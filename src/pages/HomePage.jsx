@@ -224,9 +224,6 @@ function HomePage() {
                         label="Mostrar conteúdo sensível"
                         labelPlacement="start"
                     />
-                    <Tooltip title="Mostrar/Ocultar conteúdo sensível">
-                        <Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />
-                    </Tooltip>
                 </Box>
                 <Feed filterNSFW={!showNSFW} />
             </Container>
