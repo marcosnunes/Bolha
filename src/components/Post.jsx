@@ -6,7 +6,7 @@ import { useState } from 'react';
 // Componentes e Ícones do MUI
 import {
   Card, CardHeader, CardContent, CardMedia, CardActions,
-  IconButton, Typography, Box, Menu, MenuItem, Avatar
+  IconButton, Typography, Box, Menu, MenuItem, Avatar, Tooltip
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
