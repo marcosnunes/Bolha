@@ -6,7 +6,7 @@ import { useState } from 'react';
 // Componentes e Ícones do MUI
 import {
   Card, CardHeader, CardContent, CardMedia, CardActions,
-  IconButton, Typography, Box, Menu, MenuItem
+  IconButton, Typography, Box, Menu, MenuItem, Avatar
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
@@ -60,7 +60,8 @@ function Post({ postData, onAuthorClick }) {
         action={
           <>
             <Tooltip title="Ver opções">
-              <IconButton aria-label="settings" onClick={() => onAuthorClick({ authorId, authorNickname })}>
+              {/* O onClick aqui estava errado, deveria ser handleMenuClick */}
+              <IconButton aria-label="settings" onClick={handleMenuClick}>
                 <MoreVertIcon />
               </IconButton>
             </Tooltip>
