@@ -68,7 +68,7 @@ function HomePage() {
     useEffect(() => {
         // Inicializa o Sidenav
         let sidenav = document.querySelector('#mobile-demo');
-        M.Sidenav.init(sidenav, {});
+        M.Sidenav.init(sidenav, { edge: 'right' }); 
     }, []);
 
     return (
