@@ -57,7 +57,7 @@ function HomePage() {
                 const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
                 await deleteUserAccount();
                 alert("Sua conta foi apagada com sucesso.");
-                // O logout será automático pois o usuário não existirá mais 
+                // O logout será automático pois o usuário não existirá mais
             } catch (error) {
                 console.error("Erro ao apagar a conta:", error);
                 alert("Ocorreu um erro ao apagar sua conta. Por favor, tente novamente.");
@@ -68,7 +68,7 @@ function HomePage() {
     useEffect(() => {
         // Inicializa o Sidenav
         let sidenav = document.querySelector('#mobile-demo');
-        M.Sidenav.init(sidenav, { edge: 'right' });
+        M.Sidenav.init(sidenav, {});
     }, []);
 
     return (
@@ -78,7 +78,7 @@ function HomePage() {
                     <a href="#!" className="brand-logo">Bolha</a>
 
                     {/* Ícone de "Hambúrguer" para o menu mobile */}
-                    <a href="#" data-target="mobile-demo" className="sidenav-trigger right">
+                    <a href="#" data-target="mobile-demo" className="sidenav-trigger">
                         <i className="material-icons">menu</i>
                     </a>
 
