@@ -57,7 +57,7 @@ function HomePage() {
                 const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
                 await deleteUserAccount();
                 alert("Sua conta foi apagada com sucesso.");
-                // O logout será automático pois o usuário não existirá mais
+                // O logout será automático pois o usuário não existirá mais 
             } catch (error) {
                 console.error("Erro ao apagar a conta:", error);
                 alert("Ocorreu um erro ao apagar sua conta. Por favor, tente novamente.");
