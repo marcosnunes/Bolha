@@ -58,11 +58,21 @@ function Post({ postData, onAuthorClick }) {
           </Avatar>
         }
         action={
-          <Tooltip title="Ver opções">
-            <IconButton aria-label="settings" onClick={() => onAuthorClick({ authorId, authorNickname })}>
-              <MoreVertIcon />
-            </IconButton>
-          </Tooltip>
+          <>
+            <Tooltip title="Ver opções">
+              <IconButton aria-label="settings" onClick={() => onAuthorClick({ authorId, authorNickname })}>
+                <MoreVertIcon />
+              </IconButton>
+            </Tooltip>
+            <Menu
+              anchorEl={anchorEl}
+              open={openMenu}
+              onClose={handleMenuClose}
+            >
+              <MenuItem onClick={handleAuthorClick}>Ver Perfil</MenuItem>
+              {isOwner && <MenuItem onClick={handleDeletePost} sx={{ color: 'error.main' }}><DeleteIcon fontSize="small" sx={{ mr: 1 }} /> Apagar Post</MenuItem>}
+            </Menu>
+          </>
         }
         title={authorNickname}
         subheader={formattedDate}
