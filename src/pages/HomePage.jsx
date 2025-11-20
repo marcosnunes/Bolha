@@ -66,9 +66,16 @@ function HomePage() {
     };
 
     useEffect(() => {
-        // Inicializa o Sidenav
-        let sidenav = document.querySelector('#mobile-demo');
-        M.Sidenav.init(sidenav, { edge: 'right' });
+        // Atrasamos a inicialização para garantir que o DOM está pronto
+        const timer = setTimeout(() => {
+            const sidenav = document.querySelector('.sidenav');
+            if (sidenav) {
+                M.Sidenav.init(sidenav, { edge: 'right' });
+            }
+        }, 100); // 100ms de atraso
+
+        // Limpa o timer se o componente for desmontado
+        return () => clearTimeout(timer);
     }, []);
 
     return (
