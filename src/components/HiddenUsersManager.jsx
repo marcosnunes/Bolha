@@ -1,27 +1,31 @@
 import HiddenUserItem from './HiddenUserItem.jsx';
+import { Card, CardHeader, CardContent, Typography, List } from '@mui/material';
 
 function HiddenUsersManager({ hiddenUsers, onShowUser }) {
-  if (hiddenUsers.length === 0) {
-    return null;
-  }
-
   return (
-    // Envolvemos tudo em um card do Materialize
-    <div className="card grey lighten-4" style={{ marginTop: '20px' }}>
-      <div className="card-content">
-        <span className="card-title" style={{fontSize: '1.2rem'}}>Usuários Ocultos</span>
-        <p className="grey-text" style={{marginBottom: '15px'}}>Clique em "Mostrar" para voltar a ver os posts de um usuário.</p>
-        <ul className="collection"> {/* Usamos o componente 'collection' do Materialize */}
-          {hiddenUsers.map(userId => (
-            <HiddenUserItem 
-              key={userId} 
-              userId={userId} 
-              onShowUser={onShowUser} 
-            />
-          ))}
-        </ul>
-      </div>
-    </div>
+    <Card>
+      <CardHeader 
+        title="Gerenciar Usuários Ocultos"
+        subheader="Aqui você pode voltar a ver os posts de usuários que ocultou."
+      />
+      <CardContent>
+        {hiddenUsers.length > 0 ? (
+          <List>
+            {hiddenUsers.map(userId => (
+              <HiddenUserItem 
+                key={userId} 
+                userId={userId} 
+                onShowUser={onShowUser} 
+              />
+            ))}
+          </List>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            Você não está ocultando nenhum usuário no momento.
+          </Typography>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

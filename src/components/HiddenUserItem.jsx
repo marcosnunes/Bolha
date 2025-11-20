@@ -2,32 +2,38 @@ import { useState, useEffect } from 'react';
 import { rtdb } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
 
+// Componentes do MUI
+import { ListItem, ListItemText, ListItemSecondaryAction, IconButton, Tooltip, Skeleton } from '@mui/material';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+
 function HiddenUserItem({ userId, onShowUser }) {
   const [nickname, setNickname] = useState(null);
 
-  // Este useEffect é correto, pois sincroniza com um sistema externo (Firebase)
-  // para buscar um dado que o componente não possui.
   useEffect(() => {
     const profileRef = ref(rtdb, `profiles/${userId}`);
     const unsubscribe = onValue(profileRef, (snapshot) => {
       const data = snapshot.val();
-      if (data && data.nickname) {
-        setNickname(data.nickname);
-      }
+      setNickname(data && data.nickname ? data.nickname : 'Usuário Desconhecido');
     });
-
-    return () => unsubscribe(); // Limpa a escuta
-  }, [userId]); // Roda novamente se o userId mudar (importante para listas)
+    return () => unsubscribe();
+  }, [userId]);
 
   return (
-    <li className="collection-item">
-      <div>
-        {nickname || `Carregando...`}
-        <a href="#!" onClick={() => onShowUser(userId)} className="secondary-content">
-          <i className="material-icons green-text">visibility</i> {/* Ícone de "mostrar" */}
-        </a>
-      </div>
-    </li>
+    <ListItem divider>
+      {nickname ? (
+        <ListItemText primary={nickname} secondary={`ID: ${userId}`} />
+      ) : (
+        // Mostra um esqueleto de carregamento enquanto busca o nome
+        <Skeleton variant="text" width={150} />
+      )}
+      <ListItemSecondaryAction>
+        <Tooltip title="Mostrar Usuário">
+          <IconButton edge="end" aria-label="mostrar" onClick={() => onShowUser(userId)}>
+            <VisibilityIcon />
+          </IconButton>
+        </Tooltip>
+      </ListItemSecondaryAction>
+    </ListItem>
   );
 }
 

@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { CssBaseline } from '@mui/material';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import SettingsPage from './pages/SettingsPage.jsx';
 
 import App from './App.jsx';
 import './index.css';
@@ -23,10 +24,14 @@ const router = createBrowserRouter([
     children: [
       {
         path: '/', // Rota principal
-        element: 
-        <ProtectedRoute>
-          <HomePage />
-        </ProtectedRoute>,
+        element:
+          <ProtectedRoute>
+            <HomePage />
+          </ProtectedRoute>,
+      },
+      {
+        path: '/configuracoes',
+        element: <ProtectedRoute><SettingsPage /></ProtectedRoute>,
       },
       {
         path: '/login',
