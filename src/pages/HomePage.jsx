@@ -68,7 +68,7 @@ function HomePage() {
     useEffect(() => {
         // Inicializa o Sidenav
         let sidenav = document.querySelector('#mobile-demo');
-        M.Sidenav.init(sidenav, { edge: 'right' }); 
+        M.Sidenav.init(sidenav, { edge: 'right' });
     }, []);
 
     return (
@@ -78,7 +78,7 @@ function HomePage() {
                     <a href="#!" className="brand-logo">Bolha</a>
 
                     {/* Ícone de "Hambúrguer" para o menu mobile */}
-                    <a href="#" data-target="mobile-demo" className="sidenav-trigger">
+                    <a href="#" data-target="mobile-demo" className="sidenav-trigger right">
                         <i className="material-icons">menu</i>
                     </a>
 
