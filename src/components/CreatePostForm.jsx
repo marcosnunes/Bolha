@@ -1,18 +1,18 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
-import { ref, push, serverTimestamp } from 'firebase/database';
+import { ref, push, serverTimestamp, update } from 'firebase/database';
 import useToxicityModel from '../hooks/useToxicityModel';
 
 // Componentes e Ícones do MUI
-import { 
-  Card, CardContent, CardActions, TextField, Button, 
-  CircularProgress, Alert, Box, Typography 
+import {
+  Card, CardContent, CardActions, TextField, Button,
+  CircularProgress, Alert, Box, Typography
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 
-function CreatePostForm() {
+function CreatePostForm({ onPostSuccess }) {
   const [postContent, setPostContent] = useState('');
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
@@ -20,13 +20,13 @@ function CreatePostForm() {
   const [error, setError] = useState('');
   const { currentUser, userProfile } = useAuth();
   const { loadingModel, classifyText } = useToxicityModel();
-  
+
   const fileInputRef = useRef(null); // Referência para o input de arquivo
 
   // (Suas funções de moderação de texto: forbiddenWords, containsLink, containsForbiddenWord)
   const forbiddenWords = ['buceta', 'caralho', 'puta'];
   const containsLink = (text) => {
-    const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])|(\bwww\.[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+    const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])|(\bwww\.[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/ig;
     return urlRegex.test(text);
   };
   const containsForbiddenWord = (text) => {
@@ -72,17 +72,16 @@ function CreatePostForm() {
         mediaType = data.resource_type;
       }
 
-      const isToxic = await classifyText(postContent);
-      const isForbidden = containsForbiddenWord(postContent);
-
       const postsListRef = ref(rtdb, 'posts');
-      await push(postsListRef, {
+      const newPostRef = push(postsListRef);
+      await update(newPostRef, {
         textContent: postContent,
         authorId: currentUser.uid,
         authorNickname: userProfile.nickname,
         authorPhotoURL: userProfile.photoURL || null,
         createdAt: serverTimestamp(),
-        isNSFW: isToxic || isForbidden,
+        isNSFW: false,
+        moderationStatus: 'pending',
         mediaURL: mediaURL,
         mediaType: mediaType,
       });
@@ -90,61 +89,53 @@ function CreatePostForm() {
       setPostContent('');
       setFile(null);
       setFileName('');
-      if(fileInputRef.current) fileInputRef.current.value = "";
+      setLoading(false);
+      if (onPostSuccess) onPostSuccess();
+      if (fileInputRef.current) fileInputRef.current.value = "";
+
+      const isToxicFromModel = await classifyText(postContent);
+      const isForbiddenFromList = containsForbiddenWord(postContent);
+      const finalIsNSFW = isToxicFromModel || isForbiddenFromList;
+
+      if (finalIsNSFW) {
+        const postToUpdateRef = ref(rtdb, `posts/${newPostRef.key}`);
+        await update(postToUpdateRef, {
+          isNSFW: true,
+          moderationStatus: 'completed',
+        });
+      }
+
     } catch (err) {
       console.error("Erro ao publicar o post:", err);
-      setError("Ocorreu um erro ao publicar seu post. Tente novamente.");
+      setError("Ocorreu um erro ao publicar seu post.");
+      setLoading(false); // Garante que o loading para em caso de erro
     }
-
-    setLoading(false);
   };
 
   return (
-    <Card sx={{ mb: 3 }}>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>Crie um novo post</Typography>
-        {loadingModel && <Typography variant="caption" color="text.secondary">Carregando modelo de moderação...</Typography>}
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        
-        <Box component="form" onSubmit={handleSubmit}>
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            variant="outlined"
-            label="No que você está pensando?"
-            value={postContent}
-            onChange={(e) => setPostContent(e.target.value)}
-          />
-        </Box>
-      </CardContent>
-      <CardActions sx={{ justifyContent: 'space-between', p: 2 }}>
-        <Button
-          component="label"
-          variant="outlined"
-          startIcon={<AttachFileIcon />}
-          size="small"
-        >
+    <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+      {loadingModel && <Typography variant="caption">Carregando modelo de moderação...</Typography>}
+      {error && <Alert severity="error">{error}</Alert>}
+
+      <TextField
+        fullWidth multiline rows={4} variant="outlined" label="No que você está pensando?"
+        value={postContent} onChange={(e) => setPostContent(e.target.value)}
+      />
+
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Button component="label" startIcon={<AttachFileIcon />}>
           Anexar Mídia
-          <input
-            type="file"
-            hidden
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept="image/*,video/*"
-          />
+          <input type="file" hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*,video/*" />
         </Button>
-        {fileName && <Typography variant="caption" noWrap>{fileName}</Typography>}
+        {fileName && <Typography variant="caption" noWrap sx={{ flexShrink: 1, ml: 1 }}>{fileName}</Typography>}
         <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={loading || loadingModel}
-          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+          variant="contained" type="submit" disabled={loading || loadingModel}
+          startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
         >
           Publicar
         </Button>
-      </CardActions>
-    </Card>
+      </Box>
+    </Box>
   );
 }
 

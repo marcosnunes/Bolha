@@ -1,12 +1,11 @@
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, remove } from 'firebase/database';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
-// Componentes e Ícones do MUI
-import {
-  Card, CardHeader, CardContent, CardMedia, CardActions,
-  IconButton, Typography, Box, Menu, MenuItem, Avatar, Tooltip
+import { 
+  Card, CardHeader, CardContent, IconButton, Typography, 
+  Box, Menu, MenuItem, Avatar, Tooltip 
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
@@ -18,10 +17,11 @@ function Post({ postData, onAuthorClick }) {
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-
-  // Lógica para o menu de opções (apagar post)
+  const videoRef = useRef(null);
+  
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
+  
   const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
 
@@ -44,37 +44,27 @@ function Post({ postData, onAuthorClick }) {
     }
   };
 
-  const getVideoThumbnail = (videoUrl) => {
-    if (!videoUrl) return '';
-    return videoUrl.replace(/\.\w+$/, '.jpg');
-  };
+  const getVideoThumbnail = (videoUrl) => { if (!videoUrl) return ''; return videoUrl.replace(/\.\w+$/, '.jpg'); };
+
+  // Efeito para forçar a repintura do vídeo
+  useEffect(() => {
+    if (isVideoPlaying && videoRef.current) {
+      videoRef.current.play().catch(error => console.error("Erro ao tentar tocar o vídeo:", error));
+    }
+  }, [isVideoPlaying]);
 
   return (
     <Card sx={{ mb: 3 }}>
       <CardHeader
-        avatar={
-          <Avatar 
-            src={authorPhotoURL}
-            sx={{ bgcolor: 'primary.main' }}
-          >
-            {!authorPhotoURL && authorNickname.charAt(0).toUpperCase()}
-          </Avatar>
-        }
+        avatar={<Avatar src={authorPhotoURL}>{!authorPhotoURL && authorNickname.charAt(0).toUpperCase()}</Avatar>}
         action={
           <>
             <Tooltip title="Ver opções">
-              {/* O onClick aqui estava errado, deveria ser handleMenuClick */}
-              <IconButton aria-label="settings" onClick={handleMenuClick}>
-                <MoreVertIcon />
-              </IconButton>
+              <IconButton aria-label="settings" onClick={handleMenuClick}><MoreVertIcon /></IconButton>
             </Tooltip>
-            <Menu
-              anchorEl={anchorEl}
-              open={openMenu}
-              onClose={handleMenuClose}
-            >
+            <Menu anchorEl={anchorEl} open={openMenu} onClose={handleMenuClose}>
               <MenuItem onClick={handleAuthorClick}>Ver Perfil</MenuItem>
-              {isOwner && <MenuItem onClick={handleDeletePost} sx={{ color: 'error.main' }}><DeleteIcon fontSize="small" sx={{ mr: 1 }} /> Apagar Post</MenuItem>}
+              {isOwner && <MenuItem onClick={handleDeletePost} sx={{ color: 'error.main' }}><DeleteIcon sx={{ mr: 1 }} /> Apagar Post</MenuItem>}
             </Menu>
           </>
         }
@@ -83,40 +73,37 @@ function Post({ postData, onAuthorClick }) {
       />
 
       {mediaURL && (
-        <Box sx={{ position: 'relative', backgroundColor: '#e0e0e0' }}>
-          {!isVideoPlaying ? (
-            <Box onClick={() => mediaType === 'video' && setIsVideoPlaying(true)} sx={{ cursor: mediaType === 'video' ? 'pointer' : 'default' }}>
-              <CardMedia
-                component="img"
-                image={mediaType === 'image' ? mediaURL : getVideoThumbnail(mediaURL)}
-                alt="Conteúdo do post"
-                sx={{ maxHeight: '75vh', objectFit: 'contain' }}
-              />
-              {mediaType === 'video' && (
-                <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                  <PlayCircleOutlineIcon sx={{ fontSize: 80, color: 'white', textShadow: '0 0 10px rgba(0,0,0,0.7)' }} />
+        <Box sx={{ position: 'relative', width: '100%', maxHeight: '80vh', display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'black' }}>
+          {mediaType === 'image' && (
+            <Box component="img" src={mediaURL} sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
+          )}
+
+          {mediaType === 'video' && (
+            <>
+              {!isVideoPlaying ? (
+                <Box onClick={() => setIsVideoPlaying(true)} sx={{ cursor: 'pointer', position: 'relative' }}>
+                  <Box component="img" src={getVideoThumbnail(mediaURL)} sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
+                  <PlayCircleOutlineIcon sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 80, color: 'rgba(255,255,255,0.8)' }} />
                 </Box>
+              ) : (
+                <Box component="video"
+                  ref={videoRef}
+                  src={mediaURL}
+                  controls
+                  autoPlay
+                  onEnded={() => setIsVideoPlaying(false)}
+                  onPause={(e) => { if (e.target.currentTime < e.target.duration) setIsVideoPlaying(false); }}
+                  sx={{ maxWidth: '100%', maxHeight: '80vh' }}
+                />
               )}
-            </Box>
-          ) : (
-            <CardMedia
-              component="video"
-              src={mediaURL}
-              controls
-              autoPlay
-              onEnded={() => setIsVideoPlaying(false)}
-              onPause={(e) => { if (e.target.currentTime < e.target.duration) setIsVideoPlaying(false); }}
-              sx={{ maxHeight: '75vh', width: '100%' }}
-            />
+            </>
           )}
         </Box>
       )}
-
+      
       {textContent && (
         <CardContent>
-          <Typography variant="body1" color="text.secondary">
-            {textContent}
-          </Typography>
+          <Typography variant="body1" color="text.secondary">{textContent}</Typography>
         </CardContent>
       )}
     </Card>

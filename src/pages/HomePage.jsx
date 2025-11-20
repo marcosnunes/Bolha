@@ -2,16 +2,16 @@ import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
-import { ref, push, set, update, serverTimestamp } from 'firebase/database'; // Adicionado 'update'
+import { ref, push, set, update, serverTimestamp } from 'firebase/database';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import SettingsIcon from '@mui/icons-material/Settings';
 
 // Componentes do MUI
 import {
-    AppBar, Toolbar, Typography, Button, IconButton, Drawer, List, ListItem,
+    AppBar, Toolbar, Typography, IconButton, Drawer, List, ListItem,
     ListItemButton, ListItemIcon, ListItemText, Box, Container, Divider,
-    Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField,
-    Tooltip, Switch, Avatar
+    Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
+    Tooltip, Switch, Avatar, Fab, FormControlLabel
 } from '@mui/material';
 
 // Ícones do MUI
@@ -19,6 +19,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import AddIcon from '@mui/icons-material/Add';
 
 // Nossos componentes
 import CreatePostForm from '../components/CreatePostForm.jsx';
@@ -34,6 +35,7 @@ function HomePage() {
     const [inviteLink, setInviteLink] = useState('');
     const [loadingInvite, setLoadingInvite] = useState(false);
     const [openInviteDialog, setOpenInviteDialog] = useState(false);
+    const [openPostDialog, setOpenPostDialog] = useState(false);
 
     const profilePicInputRef = useRef(null);
 
@@ -173,13 +175,8 @@ function HomePage() {
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'grey.100' }}>
-            <input
-                type="file"
-                hidden
-                ref={profilePicInputRef}
-                onChange={handleProfilePicChange}
-                accept="image/*"
-            />
+
+            <input type="file" hidden ref={profilePicInputRef} onChange={handleProfilePicChange} accept="image/*" />
 
             <AppBar component="nav" position="sticky">
                 <Toolbar>
@@ -210,17 +207,41 @@ function HomePage() {
                 </DialogActions>
             </Dialog>
 
+            <Dialog open={openPostDialog} onClose={() => setOpenPostDialog(false)} fullWidth maxWidth="sm">
+                <DialogTitle>Crie um novo post</DialogTitle>
+                <DialogContent>
+                    <CreatePostForm onPostSuccess={() => setOpenPostDialog(false)} />
+                </DialogContent>
+            </Dialog>
+
             <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
                 <CreatePostForm />
                 <Divider sx={{ my: 4 }} />
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="h4" component="h2">Posts Recentes</Typography>
+                    <FormControlLabel
+                        control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />}
+                        label="Mostrar conteúdo sensível"
+                        labelPlacement="start"
+                    />
                     <Tooltip title="Mostrar/Ocultar conteúdo sensível">
                         <Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />
                     </Tooltip>
                 </Box>
                 <Feed filterNSFW={!showNSFW} />
             </Container>
+            <Fab
+                color="primary"
+                aria-label="add"
+                onClick={() => setOpenPostDialog(true)}
+                sx={{
+                    position: 'fixed',
+                    bottom: 32,
+                    right: 32,
+                }}
+            >
+                <AddIcon />
+            </Fab>
         </Box>
     );
 }
