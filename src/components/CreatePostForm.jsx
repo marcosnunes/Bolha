@@ -1,21 +1,32 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, push, serverTimestamp } from 'firebase/database';
 import useToxicityModel from '../hooks/useToxicityModel';
 
+// Componentes e Ícones do MUI
+import { 
+  Card, CardContent, CardActions, TextField, Button, 
+  CircularProgress, Alert, Box, Typography 
+} from '@mui/material';
+import SendIcon from '@mui/icons-material/Send';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+
 function CreatePostForm() {
   const [postContent, setPostContent] = useState('');
   const [file, setFile] = useState(null);
+  const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { currentUser, userProfile } = useAuth();
   const { loadingModel, classifyText } = useToxicityModel();
+  
+  const fileInputRef = useRef(null); // Referência para o input de arquivo
 
-  // SUAS FUNÇÕES DE MODERAÇÃO DE TEXTO
+  // (Suas funções de moderação de texto: forbiddenWords, containsLink, containsForbiddenWord)
   const forbiddenWords = ['buceta', 'caralho', 'puta'];
   const containsLink = (text) => {
-    const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\\/%?=~_|!:,.;]*[-A-Z0-9+&@#\\/%=~_|])|(\bwww\.[-A-Z0-9+&@#\\/%?=~_|!:,.;]*[-A-Z0-9+&@#\\/%=~_|])/ig;
+    const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])|(\bwww\.[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
     return urlRegex.test(text);
   };
   const containsForbiddenWord = (text) => {
@@ -23,9 +34,12 @@ function CreatePostForm() {
     return forbiddenWords.some(word => lowerCaseText.includes(word));
   };
 
-  // Função para lidar com a seleção de arquivo
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setFileName(selectedFile.name);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -43,29 +57,24 @@ function CreatePostForm() {
       let mediaType = null;
 
       if (file) {
-        // 1. Prepara os dados para o Cloudinary
         const formData = new FormData();
         formData.append('file', file);
         formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
 
-        // 2. Envia para a API do Cloudinary
         const response = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/auto/upload`, {
           method: 'POST',
           body: formData,
         });
 
         if (!response.ok) throw new Error('Falha no upload da mídia.');
-
         const data = await response.json();
         mediaURL = data.secure_url;
-        mediaType = data.resource_type; // 'image' ou 'video'
+        mediaType = data.resource_type;
       }
 
-      // 3. Moderação de texto
       const isToxic = await classifyText(postContent);
       const isForbidden = containsForbiddenWord(postContent);
 
-      // 4. Salva tudo no Firebase Realtime Database
       const postsListRef = ref(rtdb, 'posts');
       await push(postsListRef, {
         textContent: postContent,
@@ -77,12 +86,10 @@ function CreatePostForm() {
         mediaType: mediaType,
       });
 
-      // 5. Limpa o formulário
       setPostContent('');
       setFile(null);
-      if (document.getElementById('file-input')) document.getElementById('file-input').value = "";
-      if (document.querySelector('.file-path')) document.querySelector('.file-path').value = "";
-
+      setFileName('');
+      if(fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       console.error("Erro ao publicar o post:", err);
       setError("Ocorreu um erro ao publicar seu post. Tente novamente.");
@@ -92,43 +99,51 @@ function CreatePostForm() {
   };
 
   return (
-    <div className="card" style={{ marginBottom: '2rem' }}>
-      <div className="card-content">
-        <span className="card-title">Crie um novo post</span>
-        {loadingModel && <p className="grey-text">Carregando modelo de moderação...</p>}
-        {error && <p className="red-text">{error}</p>}
-        <form onSubmit={handleSubmit}>
-          <div className="input-field">
-            <textarea
-              id="postContent"
-              className="materialize-textarea"
-              value={postContent}
-              onChange={(e) => setPostContent(e.target.value)}
-            ></textarea>
-            <label htmlFor="postContent">No que você está pensando?</label>
-          </div>
-
-          <div className="file-field input-field">
-            <div className="btn blue darken-4">
-              <span><i className="material-icons">attach_file</i></span>
-              <input type="file" id="file-input" onChange={handleFileChange} accept="image/*,video/*" />
-            </div>
-            <div className="file-path-wrapper">
-              <input className="file-path validate" type="text" placeholder="Adicionar imagem ou vídeo (opcional)" />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="btn waves-effect waves-light blue darken-4"
-            disabled={loading || loadingModel}
-          >
-            {loading ? 'Publicando...' : 'Publicar'}
-            <i className="material-icons right">send</i>
-          </button>
-        </form>
-      </div>
-    </div>
+    <Card sx={{ mb: 3 }}>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>Crie um novo post</Typography>
+        {loadingModel && <Typography variant="caption" color="text.secondary">Carregando modelo de moderação...</Typography>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        
+        <Box component="form" onSubmit={handleSubmit}>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            variant="outlined"
+            label="No que você está pensando?"
+            value={postContent}
+            onChange={(e) => setPostContent(e.target.value)}
+          />
+        </Box>
+      </CardContent>
+      <CardActions sx={{ justifyContent: 'space-between', p: 2 }}>
+        <Button
+          component="label"
+          variant="outlined"
+          startIcon={<AttachFileIcon />}
+          size="small"
+        >
+          Anexar Mídia
+          <input
+            type="file"
+            hidden
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*,video/*"
+          />
+        </Button>
+        {fileName && <Typography variant="caption" noWrap>{fileName}</Typography>}
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={loading || loadingModel}
+          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+        >
+          Publicar
+        </Button>
+      </CardActions>
+    </Card>
   );
 }
 

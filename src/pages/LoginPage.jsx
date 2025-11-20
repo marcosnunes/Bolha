@@ -1,79 +1,96 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom'; // Hook para redirecionamento
-import { Link } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
+
+// Componentes e Ícones do MUI
+import { 
+  Container, Box, Card, CardContent, CardActions, Typography, 
+  TextField, Button, CircularProgress, Alert 
+} from '@mui/material';
+import LoginIcon from '@mui/icons-material/Login';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const { login, currentUser } = useAuth(); // Puxamos a função de login
-  const navigate = useNavigate(); // Inicializamos o hook de navegação
+  const { login, currentUser } = useAuth();
+  const navigate = useNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
-
     try {
       setError('');
       setLoading(true);
       await login(email, password);
-      navigate('/'); // Redireciona para a página principal após o login
+      navigate('/');
     } catch (err) {
       console.error(err);
       setError('Falha ao entrar. Verifique seu e-mail e senha.');
     }
-
     setLoading(false);
   }
 
-  // Mostra o email do usuário se ele já estiver logado
+  // Redireciona se o usuário já estiver logado
   if (currentUser) {
-    return (
-      <div>
-        <h1>Você já está logado!</h1>
-        <p>Email: {currentUser.email}</p>
-      </div>
-    );
+    navigate('/');
+    return null; // Renderiza nada enquanto redireciona
   }
 
   return (
-    <div className="container" style={{ marginTop: '50px' }}>
-      <div className="row">
-        <div className="col s12 m8 offset-m2">
-          <div className="card">
-            <div className="card-content">
-              <span className="card-title">Login na Bolha</span>
-              {error && <p className="red-text">{error}</p>}
-              <form onSubmit={handleSubmit}>
-                <div className="input-field">
-                  <i className="material-icons prefix">email</i>
-                  <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                  <label htmlFor="email">Email</label>
-                </div>
-                <div className="input-field">
-                  <i className="material-icons prefix">lock</i>
-                  <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                  <label htmlFor="password">Senha</label>
-                </div>
-                <div className="card-action">
-                  <button disabled={loading} className="btn waves-effect waves-light blue darken-4" type="submit">
-                    {loading ? 'Entrando...' : 'Entrar'}
-                    <i className="material-icons right">send</i>
-                  </button>
-                </div>
-                <div className="card-action" style={{ backgroundColor: '#f5f5f5', borderTop: '1px solid #ddd' }}>
-                  <p className="center-align grey-text">
-                    Não tem uma conta? <Link to="/cadastro">Cadastre-se</Link>
-                  </p>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Container component="main" maxWidth="xs" sx={{ mt: 8 }}>
+      <Card>
+        <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Typography component="h1" variant="h5" align="center">
+            Login na Bolha
+          </Typography>
+          
+          {error && <Alert severity="error">{error}</Alert>}
+          
+          <Box component="form" onSubmit={handleSubmit} noValidate>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="email"
+              label="Endereço de E-mail"
+              name="email"
+              autoComplete="email"
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Senha"
+              type="password"
+              id="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              disabled={loading}
+              sx={{ mt: 3, mb: 2 }}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LoginIcon />}
+            >
+              {loading ? 'Entrando...' : 'Entrar'}
+            </Button>
+          </Box>
+        </CardContent>
+        <CardActions sx={{ justifyContent: 'center', bgcolor: 'grey.100' }}>
+          <Typography variant="body2">
+            Não tem uma conta? <RouterLink to="/cadastro">Cadastre-se</RouterLink>
+          </Typography>
+        </CardActions>
+      </Card>
+    </Container>
   );
 }
 

@@ -1,196 +1,219 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
 import { ref, push, set, serverTimestamp } from 'firebase/database';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import M from 'materialize-css/dist/js/materialize.min.js';
 
-// Importando os componentes
+// Componentes do MUI
+import { 
+  AppBar, Toolbar, Typography, Button, IconButton, Drawer, List, ListItem, 
+  ListItemButton, ListItemIcon, ListItemText, Box, Container, Divider, Card, 
+  CardHeader, CardContent, CardActions, TextField, InputAdornment, Tooltip, Switch
+} from '@mui/material';
+
+// Ícones do MUI
+import MenuIcon from '@mui/icons-material/Menu';
+import LogoutIcon from '@mui/icons-material/Logout';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import LinkIcon from '@mui/icons-material/Link';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+
+// Nossos componentes (que também precisaremos refatorar depois)
 import CreatePostForm from '../components/CreatePostForm.jsx';
 import Feed from '../components/Feed.jsx';
 import HiddenUsersManager from '../components/HiddenUsersManager.jsx';
 
 function HomePage() {
-    const { currentUser, userProfile, logout, hiddenUsers, showUser } = useAuth();
-    const navigate = useNavigate();
+  const { currentUser, userProfile, logout, hiddenUsers, showUser } = useAuth();
+  const navigate = useNavigate();
+  
+  // Estados do componente
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [showNSFW, setShowNSFW] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
+  const [loadingInvite, setLoadingInvite] = useState(false);
 
-    const [showNSFW, setShowNSFW] = useState(false);
-    const [inviteLink, setInviteLink] = useState('');
-    const [loadingInvite, setLoadingInvite] = useState(false);
+  // Manipulador para o menu mobile
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
 
-    async function handleLogout() {
-        try {
-            await logout();
-            navigate('/login');
-        } catch (error) {
-            console.error("Falha ao fazer logout", error);
-        }
+  // Função de Logout
+  async function handleLogout() {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error("Falha ao fazer logout", error);
     }
+  }
 
-    const generateInviteLink = async () => {
-        if (!currentUser) return;
-        setLoadingInvite(true);
-        try {
-            const invitesRef = ref(rtdb, 'invites');
-            const newInviteRef = push(invitesRef);
-            await set(newInviteRef, {
-                invitedBy: currentUser.uid,
-                status: 'pending',
-                createdAt: serverTimestamp(),
-            });
+  // Função para gerar link de convite
+  const generateInviteLink = async () => {
+    if (!currentUser) return;
+    setLoadingInvite(true);
+    try {
+      const invitesRef = ref(rtdb, 'invites');
+      const newInviteRef = push(invitesRef);
+      await set(newInviteRef, {
+        invitedBy: currentUser.uid,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      });
+      const token = newInviteRef.key;
+      const newLink = `${window.location.origin}/convite/${token}`;
+      setInviteLink(newLink);
+    } catch (error) {
+      console.error("Erro ao gerar convite:", error);
+      alert("Não foi possível gerar o link. Tente novamente.");
+    }
+    setLoadingInvite(false);
+  };
 
-            const token = newInviteRef.key;
-            const newLink = `${window.location.origin}/convite/${token}`;
-            setInviteLink(newLink);
-        } catch (error) {
-            console.error("Erro ao gerar convite:", error);
-            alert("Não foi possível gerar o link. Tente novamente.");
-        }
-        setLoadingInvite(false);
-    };
+  // Função para apagar a conta do usuário
+  const handleDeleteAccount = async () => {
+    if (window.confirm("ATENÇÃO: Você tem certeza de que deseja apagar sua conta? Todos os seus posts e dados serão permanentemente removidos. Esta ação não pode ser desfeita.")) {
+      try {
+        const functions = getFunctions();
+        const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
+        await deleteUserAccount();
+        alert("Sua conta foi apagada com sucesso.");
+      } catch (error) {
+        console.error("Erro ao apagar a conta:", error);
+        alert("Ocorreu um erro ao apagar sua conta. Por favor, tente novamente.");
+      }
+    }
+  };
 
-    const handleDeleteAccount = async () => {
-        if (window.confirm("ATENÇÃO: Você tem certeza de que deseja apagar sua conta? Todos os seus posts e dados serão permanentemente removidos. Esta ação não pode ser desfeita.")) {
-            try {
-                const functions = getFunctions();
-                const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
-                await deleteUserAccount();
-                alert("Sua conta foi apagada com sucesso.");
-                // O logout será automático pois o usuário não existirá mais
-            } catch (error) {
-                console.error("Erro ao apagar a conta:", error);
-                alert("Ocorreu um erro ao apagar sua conta. Por favor, tente novamente.");
-            }
-        }
-    };
+  // JSX do menu lateral (Drawer)
+  const drawer = (
+    <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
+      <Typography variant="h6" sx={{ my: 2 }}>
+        Bolha
+      </Typography>
+      <Divider />
+      <List>
+        {currentUser ? (
+          <>
+            <ListItem>
+              <ListItemIcon><AccountCircleIcon /></ListItemIcon>
+              <ListItemText primary={userProfile ? userProfile.nickname : ''} secondary={currentUser.email} />
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton onClick={handleLogout}>
+                <ListItemIcon><LogoutIcon /></ListItemIcon>
+                <ListItemText primary="Sair" />
+              </ListItemButton>
+            </ListItem>
+          </>
+        ) : ( /* Fallback para usuário deslogado */
+          <ListItem disablePadding>
+            <ListItemButton component={RouterLink} to="/login">
+              <ListItemIcon><AccountCircleIcon /></ListItemIcon>
+              <ListItemText primary="Login" />
+            </ListItemButton>
+          </ListItem>
+        )}
+      </List>
+    </Box>
+  );
 
-    useEffect(() => {
-        // Atrasamos a inicialização para garantir que o DOM está pronto
-        const timer = setTimeout(() => {
-            const sidenav = document.querySelector('.sidenav');
-            if (sidenav) {
-                M.Sidenav.init(sidenav, { edge: 'right' });
-            }
-        }, 100); // 100ms de atraso
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'grey.100' }}>
+      {/* --- BARRA DE NAVEGAÇÃO (AppBar) --- */}
+      <AppBar component="nav" position="sticky">
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Bolha
+          </Typography>
+          <IconButton color="inherit" aria-label="open drawer" edge="end" onClick={handleDrawerToggle} sx={{ display: { sm: 'none' } }}>
+            <MenuIcon />
+          </IconButton>
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+            {currentUser && (
+              <>
+                <Button sx={{ color: '#fff' }}>Olá, {userProfile ? userProfile.nickname : ''}</Button>
+                <Button onClick={handleLogout} color="inherit">Sair</Button>
+              </>
+            )}
+          </Box>
+        </Toolbar>
+      </AppBar>
 
-        // Limpa o timer se o componente for desmontado
-        return () => clearTimeout(timer);
-    }, []);
+      {/* --- MENU LATERAL (Drawer) --- */}
+      <Drawer variant="temporary" open={mobileOpen} onClose={handleDrawerToggle} anchor="right" ModalProps={{ keepMounted: true }} sx={{ display: { xs: 'block', sm: 'none' }, '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 } }}>
+        {drawer}
+      </Drawer>
 
-    return (
-        <>
-            <nav className="blue darken-4">
-                <div className="nav-wrapper container">
-                    <a href="#!" className="brand-logo">Bolha</a>
+      {/* --- CONTEÚDO PRINCIPAL --- */}
+      <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+        <CreatePostForm />
 
-                    {/* Ícone de "Hambúrguer" para o menu mobile */}
-                    <a href="#" data-target="mobile-demo" className="sidenav-trigger right">
-                        <i className="material-icons">menu</i>
-                    </a>
+        <HiddenUsersManager hiddenUsers={hiddenUsers} onShowUser={showUser} />
 
-                    {/* Menu para telas grandes (desktop) */}
-                    <ul className="right hide-on-med-and-down">
-                        {currentUser ? (
-                            <>
-                                <li><span>Olá, {userProfile ? userProfile.nickname : ''}</span></li>
-                                <li><a href="#!" onClick={handleLogout}>Sair</a></li>
-                            </>
-                        ) : (
-                            <>
-                                <li><Link to="/login">Login</Link></li>
-                                <li><Link to="/cadastro">Cadastro</Link></li>
-                            </>
-                        )}
-                    </ul>
-                </div>
-            </nav>
+        <Card sx={{ my: 3 }}>
+          <CardHeader title="Convidar para a Bolha" subheader="Gere um link de convite único e compartilhe." />
+          <CardContent>
+            {inviteLink && (
+              <TextField
+                fullWidth
+                label="Seu link de convite"
+                value={inviteLink}
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Tooltip title="Copiar">
+                        <IconButton onClick={() => navigator.clipboard.writeText(inviteLink)}>
+                          <ContentCopyIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            )}
+          </CardContent>
+          <CardActions>
+            <Button 
+              variant="contained" 
+              onClick={generateInviteLink} 
+              disabled={loadingInvite}
+              startIcon={<LinkIcon />}
+            >
+              {loadingInvite ? 'Gerando...' : 'Gerar Link de Convite'}
+            </Button>
+          </CardActions>
+        </Card>
 
-            {/* Estrutura do Sidenav (menu lateral para mobile) */}
-            <ul className="sidenav" id="mobile-demo">
-                {currentUser ? (
-                    <>
-                        <li>
-                            <div className="user-view" style={{ backgroundColor: '#1a237e' }}>
-                                <a href="#name"><span className="white-text name">{userProfile ? userProfile.nickname : ''}</span></a>
-                                <a href="#email"><span className="white-text email">{currentUser.email}</span></a>
-                            </div>
-                        </li>
-                        <li><a href="#!" onClick={handleLogout}><i className="material-icons">exit_to_app</i>Sair</a></li>
-                    </>
-                ) : (
-                    <>
-                        <li><Link to="/login"><i className="material-icons">person</i>Login</Link></li>
-                        <li><Link to="/cadastro"><i className="material-icons">person_add</i>Cadastro</Link></li>
-                    </>
-                )}
-            </ul>
+        <Card sx={{ my: 3, bgcolor: 'error.lightest' }}>
+          <CardHeader title="Zona de Perigo" titleTypographyProps={{color: 'error.dark'}} />
+          <CardContent>
+            <Typography variant="body2" color="error.dark">
+              Apagar sua conta é uma ação permanente e removerá todos os seus dados.
+            </Typography>
+          </CardContent>
+          <CardActions>
+            <Button variant="contained" color="error" onClick={handleDeleteAccount}>
+              Apagar Minha Conta
+            </Button>
+          </CardActions>
+        </Card>
+        
+        <Divider sx={{ my: 4 }} />
 
-            <div className="container" style={{ marginTop: '30px' }}>
-                <div className="row">
-                    <div className="col s12 m10 offset-m1 l8 offset-l2">
-
-                        <div className="card red lighten-4" style={{ marginTop: '2rem' }}>
-                            <div className="card-content red-text">
-                                <span className="card-title">Zona de Perigo</span>
-                                <p>Apagar sua conta é uma ação permanente e removerá todos os seus dados.</p>
-                                <button onClick={handleDeleteAccount} className="btn waves-effect waves-light red darken-2" style={{ marginTop: '15px' }}>
-                                    Apagar Minha Conta
-                                </button>
-                            </div>
-                        </div>
-                        <div className="card" style={{ marginBottom: '2rem' }}>
-                            <div className="card-content">
-                                <span className="card-title">Convidar para a Bolha</span>
-                                <p>Gere um link de convite único e compartilhe com um amigo.</p>
-                                <button
-                                    onClick={generateInviteLink}
-                                    disabled={loadingInvite}
-                                    className="btn waves-effect waves-light blue darken-2"
-                                    style={{ marginTop: '15px' }}
-                                >
-                                    {loadingInvite ? 'Gerando...' : 'Gerar Link de Convite'}
-                                    <i className="material-icons right">link</i>
-                                </button>
-
-                                {inviteLink && (
-                                    <div className="input-field" style={{ marginTop: '20px', display: 'flex', alignItems: 'center' }}>
-                                        <i className="material-icons prefix">insert_link</i>
-                                        <input type="text" value={inviteLink} readOnly id="invite-link" />
-                                        <label htmlFor="invite-link" className="active">Seu link de convite</label>
-                                        <button
-                                            onClick={() => navigator.clipboard.writeText(inviteLink)}
-                                            className="btn-floating waves-effect waves-light green tooltipped"
-                                            data-position="top"
-                                            data-tooltip="Copiar"
-                                        >
-                                            <i className="material-icons">content_copy</i>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/*<h1 style={{ fontSize: '2.5rem' }}>Bolha Feed</h1>*/}
-                        <CreatePostForm />
-                        <HiddenUsersManager hiddenUsers={hiddenUsers} onShowUser={showUser} />
-                        <div className="divider" style={{ margin: '2rem 0' }}></div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h4 style={{ fontSize: '1.8rem' }}>Posts Recentes</h4>
-                            <div className="switch">
-                                <label>
-                                    Filtrar Conteúdo Sensível
-                                    <input type="checkbox" checked={!showNSFW} onChange={() => setShowNSFW(!showNSFW)} />
-                                    <span className="lever"></span>
-                                </label>
-                            </div>
-                        </div>
-                        <Feed filterNSFW={!showNSFW} />
-                    </div>
-                </div>
-            </div>
-        </>
-    );
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h4" component="h2">Posts Recentes</Typography>
+          <Tooltip title="Mostrar/Ocultar conteúdo sensível">
+            <Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />
+          </Tooltip>
+        </Box>
+        
+        <Feed filterNSFW={!showNSFW} />
+      </Container>
+    </Box>
+  );
 }
 
 export default HomePage;

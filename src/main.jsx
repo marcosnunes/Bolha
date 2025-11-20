@@ -1,6 +1,6 @@
-import '@materializecss/materialize/dist/css/materialize.min.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { CssBaseline } from '@mui/material';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 import App from './App.jsx';
@@ -50,6 +50,7 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
+    <CssBaseline />
     <AuthProvider>
       <RouterProvider router={router} />
     </AuthProvider>
