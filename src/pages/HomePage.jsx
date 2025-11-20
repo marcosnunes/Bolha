@@ -217,7 +217,14 @@ function HomePage() {
             <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
                 <CreatePostForm />
                 <Divider sx={{ my: 4 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box sx={{
+                    display: 'flex',
+                    alignItems: { xs: 'flex-start', sm: 'center' },
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    justifyContent: 'space-between',
+                    mb: 2,
+                    gap: 2
+                }}>
                     <Typography variant="h4" component="h2">Posts Recentes</Typography>
                     <FormControlLabel
                         control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />}
