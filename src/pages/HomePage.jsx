@@ -8,10 +8,10 @@ import SettingsIcon from '@mui/icons-material/Settings';
 
 // Componentes do MUI
 import {
-    AppBar, Toolbar, Typography, IconButton, Drawer, List, ListItem,
+    AppBar, Toolbar, Typography, Button, IconButton, Drawer, List, ListItem,
     ListItemButton, ListItemIcon, ListItemText, Box, Container, Divider,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
-    Tooltip, Switch, Avatar, Fab, FormControlLabel
+    Tooltip, Switch, Avatar, Fab, FormControlLabel, TextField
 } from '@mui/material';
 
 // Ícones do MUI
