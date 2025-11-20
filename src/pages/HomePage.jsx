@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
 import { ref, push, set, serverTimestamp } from 'firebase/database';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import M from 'materialize-css/dist/js/materialize.min.js';
 
 // Importando os componentes
 import CreatePostForm from '../components/CreatePostForm.jsx';
@@ -64,12 +65,25 @@ function HomePage() {
         }
     };
 
+    useEffect(() => {
+        // Inicializa o Sidenav
+        let sidenav = document.querySelector('#mobile-demo');
+        M.Sidenav.init(sidenav, {});
+    }, []);
+
     return (
         <>
             <nav className="blue darken-4">
                 <div className="nav-wrapper container">
                     <a href="#!" className="brand-logo">Bolha</a>
-                    <ul id="nav-mobile" className="right hide-on-med-and-down">
+
+                    {/* Ícone de "Hambúrguer" para o menu mobile */}
+                    <a href="#" data-target="mobile-demo" className="sidenav-trigger">
+                        <i className="material-icons">menu</i>
+                    </a>
+
+                    {/* Menu para telas grandes (desktop) */}
+                    <ul className="right hide-on-med-and-down">
                         {currentUser ? (
                             <>
                                 <li><span>Olá, {userProfile ? userProfile.nickname : ''}</span></li>
@@ -84,6 +98,26 @@ function HomePage() {
                     </ul>
                 </div>
             </nav>
+
+            {/* Estrutura do Sidenav (menu lateral para mobile) */}
+            <ul className="sidenav" id="mobile-demo">
+                {currentUser ? (
+                    <>
+                        <li>
+                            <div className="user-view" style={{ backgroundColor: '#1a237e' }}>
+                                <a href="#name"><span className="white-text name">{userProfile ? userProfile.nickname : ''}</span></a>
+                                <a href="#email"><span className="white-text email">{currentUser.email}</span></a>
+                            </div>
+                        </li>
+                        <li><a href="#!" onClick={handleLogout}><i className="material-icons">exit_to_app</i>Sair</a></li>
+                    </>
+                ) : (
+                    <>
+                        <li><Link to="/login"><i className="material-icons">person</i>Login</Link></li>
+                        <li><Link to="/cadastro"><i className="material-icons">person_add</i>Cadastro</Link></li>
+                    </>
+                )}
+            </ul>
 
             <div className="container" style={{ marginTop: '30px' }}>
                 <div className="row">
