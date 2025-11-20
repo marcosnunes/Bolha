@@ -130,7 +130,7 @@ function HomePage() {
                             </div>
                         </div>
 
-                        <h1 style={{ fontSize: '2.5rem' }}>Bolha Feed</h1>
+                        {/*<h1 style={{ fontSize: '2.5rem' }}>Bolha Feed</h1>*/}
                         <CreatePostForm />
                         <HiddenUsersManager hiddenUsers={hiddenUsers} onShowUser={showUser} />
                         <div className="divider" style={{ margin: '2rem 0' }}></div>
@@ -138,7 +138,7 @@ function HomePage() {
                             <h4 style={{ fontSize: '1.8rem' }}>Posts Recentes</h4>
                             <div className="switch">
                                 <label>
-                                    Filtrar NSFW
+                                    Filtrar Conteúdo Sensível
                                     <input type="checkbox" checked={!showNSFW} onChange={() => setShowNSFW(!showNSFW)} />
                                     <span className="lever"></span>
                                 </label>
