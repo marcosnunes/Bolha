@@ -216,6 +216,7 @@ function HomePage() {
 
             <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
                 <CreatePostForm />
+                <HiddenUsersManager hiddenUsers={hiddenUsers} onShowUser={showUser} />
                 <Divider sx={{ my: 4 }} />
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="h4" component="h2">Posts Recentes</Typography>
