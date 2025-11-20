@@ -17,17 +17,15 @@ import {
 // Ícones do MUI
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 
 // Nossos componentes
 import CreatePostForm from '../components/CreatePostForm.jsx';
 import Feed from '../components/Feed.jsx';
-import HiddenUsersManager from '../components/HiddenUsersManager.jsx';
 
 function HomePage() {
-    const { currentUser, userProfile, logout, hiddenUsers, showUser } = useAuth();
+    const { currentUser, userProfile, logout } = useAuth();
     const navigate = useNavigate();
 
     // Estados do componente

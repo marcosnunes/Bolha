@@ -52,7 +52,7 @@ function Feed({ filterNSFW }) {
     <div>
       <ProfileModal 
         userToDisplay={selectedUser} 
-        onclose={handleCloseProfile}
+        onClose={handleCloseProfile}
         // Passa as informações e funções necessárias para o Modal
         hiddenUsers={hiddenUsers}
         onHideUser={hideUser}
