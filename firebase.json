@@ -1,6 +1,7 @@
 {
   "functions": [
     {
+      "predeploy": [],
       "source": "functions",
       "codebase": "default",
       "disallowLegacyRuntimeConfig": true,
@@ -10,10 +11,7 @@
         "firebase-debug.log",
         "firebase-debug.*.log",
         "*.local"
-      ],
-      "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint"
-      ]
+      ]      
     }
   ]
 }

@@ -1,52 +1,53 @@
-import * as functions from "firebase-functions";
-import * as admin from "firebase-admin";
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { logger } = require("firebase-functions");
+const admin = require("firebase-admin");
 
 admin.initializeApp();
 
-// É uma boa prática definir a região
-export const deleteUserAccount = functions.region("us-central1").https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
+// A definição da função agora é mais direta
+exports.deleteUserAccount = onCall({ region: "us-central1" }, async (request) => {
+  const { auth, data } = request;
+
+  if (!auth) {
+    logger.error("Tentativa de exclusão de conta não autenticada.");
+    throw new HttpsError(
       "unauthenticated",
       "Ação não permitida. Você precisa estar logado."
     );
   }
 
-  const uid = context.auth.uid;
+  const uid = auth.uid;
   const db = admin.database();
-  const auth = admin.auth();
+  const authAdmin = admin.auth();
 
-  console.log(`Iniciando exclusão da conta para o UID: ${uid}`);
+  logger.info(`Iniciando o processo de exclusão para o UID: ${uid}`);
 
   try {
-    // 1. Apagar dados do Realtime Database
+    const updates = {};
+    updates[`/profiles/${uid}`] = null;
+    updates[`/users/${uid}`] = null;
+    
     const postsQuery = db.ref("/posts").orderByChild("authorId").equalTo(uid);
     const postsSnapshot = await postsQuery.once("value");
-
-    const updates = {};
     if (postsSnapshot.exists()) {
       postsSnapshot.forEach((child) => {
         updates[`/posts/${child.key}`] = null;
       });
     }
-    updates[`/profiles/${uid}`] = null;
-    updates[`/users/${uid}`] = null;
-    
+
     await db.ref().update(updates);
-    console.log(`Dados do RTDB para o UID ${uid} foram removidos.`);
+    logger.info(`Dados do RTDB para o UID ${uid} foram removidos.`);
 
-    // 2. Apagar o usuário do Authentication (este é o último passo)
-    await auth.deleteUser(uid);
-    console.log(`Usuário ${uid} apagado do Authentication com sucesso.`);
+    await authAdmin.deleteUser(uid);
+    logger.info(`Usuário ${uid} apagado do Authentication com sucesso.`);
 
-    return { success: true };
-
+    return { success: true, message: "Sua conta foi removida com sucesso." };
   } catch (error) {
-    console.error(`Falha ao apagar a conta para o UID: ${uid}`, error);
-    throw new functions.https.HttpsError(
+    logger.error(`Falha CRÍTICA ao apagar a conta para o UID: ${uid}`, error);
+    throw new HttpsError(
       "internal",
-      "Ocorreu um erro interno ao processar sua solicitação. Verifique os logs do servidor.",
-      error
+      "Ocorreu um erro interno ao processar sua solicitação.",
+      error.message
     );
   }
 });

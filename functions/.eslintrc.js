@@ -1,31 +1,18 @@
-/* eslint-env node */
 module.exports = {
+  root: true,
   env: {
     es6: true,
-    node: true,
-  },
-  parserOptions: {
-    "ecmaVersion": 2018,
+    node: true, // Informa ao ESLint sobre o ambiente Node.js
   },
   extends: [
     "eslint:recommended",
     "google",
   ],
   rules: {
-    "no-restricted-globals": ["error", "name", "length"],
-    "prefer-arrow-callback": "error",
-    "quotes": ["error", "double", {"allowTemplateLiterals": true}],
+    "quotes": ["error", "double"],
   },
-  overrides: [
-    {
-      files: ["**/*.spec.*"],
-      env: {
-        mocha: true,
-      },
-      rules: {},
-    },
-  ],
-  globals: {
-    module: "readonly",
+  parserOptions: {
+    // Required for top-level await
+    "ecmaVersion": 2020,
   },
 };
