@@ -104,7 +104,7 @@ function HomePage() {
 
     const handleDeleteAccount = async () => {
         handleDrawerToggle();
-        if (window.confirm("ATENÇÃO: ...")) { // Mensagem completa aqui
+        if (window.confirm("ATENÇÃO: ...")) {
             try {
                 const functions = getFunctions();
                 const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
@@ -117,7 +117,6 @@ function HomePage() {
         }
     };
 
-    // JSX do menu lateral (Drawer) COMPLETO
     const drawer = (
         <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
             <Typography variant="h6" sx={{ my: 2 }}>
@@ -174,7 +173,6 @@ function HomePage() {
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'grey.100' }}>
-            {/* Input de arquivo escondido para a foto de perfil */}
             <input
                 type="file"
                 hidden

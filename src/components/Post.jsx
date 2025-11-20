@@ -14,7 +14,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 
 function Post({ postData, onAuthorClick }) {
   const { currentUser } = useAuth();
-  const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id } = postData;
+  const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL } = postData;
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -53,8 +53,11 @@ function Post({ postData, onAuthorClick }) {
     <Card sx={{ mb: 3 }}>
       <CardHeader
         avatar={
-          <Avatar sx={{ bgcolor: 'primary.main' }}>
-            {authorNickname.charAt(0).toUpperCase()}
+          <Avatar 
+            src={authorPhotoURL}
+            sx={{ bgcolor: 'primary.main' }}
+          >
+            {!authorPhotoURL && authorNickname.charAt(0).toUpperCase()}
           </Avatar>
         }
         action={

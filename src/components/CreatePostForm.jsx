@@ -80,6 +80,7 @@ function CreatePostForm() {
         textContent: postContent,
         authorId: currentUser.uid,
         authorNickname: userProfile.nickname,
+        authorPhotoURL: userProfile.photoURL || null,
         createdAt: serverTimestamp(),
         isNSFW: isToxic || isForbidden,
         mediaURL: mediaURL,
