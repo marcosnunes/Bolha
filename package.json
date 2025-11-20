@@ -10,10 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@materializecss/materialize": "^2.2.2",
     "@stripe/react-stripe-js": "^5.3.0",
     "@stripe/stripe-js": "^8.4.0",
     "firebase": "^12.6.0",
-    "materialize-css": "^1.0.0-rc.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.6"
