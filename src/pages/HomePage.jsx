@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
@@ -39,6 +39,49 @@ function HomePage() {
     const [inviteLink, setInviteLink] = useState('');
     const [loadingInvite, setLoadingInvite] = useState(false);
     const [openInviteDialog, setOpenInviteDialog] = useState(false);
+
+    const profilePicInputRef = useRef(null);
+
+    const handleProfilePicChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Opcional: Adicionar um feedback de loading na UI
+        console.log("Iniciando upload da nova foto de perfil...");
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+
+            const response = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error('Falha no upload da nova foto de perfil.');
+            }
+
+            const data = await response.json();
+            const newPhotoURL = data.secure_url;
+
+            // Atualiza a URL da foto no Realtime Database
+            if (currentUser) {
+                const profileRef = ref(rtdb, `profiles/${currentUser.uid}`);
+                await update(profileRef, {
+                    photoURL: newPhotoURL
+                });
+                alert("Foto de perfil atualizada com sucesso!");
+            }
+        } catch (error) {
+            console.error("Erro ao atualizar a foto de perfil:", error);
+            alert("Não foi possível atualizar sua foto de perfil.");
+        } finally {
+            // Opcional: Remover o feedback de loading
+            console.log("Upload finalizado.");
+        }
+    };
 
     // Manipulador para o menu mobile/desktop unificado
     const handleDrawerToggle = () => {
@@ -97,50 +140,25 @@ function HomePage() {
 
     // JSX do menu lateral (Drawer)
     const drawer = (
-        <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
-            <Typography variant="h6" sx={{ my: 2 }}>
-                Bolha
-            </Typography>
-            <Divider />
+        <Box sx={{ textAlign: 'center' }}>
+            {/* ... (título e divider) ... */}
             <List>
                 {currentUser && (
                     <>
-                        {/* Seção do Perfil com Avatar */}
                         <ListItem sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2, textAlign: 'center' }}>
-                            <Avatar
-                                src={userProfile ? userProfile.photoURL : ''}
-                                sx={{ width: 80, height: 80, mb: 1, bgcolor: 'primary.main' }}
-                            >
-                                {/* Mostra a inicial do apelido se não houver foto */}
-                                {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
-                            </Avatar>
-                            <ListItemText
-                                primary={userProfile ? userProfile.nickname : ''}
-                                secondary={currentUser.email}
-                                primaryTypographyProps={{ fontWeight: 'bold' }}
-                            />
+                            <Tooltip title="Clique para alterar sua foto">
+                                <IconButton onClick={() => profilePicInputRef.current.click()} sx={{ p: 0, mb: 1 }}>
+                                    <Avatar
+                                        src={userProfile ? userProfile.photoURL : ''}
+                                        sx={{ width: 80, height: 80 }}
+                                    >
+                                        {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
+                                    </Avatar>
+                                </IconButton>
+                            </Tooltip>
+                            {/* ... (ListItemText com nome e email) ... */}
                         </ListItem>
-                        <Divider />
-
-                        {/* Resto dos itens do menu */}
-                        <ListItem disablePadding>
-                            <ListItemButton onClick={generateInviteLink} disabled={loadingInvite}>
-                                <ListItemIcon><AddCircleOutlineIcon /></ListItemIcon>
-                                <ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} />
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}>
-                                <ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon>
-                                <ListItemText primary="Apagar Conta" />
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton onClick={handleLogout}>
-                                <ListItemIcon><LogoutIcon /></ListItemIcon>
-                                <ListItemText primary="Sair" />
-                            </ListItemButton>
-                        </ListItem>
+                        {/* ... (resto do menu) ... */}
                     </>
                 )}
             </List>
@@ -149,6 +167,13 @@ function HomePage() {
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'grey.100' }}>
+            <input
+                type="file"
+                hidden
+                ref={profilePicInputRef}
+                onChange={handleProfilePicChange}
+                accept="image/*"
+            />
             {/* --- BARRA DE NAVEGAÇÃO UNIFICADA --- */}
             <AppBar component="nav" position="sticky">
                 <Toolbar>
