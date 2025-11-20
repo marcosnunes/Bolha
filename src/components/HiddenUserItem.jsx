@@ -40,12 +40,10 @@ function HiddenUserItem({ userId, onShowUser }) {
       {userProfile ? (
         <ListItemText 
           primary={userProfile.nickname} 
-          secondary={`ID: ...${userId.slice(-6)}`} // ID como info secundária
         />
       ) : (
         <ListItemText 
           primary={<Skeleton variant="text" width={120} />} 
-          secondary={<Skeleton variant="text" width={80} />} 
         />
       )}
       
