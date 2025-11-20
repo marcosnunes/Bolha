@@ -1,5 +1,5 @@
 import { useAuth } from '../contexts/AuthContext';
-// Componentes do MUI
+
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, Box, Avatar, Typography 
@@ -8,14 +8,13 @@ import {
 function ProfileModal({ userToDisplay, onClose, onHideUser, onShowUser }) {
   const { hiddenUsers } = useAuth();
   
-  // Converte o 'open' para um booleano para controlar o Dialog
   const open = Boolean(userToDisplay);
   
   if (!open) {
     return null;
   }
 
-  const isHidden = hiddenUsers.includes(userToD/isplay.authorId);
+  const isHidden = hiddenUsers.includes(userToDisplay.authorId);
 
   const handleHideToggle = () => {
     if (isHidden) {
@@ -23,7 +22,7 @@ function ProfileModal({ userToDisplay, onClose, onHideUser, onShowUser }) {
     } else {
       onHideUser(userToDisplay.authorId);
     }
-    onClose(); // Fecha o modal
+    onClose();
   };
 
   return (
@@ -32,8 +31,7 @@ function ProfileModal({ userToDisplay, onClose, onHideUser, onShowUser }) {
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, p: 2 }}>
           <Avatar 
-            // Futuramente, buscaremos a foto do perfil aqui
-            sx={{ width: 80, height: 80 }}
+            sx={{ width: 80, height: 80, bgcolor: 'secondary.main' }}
           >
             {userToDisplay.authorNickname.charAt(0).toUpperCase()}
           </Avatar>
