@@ -1,7 +1,21 @@
-function ProfileModal({ userToDisplay, onclose, hiddenUsers, onHideUser, onShowUser }) {
-  if (!userToDisplay) return null;
+import { useAuth } from '../contexts/AuthContext';
+// Componentes do MUI
+import { 
+  Dialog, DialogTitle, DialogContent, DialogActions, 
+  Button, Box, Avatar, Typography 
+} from '@mui/material';
 
-  const isHidden = hiddenUsers.includes(userToDisplay.authorId);
+function ProfileModal({ userToDisplay, onClose, onHideUser, onShowUser }) {
+  const { hiddenUsers } = useAuth();
+  
+  // Converte o 'open' para um booleano para controlar o Dialog
+  const open = Boolean(userToDisplay);
+  
+  if (!open) {
+    return null;
+  }
+
+  const isHidden = hiddenUsers.includes(userToD/isplay.authorId);
 
   const handleHideToggle = () => {
     if (isHidden) {
@@ -9,24 +23,30 @@ function ProfileModal({ userToDisplay, onclose, hiddenUsers, onHideUser, onShowU
     } else {
       onHideUser(userToDisplay.authorId);
     }
-    onclose();
+    onClose(); // Fecha o modal
   };
 
   return (
-    // Vamos manter nossa estrutura, mas aplicar classes do Materialize
-    <div className="modal-overlay" onClick={onclose} style={{ zIndex: 1000, display: 'block', opacity: 1 }}>
-      <div className="card" style={{ position: 'relative', top: '25%', margin: '0 auto', maxWidth: '400px' }}>
-        <div className="card-content">
-          <span className="card-title">{userToDisplay.authorNickname}</span>
-        </div>
-        <div className="card-action">
-          <a href="#!" onClick={handleHideToggle} className={isHidden ? 'waves-effect waves-green btn-flat' : 'waves-effect waves-red btn-flat'}>
-            {isHidden ? 'Mostrar' : 'Ocultar'}
-          </a>
-          <a href="#!" onClick={onclose} className="waves-effect btn-flat">Fechar</a>
-        </div>
-      </div>
-    </div>
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle align="center">Perfil do Usuário</DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, p: 2 }}>
+          <Avatar 
+            // Futuramente, buscaremos a foto do perfil aqui
+            sx={{ width: 80, height: 80 }}
+          >
+            {userToDisplay.authorNickname.charAt(0).toUpperCase()}
+          </Avatar>
+          <Typography variant="h6">{userToDisplay.authorNickname}</Typography>
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{justifyContent: 'center', pb: 2}}>
+        <Button onClick={handleHideToggle} color={isHidden ? 'success' : 'error'} variant="contained">
+          {isHidden ? 'Mostrar Posts' : 'Ocultar Posts'}
+        </Button>
+        <Button onClick={onClose} variant="outlined">Fechar</Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 

@@ -4,9 +4,9 @@ import { ref, remove } from 'firebase/database';
 import { useState } from 'react';
 
 // Componentes e Ícones do MUI
-import { 
-  Card, CardHeader, CardContent, CardMedia, CardActions, 
-  IconButton, Typography, Box, Menu, MenuItem 
+import {
+  Card, CardHeader, CardContent, CardMedia, CardActions,
+  IconButton, Typography, Box, Menu, MenuItem
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
@@ -18,7 +18,7 @@ function Post({ postData, onAuthorClick }) {
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-  
+
   // Lógica para o menu de opções (apagar post)
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
@@ -30,7 +30,7 @@ function Post({ postData, onAuthorClick }) {
     handleMenuClose();
     onAuthorClick({ authorId: authorId, authorNickname: authorNickname });
   };
-  
+
   const handleDeletePost = async () => {
     handleMenuClose();
     if (window.confirm("Tem certeza de que deseja apagar este post?")) {
@@ -52,20 +52,17 @@ function Post({ postData, onAuthorClick }) {
   return (
     <Card sx={{ mb: 3 }}>
       <CardHeader
+        avatar={
+          <Avatar sx={{ bgcolor: 'primary.main' }}>
+            {authorNickname.charAt(0).toUpperCase()}
+          </Avatar>
+        }
         action={
-          <>
-            <IconButton aria-label="settings" onClick={handleMenuClick}>
+          <Tooltip title="Ver opções">
+            <IconButton aria-label="settings" onClick={() => onAuthorClick({ authorId, authorNickname })}>
               <MoreVertIcon />
             </IconButton>
-            <Menu
-              anchorEl={anchorEl}
-              open={openMenu}
-              onClose={handleMenuClose}
-            >
-              <MenuItem onClick={handleAuthorClick}>Ver Perfil</MenuItem>
-              {isOwner && <MenuItem onClick={handleDeletePost} sx={{color: 'error.main'}}><DeleteIcon fontSize="small" sx={{mr: 1}}/> Apagar Post</MenuItem>}
-            </Menu>
-          </>
+          </Tooltip>
         }
         title={authorNickname}
         subheader={formattedDate}
@@ -100,7 +97,7 @@ function Post({ postData, onAuthorClick }) {
           )}
         </Box>
       )}
-      
+
       {textContent && (
         <CardContent>
           <Typography variant="body1" color="text.secondary">
