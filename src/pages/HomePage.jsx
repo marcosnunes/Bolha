@@ -188,7 +188,7 @@ function HomePage() {
 
             <input type="file" hidden ref={profilePicInputRef} onChange={handleProfilePicChange} accept="image/*" />
 
-            <AppBar component="nav" position="sticky">
+            <AppBar component="nav" position="sticky" sx={{ pt: { xs: 'env(safe-area-inset-top)', sm: 0 } }}>
                 <Toolbar>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Bolha</Typography>
                     <IconButton color="inherit" aria-label="open drawer" edge="end" onClick={handleDrawerToggle}>
@@ -223,7 +223,6 @@ function HomePage() {
             </Dialog>
 
             <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-                <CreatePostForm />
                 <Divider sx={{ my: 4 }} />
                 <Box sx={{
                     display: 'flex',
@@ -248,7 +247,7 @@ function HomePage() {
                 onClick={() => setOpenPostDialog(true)}
                 sx={{
                     position: 'fixed',
-                    bottom: 32,
+                    bottom: { xs: 80, sm: 32 },
                     right: 32,
                 }}
             >
