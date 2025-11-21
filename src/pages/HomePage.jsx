@@ -120,57 +120,66 @@ function HomePage() {
     };
 
     const drawer = (
-        <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
-            <Typography variant="h6" sx={{ my: 2 }}>
-                Bolha
-            </Typography>
-            <Divider />
-            <List>
-                {currentUser && (
-                    <>
-                        <ListItem sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2, textAlign: 'center' }}>
-                            <Tooltip title="Clique para alterar sua foto">
-                                <IconButton onClick={() => profilePicInputRef.current.click()} sx={{ p: 0, mb: 1 }}>
-                                    <Avatar src={userProfile ? userProfile.photoURL : ''} sx={{ width: 80, height: 80 }}>
-                                        {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
-                                    </Avatar>
-                                </IconButton>
-                            </Tooltip>
-                            <ListItemText
-                                primary={userProfile ? userProfile.nickname : ''}
-                                secondary={currentUser.email}
-                                primaryTypographyProps={{ fontWeight: 'bold' }}
-                            />
-                        </ListItem>
-                        <Divider />
-                        <ListItem disablePadding>
-                            <ListItemButton component={RouterLink} to="/configuracoes">
-                                <ListItemIcon><SettingsIcon /></ListItemIcon>
-                                <ListItemText primary="Configurações" />
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton onClick={generateInviteLink} disabled={loadingInvite}>
-                                <ListItemIcon><AddCircleOutlineIcon /></ListItemIcon>
-                                <ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} />
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}>
-                                <ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon>
-                                <ListItemText primary="Apagar Conta" />
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton onClick={handleLogout}>
-                                <ListItemIcon><LogoutIcon /></ListItemIcon>
-                                <ListItemText primary="Sair" />
-                            </ListItemButton>
-                        </ListItem>
-                    </>
-                )}
-            </List>
-        </Box>
+
+        import PolicyIcon from '@mui/icons-material/Policy';
+
+    <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
+        <Typography variant="h6" sx={{ my: 2 }}>
+            Bolha
+        </Typography>
+        <Divider />
+        <List>
+            {currentUser && (
+                <>
+                    <ListItem sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2, textAlign: 'center' }}>
+                        <Tooltip title="Clique para alterar sua foto">
+                            <IconButton onClick={() => profilePicInputRef.current.click()} sx={{ p: 0, mb: 1 }}>
+                                <Avatar src={userProfile ? userProfile.photoURL : ''} sx={{ width: 80, height: 80 }}>
+                                    {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
+                                </Avatar>
+                            </IconButton>
+                        </Tooltip>
+                        <ListItemText
+                            primary={userProfile ? userProfile.nickname : ''}
+                            secondary={currentUser.email}
+                            primaryTypographyProps={{ fontWeight: 'bold' }}
+                        />
+                    </ListItem>
+                    <Divider />
+                    <ListItem disablePadding>
+                        <ListItemButton component={RouterLink} to="/configuracoes">
+                            <ListItemIcon><SettingsIcon /></ListItemIcon>
+                            <ListItemText primary="Configurações" />
+                        </ListItemButton>
+                    </ListItem>
+                    <ListItem disablePadding>
+                        <ListItemButton onClick={generateInviteLink} disabled={loadingInvite}>
+                            <ListItemIcon><AddCircleOutlineIcon /></ListItemIcon>
+                            <ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} />
+                        </ListItemButton>
+                    </ListItem>
+                    <ListItem disablePadding>
+                        <ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}>
+                            <ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon>
+                            <ListItemText primary="Apagar Conta" />
+                        </ListItemButton>
+                    </ListItem>
+                    <ListItem disablePadding>
+                        <ListItemButton component={RouterLink} to="/politica-de-privacidade">
+                            <ListItemIcon><PolicyIcon /></ListItemIcon>
+                            <ListItemText primary="Política de Privacidade" />
+                        </ListItemButton>
+                    </ListItem>
+                    <ListItem disablePadding>
+                        <ListItemButton onClick={handleLogout}>
+                            <ListItemIcon><LogoutIcon /></ListItemIcon>
+                            <ListItemText primary="Sair" />
+                        </ListItemButton>
+                    </ListItem>
+                </>
+            )}
+        </List>
+    </Box>
     );
 
     return (
