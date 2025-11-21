@@ -107,12 +107,15 @@ function HomePage() {
 
     const handleDeleteAccount = async () => {
         handleDrawerToggle();
-        if (window.confirm("ATENÇÃO: ...")) {
+        if (window.confirm("ATENÇÃO: Você tem certeza de que deseja apagar sua conta? ...")) {
             try {
+                console.log("Iniciando exclusão da conta...");
                 const functions = getFunctions();
                 const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
                 await deleteUserAccount();
                 alert("Sua conta foi apagada com sucesso.");
+                await logout();
+                navigate('/cadastro');
             } catch (error) {
                 console.error("Erro ao apagar a conta:", error);
                 alert("Ocorreu um erro ao apagar sua conta. Por favor, tente novamente.");
