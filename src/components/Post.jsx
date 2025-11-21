@@ -1,7 +1,7 @@
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
-import { ref, remove, set } from 'firebase/database';
-import { useState } from 'react';
+import { ref, remove, set, onValue } from 'firebase/database'; // Adicionado onValue
+import { useState, useEffect } from 'react';
 
 // Componentes e Ícones do MUI
 import {
@@ -15,15 +15,41 @@ import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import ThumbDownOutlinedIcon from '@mui/icons-material/ThumbDownOutlined';
 
-// Recebe onPostDelete
 function Post({ postData, onAuthorClick, onPostDelete }) {
   const { currentUser } = useAuth();
-  const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL, likes, dislikes } = postData;
+  // Removemos likes e dislikes da desestruturação inicial para usar o estado em tempo real
+  const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL } = postData;
+  
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
 
+  // Estados para gerenciar likes/dislikes em tempo real
+  const [likesData, setLikesData] = useState(postData.likes || {});
+  const [dislikesData, setDislikesData] = useState(postData.dislikes || {});
+
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
+
+  // Listener em tempo real para atualizar curtidas instantaneamente
+  useEffect(() => {
+    const likesRef = ref(rtdb, `posts/${id}/likes`);
+    const dislikesRef = ref(rtdb, `posts/${id}/dislikes`);
+
+    // Escuta mudanças nos likes
+    const unsubscribeLikes = onValue(likesRef, (snapshot) => {
+      setLikesData(snapshot.val() || {});
+    });
+
+    // Escuta mudanças nos dislikes
+    const unsubscribeDislikes = onValue(dislikesRef, (snapshot) => {
+      setDislikesData(snapshot.val() || {});
+    });
+
+    return () => {
+      unsubscribeLikes();
+      unsubscribeDislikes();
+    };
+  }, [id]);
 
   const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
@@ -37,15 +63,12 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     handleMenuClose();
     if (window.confirm("Tem certeza de que deseja apagar este post?")) {
       try {
-        // 1. Remove do Firebase
         const postRef = ref(rtdb, `posts/${id}`);
         await remove(postRef);
         
-        // 2. Remove da tela imediatamente
         if (onPostDelete) {
           onPostDelete(id);
         }
-        
       } catch (error) {
         console.error("Erro ao apagar o post:", error);
         alert("Não foi possível apagar o post. Tente novamente.");
@@ -58,9 +81,10 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     return videoUrl.replace(/\.\w+$/, '.jpg');
   };
 
-  const likesCount = likes ? Object.keys(likes).length : 0;
-  const hasLiked = currentUser && likes && likes[currentUser.uid];
-  const hasDisliked = currentUser && dislikes && dislikes[currentUser.uid];
+  // Cálculos baseados no estado em tempo real
+  const likesCount = Object.keys(likesData).length;
+  const hasLiked = currentUser && likesData[currentUser.uid];
+  const hasDisliked = currentUser && dislikesData[currentUser.uid];
 
   const handleLike = async () => {
     if (!currentUser) return;
@@ -68,6 +92,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     const postLikesRef = ref(rtdb, `posts/${id}/likes/${uid}`);
     const postDislikesRef = ref(rtdb, `posts/${id}/dislikes/${uid}`);
 
+    // Se já curtiu, remove o like. Se não, adiciona like e remove dislike (se houver)
     if (hasLiked) {
       await remove(postLikesRef);
     } else {
@@ -82,6 +107,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     const postLikesRef = ref(rtdb, `posts/${id}/likes/${uid}`);
     const postDislikesRef = ref(rtdb, `posts/${id}/dislikes/${uid}`);
 
+    // Se já descurtiu, remove o dislike. Se não, adiciona dislike e remove like (se houver)
     if (hasDisliked) {
       await remove(postDislikesRef);
     } else {
@@ -120,16 +146,25 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
 
       {textContent && (
         <CardContent>
-          <Typography variant="body1" color="text.secondary">{textContent}</Typography>
+          <Typography variant="body1" color="text.secondary" sx={{whiteSpace: 'pre-wrap'}}>{textContent}</Typography>
         </CardContent>
       )}
 
       <Divider />
       <CardActions sx={{ justifyContent: 'space-around', p: 1 }}>
-        <Button startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />} onClick={handleLike} color={hasLiked ? 'primary' : 'inherit'}>
-          {likesCount}
+        <Button 
+          startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />} 
+          onClick={handleLike} 
+          color={hasLiked ? 'primary' : 'inherit'}
+        >
+          {likesCount > 0 ? likesCount : 'Curtir'}
         </Button>
-        <Button startIcon={hasDisliked ? <ThumbDownIcon /> : <ThumbDownOutlinedIcon />} onClick={handleDislike} color={hasDisliked ? 'error' : 'inherit'}>
+        
+        <Button 
+          startIcon={hasDisliked ? <ThumbDownIcon /> : <ThumbDownOutlinedIcon />} 
+          onClick={handleDislike} 
+          color={hasDisliked ? 'error' : 'inherit'}
+        >
           Descurtir
         </Button>
       </CardActions>
