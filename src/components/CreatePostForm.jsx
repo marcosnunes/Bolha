@@ -24,7 +24,16 @@ function CreatePostForm({ onPostSuccess }) {
   const fileInputRef = useRef(null); // Referência para o input de arquivo
 
   // (Suas funções de moderação de texto: forbiddenWords, containsLink, containsForbiddenWord)
-  const forbiddenWords = ['buceta', 'caralho', 'puta'];
+  const forbiddenWords = ['arrombado', 'arrombada',
+    'babaca', 'bosta', 'buceta', 'boceta',
+    'caralho', 'caraio', 'cagar', 'cona', 'corno', 'cornudo', 'cu', 'cuzão',
+    'escroto', 'escrota',
+    'foda', 'foder', 'fudido', 'fudida',
+    'merda',
+    'pau', 'pinto', 'piranha', 'porra', 'prostituta', 'puta', 'puto',
+    'retardado',
+    'vadia', 'vagabundo', 'vagabunda', 'viado', 'viadinho',
+    'xoxota'];
   const containsLink = (text) => {
     const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])|(\bwww\.[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/ig;
     return urlRegex.test(text);
