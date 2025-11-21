@@ -12,27 +12,29 @@ function Feed({ filterNSFW }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(false); // Inicia como false para evitar botão fantasma
   const [selectedUser, setSelectedUser] = useState(null);
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
   useEffect(() => {
     const fetchInitialPosts = async () => {
       setLoading(true);
-      const postsRef = ref(rtdb, 'posts');
-      // Busca os últimos posts ordenados por data
-      const postsQuery = query(postsRef, orderByChild('createdAt'), limitToLast(POSTS_PER_PAGE));
-      
       try {
-        // get para evitar que atualizações em tempo real resetem a paginação
+        const postsRef = ref(rtdb, 'posts');
+        // Busca os últimos posts ordenados por data
+        // NECESSÁRIO: Regra ".indexOn": ["createdAt"] no Firebase
+        const postsQuery = query(postsRef, orderByChild('createdAt'), limitToLast(POSTS_PER_PAGE));
+        
         const snapshot = await get(postsQuery);
+        
         if (snapshot.exists()) {
           const postsList = [];
-          // CRUCIAL: Usar forEach garante que iteramos na ordem correta do banco (Mais antigo -> Mais novo)
           snapshot.forEach((childSnapshot) => {
             postsList.push({ id: childSnapshot.key, ...childSnapshot.val() });
           });
-          // Mostrar o mais novo no topo
+          
+          // Firebase retorna ascendente (mais antigo -> mais novo)
+          // Invertemos para exibir o mais novo no topo
           setPosts(postsList.reverse()); 
           setHasMore(postsList.length === POSTS_PER_PAGE);
         } else {
@@ -41,6 +43,7 @@ function Feed({ filterNSFW }) {
         }
       } catch (error) {
         console.error("Erro ao carregar feed:", error);
+        // Dica para debug: Se o erro for "Index not defined", atualize as regras do Firebase
       } finally {
         setLoading(false);
       }
@@ -54,25 +57,33 @@ function Feed({ filterNSFW }) {
     setLoadingMore(true);
 
     try {
-      // Pega o timestamp do último post da lista atual (que é o mais antigo visível)
+      // Pega o timestamp do último post da lista atual
       const lastPost = posts[posts.length - 1];
+      if (!lastPost || !lastPost.createdAt) {
+        setHasMore(false);
+        setLoadingMore(false);
+        return;
+      }
+      
       const lastKey = lastPost.createdAt;
-
       const postsRef = ref(rtdb, 'posts');
-      // Busca posts que foram criados ANTES do timestamp do último post carregado
-      const postsQuery = query(postsRef, orderByChild('createdAt'), endBefore(lastKey), limitToLast(POSTS_PER_PAGE));
+      
+      // Busca posts anteriores ao último timestamp carregado
+      const postsQuery = query(
+        postsRef, 
+        orderByChild('createdAt'), 
+        endBefore(lastKey), 
+        limitToLast(POSTS_PER_PAGE)
+      );
       
       const snapshot = await get(postsQuery);
 
       if (snapshot.exists()) {
         const newPosts = [];
-        // Novamente, usamos forEach para garantir a ordem correta vinda do banco
         snapshot.forEach((childSnapshot) => {
           newPosts.push({ id: childSnapshot.key, ...childSnapshot.val() });
         });
 
-        // newPosts vem do banco como [Antigo ... Menos Antigo]. 
-        // Invertemos para [Menos Antigo ... Antigo] e adicionamos ao final da lista.
         setPosts(prevPosts => [...prevPosts, ...newPosts.reverse()]);
         setHasMore(newPosts.length === POSTS_PER_PAGE);
       } else {
@@ -80,6 +91,7 @@ function Feed({ filterNSFW }) {
       }
     } catch (error) {
       console.error("Erro ao carregar mais posts:", error);
+      setHasMore(false);
     } finally {
       setLoadingMore(false);
     }
@@ -119,7 +131,9 @@ function Feed({ filterNSFW }) {
           />)
       ) : (
         <Typography variant="body1" color="text.secondary" align="center" sx={{my: 4}}>
-          Ainda não há posts para exibir.
+          {posts.length > 0 
+            ? "Todos os posts carregados foram ocultados pelos filtros." 
+            : "Ainda não há posts para exibir."}
         </Typography>
       )}
 
