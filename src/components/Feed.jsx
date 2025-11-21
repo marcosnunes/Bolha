@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { rtdb } from '../firebase/config';
-import { ref, query, orderByChild, limitToLast, endBefore, get } from 'firebase/database';
+import { ref, onValue, query, orderByChild, limitToLast, endBefore, get } from 'firebase/database';
 import Post from './Post.jsx';
 import ProfileModal from './ProfileModal.jsx';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,78 +16,57 @@ function Feed({ filterNSFW }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
-  // Função para buscar a primeira página de posts
-  const fetchInitialPosts = async () => {
-    setLoading(true);
+  useEffect(() => {
+    // Busca inicial dos primeiros posts
     const postsRef = ref(rtdb, 'posts');
     const postsQuery = query(postsRef, orderByChild('createdAt'), limitToLast(POSTS_PER_PAGE));
     
-    try {
-      const snapshot = await get(postsQuery);
+    // Usamos onValue para a primeira carga para que o feed seja atualizado em tempo real com novos posts
+    const unsubscribe = onValue(postsQuery, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const postsList = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-        setPosts(postsList.reverse());
+        setPosts(postsList.reverse()); // Inverte para mostrar o mais novo primeiro
         setHasMore(postsList.length === POSTS_PER_PAGE);
       } else {
         setPosts([]);
         setHasMore(false);
       }
-    } catch (error) {
-      console.error("Erro ao buscar posts iniciais:", error);
-    } finally {
       setLoading(false);
-    }
-  };
+    });
 
-  // Roda a busca inicial apenas uma vez
-  useEffect(() => {
-    fetchInitialPosts();
-  }, []); // Dependência vazia garante que rode apenas na montagem
+    return () => unsubscribe(); // Limpa o listener em tempo real
+  }, []);
 
   const loadMorePosts = async () => {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
 
-    // Pega o último post da lista atual
+    // Pega o timestamp do último post carregado para saber de onde continuar
     const lastPost = posts[posts.length - 1];
-    if (!lastPost) {
-      setLoadingMore(false);
-      return;
-    }
+    const lastKey = lastPost.createdAt;
 
     const postsRef = ref(rtdb, 'posts');
-    // Passamos o valor (timestamp) E a chave (ID do post) para 'endBefore'
-    const postsQuery = query(
-      postsRef,
-      orderByChild('createdAt'),
-      endBefore(lastPost.createdAt, lastPost.id),
-      limitToLast(POSTS_PER_PAGE)
-    );
+    const postsQuery = query(postsRef, orderByChild('createdAt'), endBefore(lastKey), limitToLast(POSTS_PER_PAGE));
     
-    try {
-      const snapshot = await get(postsQuery);
-      const data = snapshot.val();
+    // Usamos 'get' para o "carregar mais", pois é uma ação única, não em tempo real
+    const snapshot = await get(postsQuery);
+    const data = snapshot.val();
 
-      if (data) {
-        const newPosts = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-        // Adiciona os novos posts ao final da lista existente
-        setPosts(prevPosts => [...prevPosts, ...newPosts.reverse()]);
-        setHasMore(newPosts.length === POSTS_PER_PAGE);
-      } else {
-        setHasMore(false);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar mais posts:", error);
-    } finally {
-      setLoadingMore(false);
+    if (data) {
+      const newPosts = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+      setPosts(prevPosts => [...prevPosts, ...newPosts.reverse()]);
+      setHasMore(newPosts.length === POSTS_PER_PAGE);
+    } else {
+      setHasMore(false);
     }
+    setLoadingMore(false);
   };
 
   const handleOpenProfile = (userData) => setSelectedUser(userData);
   const handleCloseProfile = () => setSelectedUser(null);
 
-  // Aplica os filtros de ocultar e NSFW no momento da renderização
+  // Aplica os filtros de ocultar e NSFW
   const finalFilteredPosts = posts
     .filter(post => !hiddenUsers.includes(post.authorId))
     .filter(post => filterNSFW ? !post.isNSFW : true);
