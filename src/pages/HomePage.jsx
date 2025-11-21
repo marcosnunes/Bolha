@@ -38,14 +38,15 @@ function HomePage() {
     const [loadingInvite, setLoadingInvite] = useState(false);
     const [openInviteDialog, setOpenInviteDialog] = useState(false);
     const [openPostDialog, setOpenPostDialog] = useState(false);
+    
+    // NOVO: Estado para forçar a atualização do Feed
+    const [refreshFeed, setRefreshFeed] = useState(0);
 
     const profilePicInputRef = useRef(null);
 
-    // Função para lidar com a mudança da foto de perfil
     const handleProfilePicChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        console.log("Iniciando upload da nova foto de perfil...");
         try {
             const formData = new FormData();
             formData.append('file', file);
@@ -65,8 +66,6 @@ function HomePage() {
         } catch (error) {
             console.error("Erro ao atualizar a foto de perfil:", error);
             alert("Não foi possível atualizar sua foto de perfil.");
-        } finally {
-            console.log("Upload finalizado.");
         }
     };
 
@@ -110,7 +109,6 @@ function HomePage() {
         handleDrawerToggle();
         if (window.confirm("ATENÇÃO: Você tem certeza de que deseja apagar sua conta? ...")) {
             try {
-                console.log("Iniciando exclusão da conta...");
                 const functions = getFunctions();
                 const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
                 await deleteUserAccount();
@@ -124,11 +122,15 @@ function HomePage() {
         }
     };
 
+    // NOVO: Função chamada quando um post é criado com sucesso
+    const handlePostSuccess = () => {
+        setOpenPostDialog(false);
+        setRefreshFeed(prev => prev + 1); // Incrementa o contador para disparar o reload no Feed
+    };
+
     const drawer = (
         <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
-            <Typography variant="h6" sx={{ my: 2 }}>
-                Bolha
-            </Typography>
+            <Typography variant="h6" sx={{ my: 2 }}>Bolha</Typography>
             <Divider />
             <List>
                 {currentUser && (
@@ -148,42 +150,12 @@ function HomePage() {
                             />
                         </ListItem>
                         <Divider />
-                        <ListItem disablePadding>
-                            <ListItemButton component={RouterLink} to="/configuracoes">
-                                <ListItemIcon><SettingsIcon /></ListItemIcon>
-                                <ListItemText primary="Configurações" />
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton onClick={generateInviteLink} disabled={loadingInvite}>
-                                <ListItemIcon><AddCircleOutlineIcon /></ListItemIcon>
-                                <ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} />
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}>
-                                <ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon>
-                                <ListItemText primary="Apagar Conta" />
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton component={RouterLink} to="/politica-de-privacidade">
-                                <ListItemIcon><PolicyIcon /></ListItemIcon>
-                                <ListItemText primary="Política de Privacidade" />
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton component={RouterLink} to="/denuncia">
-                                <ListItemIcon><ReportProblemIcon color="warning" /></ListItemIcon>
-                                <ListItemText primary="Denunciar Abuso" />
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton onClick={handleLogout}>
-                                <ListItemIcon><LogoutIcon /></ListItemIcon>
-                                <ListItemText primary="Sair" />
-                            </ListItemButton>
-                        </ListItem>
+                        <ListItem disablePadding><ListItemButton component={RouterLink} to="/configuracoes"><ListItemIcon><SettingsIcon /></ListItemIcon><ListItemText primary="Configurações" /></ListItemButton></ListItem>
+                        <ListItem disablePadding><ListItemButton onClick={generateInviteLink} disabled={loadingInvite}><ListItemIcon><AddCircleOutlineIcon /></ListItemIcon><ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} /></ListItemButton></ListItem>
+                        <ListItem disablePadding><ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}><ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon><ListItemText primary="Apagar Conta" /></ListItemButton></ListItem>
+                        <ListItem disablePadding><ListItemButton component={RouterLink} to="/politica-de-privacidade"><ListItemIcon><PolicyIcon /></ListItemIcon><ListItemText primary="Política de Privacidade" /></ListItemButton></ListItem>
+                        <ListItem disablePadding><ListItemButton component={RouterLink} to="/denuncia"><ListItemIcon><ReportProblemIcon color="warning" /></ListItemIcon><ListItemText primary="Denunciar Abuso" /></ListItemButton></ListItem>
+                        <ListItem disablePadding><ListItemButton onClick={handleLogout}><ListItemIcon><LogoutIcon /></ListItemIcon><ListItemText primary="Sair" /></ListItemButton></ListItem>
                     </>
                 )}
             </List>
@@ -192,29 +164,20 @@ function HomePage() {
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'grey.100' }}>
-
             <input type="file" hidden ref={profilePicInputRef} onChange={handleProfilePicChange} accept="image/*" />
-
             <AppBar component="nav" position="sticky" sx={{ pt: { xs: 'env(safe-area-inset-top)', sm: 0 } }}>
                 <Toolbar>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Bolha</Typography>
-                    <IconButton color="inherit" aria-label="open drawer" edge="end" onClick={handleDrawerToggle}>
-                        <MenuIcon />
-                    </IconButton>
+                    <IconButton color="inherit" aria-label="open drawer" edge="end" onClick={handleDrawerToggle}><MenuIcon /></IconButton>
                 </Toolbar>
             </AppBar>
-
-            <Drawer variant="temporary" open={mobileOpen} onClose={handleDrawerToggle} anchor="right" ModalProps={{ keepMounted: true }} sx={{ '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 } }}>
-                {drawer}
-            </Drawer>
+            <Drawer variant="temporary" open={mobileOpen} onClose={handleDrawerToggle} anchor="right" ModalProps={{ keepMounted: true }} sx={{ '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 } }}>{drawer}</Drawer>
 
             <Dialog open={openInviteDialog} onClose={() => setOpenInviteDialog(false)}>
                 <DialogTitle>Link de Convite Gerado</DialogTitle>
                 <DialogContent>
                     <DialogContentText>Copie o link abaixo e compartilhe com seu amigo.</DialogContentText>
-                    <TextField autoFocus margin="dense" id="link" label="Link de Convite" type="text"
-                        fullWidth variant="standard" value={inviteLink} InputProps={{ readOnly: true }}
-                    />
+                    <TextField autoFocus margin="dense" id="link" label="Link de Convite" type="text" fullWidth variant="standard" value={inviteLink} InputProps={{ readOnly: true }} />
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => { navigator.clipboard.writeText(inviteLink); setOpenInviteDialog(false); }}>Copiar e Fechar</Button>
@@ -225,38 +188,21 @@ function HomePage() {
             <Dialog open={openPostDialog} onClose={() => setOpenPostDialog(false)} fullWidth maxWidth="sm">
                 <DialogTitle>Crie um novo post</DialogTitle>
                 <DialogContent>
-                    <CreatePostForm onPostSuccess={() => setOpenPostDialog(false)} />
+                    {/* Passamos o handlePostSuccess para fechar o modal e atualizar o feed */}
+                    <CreatePostForm onPostSuccess={handlePostSuccess} />
                 </DialogContent>
             </Dialog>
 
             <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-
-                <Box sx={{
-                    display: 'flex',
-                    alignItems: { xs: 'flex-start', sm: 'center' },
-                    flexDirection: { xs: 'column', sm: 'row' },
-                    justifyContent: 'space-between',
-                    mb: 2,
-                    gap: 2
-                }}>
-                    <FormControlLabel
-                        control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />}
-                        label="Mostrar conteúdo sensível"
-                        labelPlacement="start"
-                    />
+                <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', mb: 2, gap: 2 }}>
+                    <FormControlLabel control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />} label="Mostrar conteúdo sensível" labelPlacement="start" />
                 </Box>
-                <Feed filterNSFW={!showNSFW} />
+                
+                {/* Passamos o refreshTrigger para o Feed */}
+                <Feed filterNSFW={!showNSFW} refreshTrigger={refreshFeed} />
             </Container>
-            <Fab
-                color="primary"
-                aria-label="add"
-                onClick={() => setOpenPostDialog(true)}
-                sx={{
-                    position: 'fixed',
-                    bottom: { xs: 80, sm: 32 },
-                    right: 32,
-                }}
-            >
+
+            <Fab color="primary" aria-label="add" onClick={() => setOpenPostDialog(true)} sx={{ position: 'fixed', bottom: { xs: 80, sm: 32 }, right: 32 }}>
                 <AddIcon />
             </Fab>
         </Box>
