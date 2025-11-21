@@ -6,9 +6,14 @@ function ReportAbusePage() {
   const navigate = useNavigate();
   const contactEmail = 'marcos.lindolpho@gmail.com';
 
+  const handleReportClick = () => {
+    const mailtoLink = `mailto:${contactEmail}?subject=Denúncia de Abuso - App Bolha`;
+    window.open(mailtoLink, '_blank');
+  };
+
   return (
     <Box sx={{ flexGrow: 1, bgcolor: 'grey.100', minHeight: '100vh' }}>
-      <AppBar position="sticky">
+      <AppBar position="sticky" sx={{ pt: { xs: 'env(safe-area-inset-top)', sm: 0 } }}>
         <Toolbar>
           <IconButton edge="start" color="inherit" onClick={() => navigate(-1)} aria-label="voltar">
             <ArrowBackIcon />
@@ -21,12 +26,16 @@ function ReportAbusePage() {
       
       <Container maxWidth="md" sx={{ mt: 4 }}>
         <Paper sx={{p: 4}}>
-          <Typography variant="h4" gutterBottom>Padrões de Segurança e Denúncia de Abuso</Typography>
+          <Typography variant="h4" gutterBottom>
+            Padrões de Segurança e Denúncia de Abuso
+          </Typography>
           <Typography variant="body1" paragraph>
             A Bolha tem uma política de tolerância zero contra a exploração e o abuso sexual infantil (CSAE). Todo o conteúdo é monitorado e qualquer material que viole esta política será removido, e a conta associada será permanentemente banida. As autoridades competentes serão notificadas conforme exigido por lei.
           </Typography>
           
-          <Typography variant="h5" gutterBottom sx={{mt: 3}}>Como Denunciar</Typography>
+          <Typography variant="h5" gutterBottom sx={{mt: 3}}>
+            Como Denunciar
+          </Typography>
           <Typography variant="body1" paragraph>
             Se você encontrar qualquer conteúdo que suspeite ser ilegal ou que viole nossas políticas, por favor, denuncie-o imediatamente. Sua ação é crucial para mantermos nossa comunidade segura.
           </Typography>
@@ -36,11 +45,15 @@ function ReportAbusePage() {
           </Typography>
           
           <Box sx={{ my: 3, textAlign: 'center' }}>
-            <Typography variant="h6">Ponto de Contato para Denúncias:</Typography>
-            <Typography variant="body1" sx={{fontWeight: 'bold', fontSize: '1.2rem'}}>{contactEmail}</Typography>
+            <Typography variant="h6">
+              Ponto de Contato para Denúncias:
+            </Typography>
+            <Typography variant="body1" sx={{fontWeight: 'bold', fontSize: '1.2rem'}}>
+              {contactEmail}
+            </Typography>
             <Button 
               variant="contained" 
-              href={`mailto:${contactEmail}?subject=Denúncia de Abuso - App Bolha`} 
+              onClick={handleReportClick}
               sx={{mt: 2}}
             >
               Enviar E-mail de Denúncia
