@@ -1,11 +1,12 @@
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, remove } from 'firebase/database';
-import { useState } from 'react';
+import { useState } from 'react'; // Apenas useState é necessário
 
-import { 
-  Card, CardHeader, CardContent, IconButton, Typography, 
-  Box, Menu, MenuItem, Avatar, Tooltip 
+// Componentes e Ícones do MUI
+import {
+  Card, CardHeader, CardContent, IconButton, Typography,
+  Box, Menu, MenuItem, Avatar, Tooltip
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -15,14 +16,14 @@ function Post({ postData, onAuthorClick }) {
   const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL } = postData;
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
-  
+
+  // Apenas o estado para o menu de opções é necessário agora
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
-  
+
   const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
 
-  // Funções auxiliares
   const handleAuthorClick = () => {
     handleMenuClose();
     onAuthorClick({ authorId: authorId, authorNickname: authorNickname });
@@ -46,13 +47,6 @@ function Post({ postData, onAuthorClick }) {
     return videoUrl.replace(/\.\w+$/, '.jpg');
   };
 
-  // Efeito para forçar a repintura do vídeo
-  useEffect(() => {
-    if (isVideoPlaying && videoRef.current) {
-      videoRef.current.play().catch(error => console.error("Erro ao tentar tocar o vídeo:", error));
-    }
-  }, [isVideoPlaying]);
-
   return (
     <Card sx={{ mb: 3 }}>
       <CardHeader
@@ -75,17 +69,16 @@ function Post({ postData, onAuthorClick }) {
       {mediaURL && (
         <Box sx={{ bgcolor: 'black', display: 'flex', justifyContent: 'center' }}>
           {mediaType === 'image' && (
-            <Box 
-              component="img" 
-              src={mediaURL} 
-              sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} 
+            <Box
+              component="img"
+              src={mediaURL}
+              sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
             />
           )}
 
           {mediaType === 'video' && (
-            <Box 
+            <Box
               component="video"
-              // O atributo 'poster' é a solução nativa!
               poster={getVideoThumbnail(mediaURL)}
               src={mediaURL}
               controls
@@ -94,7 +87,7 @@ function Post({ postData, onAuthorClick }) {
           )}
         </Box>
       )}
-      
+
       {textContent && (
         <CardContent>
           <Typography variant="body1" color="text.secondary">{textContent}</Typography>
