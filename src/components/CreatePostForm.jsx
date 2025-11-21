@@ -22,13 +22,12 @@ function CreatePostForm({ onPostSuccess }) {
 
   const fileInputRef = useRef(null);
 
-  // LISTA REDUZIDA: Focada apenas em ofensas graves e discurso de ódio.
-  // Palavras coloquiais (palavrões comuns) foram removidas para evitar falsos positivos.
+  // MODERAÇÃO
   const forbiddenWords = [
     'arrombado', 'arrombada', 'babaca', 'nazista', 'nazi',
     'estupro', 'estuprador', 'pedofilo', 'pedofilia',
-    'macaco', 'preto imundo',
-    'bicha', 'traveco',
+    'macaco', 'preto imundo', 
+    'bicha', 'traveco', 
     'retardado', 'mongol'
   ];
 
@@ -38,13 +37,11 @@ function CreatePostForm({ onPostSuccess }) {
     return urlRegex.test(text);
   };
 
-  // Usa Regex (\b) para buscar a palavra exata.
   const containsForbiddenWord = (text) => {
     if (!text) return false;
     const lowerCaseText = text.toLowerCase();
     
     return forbiddenWords.some(word => {
-      // Cria uma expressão regular que busca a palavra inteira
       const regex = new RegExp(`\\b${word}\\b`, 'i');
       return regex.test(lowerCaseText);
     });
@@ -62,7 +59,7 @@ function CreatePostForm({ onPostSuccess }) {
     e.preventDefault();
     setError('');
 
-    if (containsLink(postContent)) return setError("Posts contendo links não são permitidos por segurança.");
+    if (containsLink(postContent)) return setError("Posts contendo links não são permitidos.");
     if (!postContent.trim() && !file) return setError("O post precisa ter texto ou uma imagem/vídeo.");
     if (!currentUser || !userProfile) return setError("Você precisa estar logado para postar.");
 
@@ -72,7 +69,7 @@ function CreatePostForm({ onPostSuccess }) {
       let mediaURL = null;
       let mediaType = null;
 
-      // 1. Upload da Mídia (se houver)
+      // 1. Upload de Imagem/Vídeo (se houver)
       if (file) {
         const formData = new FormData();
         formData.append('file', file);
@@ -83,7 +80,7 @@ function CreatePostForm({ onPostSuccess }) {
           body: formData,
         });
 
-        if (!response.ok) throw new Error('Falha no upload da mídia. Verifique sua conexão.');
+        if (!response.ok) throw new Error('Falha no upload da mídia.');
         const data = await response.json();
         mediaURL = data.secure_url;
         mediaType = data.resource_type;
@@ -93,37 +90,40 @@ function CreatePostForm({ onPostSuccess }) {
       const postsListRef = ref(rtdb, 'posts');
       const newPostRef = push(postsListRef);
       
-      // Salvamos o post inicialmente.
-      await update(newPostRef, {
+      // Objeto do post
+      const newPostData = {
         textContent: postContent,
         authorId: currentUser.uid,
         authorNickname: userProfile.nickname,
-        authorPhotoURL: userProfile.photoURL || null,
         createdAt: serverTimestamp(),
-        isNSFW: false, // Começa como false
+        isNSFW: false,
         moderationStatus: 'pending',
-        mediaURL: mediaURL,
-        mediaType: mediaType,
-      });
+        mediaURL: mediaURL || null, // Garante que null seja enviado se não houver mídia
+        mediaType: mediaType || null
+      };
 
-      // Limpa o formulário imediatamente para dar feedback rápido
+      // Adiciona foto apenas se existir, para evitar erros com null nas regras
+      if (userProfile.photoURL) {
+        newPostData.authorPhotoURL = userProfile.photoURL;
+      }
+
+      // Envia para o banco (Isso agora vai passar pela nova regra .write)
+      await update(newPostRef, newPostData);
+
+      // Limpa o form
       setPostContent('');
       setFile(null);
       setFileName('');
       if (fileInputRef.current) fileInputRef.current.value = "";
-      
-      // Fecha o modal (passado via props)
       if (onPostSuccess) onPostSuccess();
 
-      // 3. Moderação Assíncrona (Roda em segundo plano)
-      // Só roda se tiver texto. Se for só foto, pula essa etapa pesada.
+      // 3. Moderação em Segundo Plano
+      // Só roda se tiver texto para analisar
       if (postContent && postContent.trim().length > 0) {
         const isToxicFromModel = await classifyText(postContent);
         const isForbiddenFromList = containsForbiddenWord(postContent);
-        const finalIsNSFW = isToxicFromModel || isForbiddenFromList;
-
-        if (finalIsNSFW) {
-          // Se for tóxico, atualiza o post já criado para NSFW
+        
+        if (isToxicFromModel || isForbiddenFromList) {
           const postToUpdateRef = ref(rtdb, `posts/${newPostRef.key}`);
           await update(postToUpdateRef, {
             isNSFW: true,
@@ -134,7 +134,7 @@ function CreatePostForm({ onPostSuccess }) {
 
     } catch (err) {
       console.error("Erro ao publicar o post:", err);
-      setError("Ocorreu um erro ao publicar seu post. Tente novamente.");
+      setError("Ocorreu um erro ao publicar seu post. Verifique se você tem permissão.");
     } finally {
       setLoading(false);
     }
@@ -142,13 +142,12 @@ function CreatePostForm({ onPostSuccess }) {
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-      {loadingModel && <Typography variant="caption" color="text.secondary">Carregando sistema de segurança...</Typography>}
+      {loadingModel && <Typography variant="caption">Carregando segurança...</Typography>}
       {error && <Alert severity="error">{error}</Alert>}
 
       <TextField
         fullWidth multiline rows={4} variant="outlined" label="No que você está pensando?"
         value={postContent} onChange={(e) => setPostContent(e.target.value)}
-        placeholder="Digite algo legal..."
       />
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -156,7 +155,7 @@ function CreatePostForm({ onPostSuccess }) {
           Anexar Mídia
           <input type="file" hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*,video/*" />
         </Button>
-        {fileName && <Typography variant="caption" noWrap sx={{ flexShrink: 1, ml: 1, maxWidth: '150px' }}>{fileName}</Typography>}
+        {fileName && <Typography variant="caption" noWrap sx={{ flexShrink: 1, ml: 1, maxWidth: 150 }}>{fileName}</Typography>}
         <Button
           variant="contained" type="submit" disabled={loading || loadingModel}
           startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
