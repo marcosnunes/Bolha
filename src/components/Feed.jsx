@@ -17,11 +17,10 @@ function Feed({ filterNSFW }) {
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
   useEffect(() => {
-    // Busca inicial dos primeiros posts
+    // Busca inicial dos primeiros posts (funcionalidade original mantida)
     const postsRef = ref(rtdb, 'posts');
     const postsQuery = query(postsRef, orderByChild('createdAt'), limitToLast(POSTS_PER_PAGE));
     
-    // Usamos onValue para a primeira carga para que o feed seja atualizado em tempo real com novos posts
     const unsubscribe = onValue(postsQuery, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -42,14 +41,28 @@ function Feed({ filterNSFW }) {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
 
-    // Pega o timestamp do último post carregado para saber de onde continuar
+    // Pega o último post da lista atual para usar como ponto de partida
     const lastPost = posts[posts.length - 1];
-    const lastKey = lastPost.createdAt;
-
-    const postsRef = ref(rtdb, 'posts');
-    const postsQuery = query(postsRef, orderByChild('createdAt'), endBefore(lastKey), limitToLast(POSTS_PER_PAGE));
+    if (!lastPost) {
+        setLoadingMore(false);
+        return;
+    }
     
-    // Usamos 'get' para o "carregar mais", pois é uma ação única, não em tempo real
+    const postsRef = ref(rtdb, 'posts');
+    
+    
+    // A query 'endBefore' precisa de DOIS argumentos para funcionar com 'orderByChild':
+    // O valor pelo qual está sendo ordenado (lastPost.createdAt)
+    // E a chave do próprio item (lastPost.id) para desambiguação.
+    const postsQuery = query(
+        postsRef, 
+        orderByChild('createdAt'), 
+        endBefore(lastPost.createdAt, lastPost.id), 
+        limitToLast(POSTS_PER_PAGE)
+    );
+    
+    
+    // Usamos 'get' para o "carregar mais", pois é uma ação única
     const snapshot = await get(postsQuery);
     const data = snapshot.val();
 
@@ -58,7 +71,7 @@ function Feed({ filterNSFW }) {
       setPosts(prevPosts => [...prevPosts, ...newPosts.reverse()]);
       setHasMore(newPosts.length === POSTS_PER_PAGE);
     } else {
-      setHasMore(false);
+      setHasMore(false); // Não há mais posts para carregar
     }
     setLoadingMore(false);
   };
@@ -101,7 +114,8 @@ function Feed({ filterNSFW }) {
         </Typography>
       )}
 
-      {hasMore && (
+      {/* Oculta o botão se não houver mais posts ou se a lista inicial ainda não carregou */}
+      {!loading && hasMore && (
         <Box sx={{ textAlign: 'center', my: 2 }}>
           <Button onClick={loadMorePosts} disabled={loadingMore}>
             {loadingMore ? <CircularProgress size={24} /> : 'Carregar Mais Posts'}
