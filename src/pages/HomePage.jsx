@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
@@ -20,6 +20,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import AddIcon from '@mui/icons-material/Add';
+import PolicyIcon from '@mui/icons-material/Policy';
 
 // Nossos componentes
 import CreatePostForm from '../components/CreatePostForm.jsx';
@@ -120,66 +121,76 @@ function HomePage() {
     };
 
     const drawer = (
+        <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h6" sx={{ my: 2 }}>
+                Bolha
+            </Typography>
+            <Divider />
+            <List>
+                {currentUser && (
+                    <>
+                        <ListItem sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2, textAlign: 'center' }}>
+                            <Tooltip title="Clique para alterar sua foto">
+                                <IconButton
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        profilePicInputRef.current?.click();
+                                    }}
+                                    sx={{ p: 0, mb: 1 }}
+                                >
+                                    <Avatar src={userProfile ? userProfile.photoURL : ''} sx={{ width: 80, height: 80 }}>
+                                        {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
+                                    </Avatar>
+                                </IconButton>
+                            </Tooltip>
+                            <ListItemText
+                                primary={userProfile ? userProfile.nickname : ''}
+                                secondary={currentUser.email}
+                                primaryTypographyProps={{ fontWeight: 'bold' }}
+                            />
+                        </ListItem>
+                        <Divider />
 
-        import PolicyIcon from '@mui/icons-material/Policy';
+                        <ListItem disablePadding>
+                            <ListItemButton
+                                component={RouterLink}
+                                to="/configuracoes"
+                                onClick={handleDrawerToggle}
+                            >
+                                <ListItemIcon><SettingsIcon /></ListItemIcon>
+                                <ListItemText primary="Configurações" />
+                            </ListItemButton>
+                        </ListItem>
 
-    <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
-        <Typography variant="h6" sx={{ my: 2 }}>
-            Bolha
-        </Typography>
-        <Divider />
-        <List>
-            {currentUser && (
-                <>
-                    <ListItem sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2, textAlign: 'center' }}>
-                        <Tooltip title="Clique para alterar sua foto">
-                            <IconButton onClick={() => profilePicInputRef.current.click()} sx={{ p: 0, mb: 1 }}>
-                                <Avatar src={userProfile ? userProfile.photoURL : ''} sx={{ width: 80, height: 80 }}>
-                                    {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
-                                </Avatar>
-                            </IconButton>
-                        </Tooltip>
-                        <ListItemText
-                            primary={userProfile ? userProfile.nickname : ''}
-                            secondary={currentUser.email}
-                            primaryTypographyProps={{ fontWeight: 'bold' }}
-                        />
-                    </ListItem>
-                    <Divider />
-                    <ListItem disablePadding>
-                        <ListItemButton component={RouterLink} to="/configuracoes">
-                            <ListItemIcon><SettingsIcon /></ListItemIcon>
-                            <ListItemText primary="Configurações" />
-                        </ListItemButton>
-                    </ListItem>
-                    <ListItem disablePadding>
-                        <ListItemButton onClick={generateInviteLink} disabled={loadingInvite}>
-                            <ListItemIcon><AddCircleOutlineIcon /></ListItemIcon>
-                            <ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} />
-                        </ListItemButton>
-                    </ListItem>
-                    <ListItem disablePadding>
-                        <ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}>
-                            <ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon>
-                            <ListItemText primary="Apagar Conta" />
-                        </ListItemButton>
-                    </ListItem>
-                    <ListItem disablePadding>
-                        <ListItemButton component={RouterLink} to="/politica-de-privacidade">
-                            <ListItemIcon><PolicyIcon /></ListItemIcon>
-                            <ListItemText primary="Política de Privacidade" />
-                        </ListItemButton>
-                    </ListItem>
-                    <ListItem disablePadding>
-                        <ListItemButton onClick={handleLogout}>
-                            <ListItemIcon><LogoutIcon /></ListItemIcon>
-                            <ListItemText primary="Sair" />
-                        </ListItemButton>
-                    </ListItem>
-                </>
-            )}
-        </List>
-    </Box>
+                        <ListItem disablePadding>
+                            <ListItemButton
+                                onClick={() => {
+                                    generateInviteLink();
+                                }}
+                                disabled={loadingInvite}
+                            >
+                                <ListItemIcon><AddCircleOutlineIcon /></ListItemIcon>
+                                <ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} />
+                            </ListItemButton>
+                        </ListItem>
+
+                        <ListItem disablePadding>
+                            <ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}>
+                                <ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon>
+                                <ListItemText primary="Apagar Conta" />
+                            </ListItemButton>
+                        </ListItem>
+
+                        <ListItem disablePadding>
+                            <ListItemButton onClick={handleLogout}>
+                                <ListItemIcon><LogoutIcon /></ListItemIcon>
+                                <ListItemText primary="Sair" />
+                            </ListItemButton>
+                        </ListItem>
+                    </>
+                )}
+            </List>
+        </Box>
     );
 
     return (
@@ -189,9 +200,7 @@ function HomePage() {
 
             <AppBar component="nav" position="sticky">
                 <Toolbar>
-                    <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                        Bolha
-                    </Typography>
+                    <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Bolha</Typography>
                     <IconButton color="inherit" aria-label="open drawer" edge="end" onClick={handleDrawerToggle}>
                         <MenuIcon />
                     </IconButton>
