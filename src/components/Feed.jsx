@@ -24,7 +24,7 @@ function Feed({ filterNSFW }) {
       const postsQuery = query(postsRef, orderByChild('createdAt'), limitToLast(POSTS_PER_PAGE));
       
       try {
-        // Mudamos de onValue para get para evitar que atualizações em tempo real resetem a paginação
+        // get para evitar que atualizações em tempo real resetem a paginação
         const snapshot = await get(postsQuery);
         if (snapshot.exists()) {
           const postsList = [];
@@ -32,7 +32,7 @@ function Feed({ filterNSFW }) {
           snapshot.forEach((childSnapshot) => {
             postsList.push({ id: childSnapshot.key, ...childSnapshot.val() });
           });
-          // Invertemos para mostrar o mais novo no topo
+          // Mostrar o mais novo no topo
           setPosts(postsList.reverse()); 
           setHasMore(postsList.length === POSTS_PER_PAGE);
         } else {
