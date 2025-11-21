@@ -16,6 +16,7 @@ import ConvitePage from './pages/ConvitePage.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage.jsx';
+import ReportAbusePage from './pages/ReportAbusePage.jsx';
 
 // Criando o roteador
 const router = createBrowserRouter([
@@ -53,6 +54,10 @@ const router = createBrowserRouter([
       {
         path: '/politica-de-privacidade',
         element: <PrivacyPolicyPage />,
+      },
+      {
+        path: '/denuncia',
+        element: <ReportAbusePage />,
       },
     ],
   },

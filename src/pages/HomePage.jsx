@@ -21,6 +21,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import AddIcon from '@mui/icons-material/Add';
 import PolicyIcon from '@mui/icons-material/Policy';
+import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 
 // Nossos componentes
 import CreatePostForm from '../components/CreatePostForm.jsx';
@@ -172,6 +173,12 @@ function HomePage() {
                             </ListItemButton>
                         </ListItem>
                         <ListItem disablePadding>
+                            <ListItemButton component={RouterLink} to="/denuncia">
+                                <ListItemIcon><ReportProblemIcon color="warning" /></ListItemIcon>
+                                <ListItemText primary="Denunciar Abuso" />
+                            </ListItemButton>
+                        </ListItem>
+                        <ListItem disablePadding>
                             <ListItemButton onClick={handleLogout}>
                                 <ListItemIcon><LogoutIcon /></ListItemIcon>
                                 <ListItemText primary="Sair" />
@@ -223,7 +230,7 @@ function HomePage() {
             </Dialog>
 
             <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-                
+
                 <Box sx={{
                     display: 'flex',
                     alignItems: { xs: 'flex-start', sm: 'center' },
