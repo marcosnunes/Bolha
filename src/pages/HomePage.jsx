@@ -121,7 +121,7 @@ function HomePage() {
     };
 
     const drawer = (
-        <Box sx={{ textAlign: 'center' }}>
+        <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
             <Typography variant="h6" sx={{ my: 2 }}>
                 Bolha
             </Typography>
@@ -131,13 +131,7 @@ function HomePage() {
                     <>
                         <ListItem sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2, textAlign: 'center' }}>
                             <Tooltip title="Clique para alterar sua foto">
-                                <IconButton
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        profilePicInputRef.current?.click();
-                                    }}
-                                    sx={{ p: 0, mb: 1 }}
-                                >
+                                <IconButton onClick={() => profilePicInputRef.current.click()} sx={{ p: 0, mb: 1 }}>
                                     <Avatar src={userProfile ? userProfile.photoURL : ''} sx={{ width: 80, height: 80 }}>
                                         {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
                                     </Avatar>
@@ -150,37 +144,30 @@ function HomePage() {
                             />
                         </ListItem>
                         <Divider />
-
                         <ListItem disablePadding>
-                            <ListItemButton
-                                component={RouterLink}
-                                to="/configuracoes"
-                                onClick={handleDrawerToggle}
-                            >
+                            <ListItemButton component={RouterLink} to="/configuracoes">
                                 <ListItemIcon><SettingsIcon /></ListItemIcon>
                                 <ListItemText primary="Configurações" />
                             </ListItemButton>
                         </ListItem>
-
                         <ListItem disablePadding>
-                            <ListItemButton
-                                onClick={() => {
-                                    generateInviteLink();
-                                }}
-                                disabled={loadingInvite}
-                            >
+                            <ListItemButton onClick={generateInviteLink} disabled={loadingInvite}>
                                 <ListItemIcon><AddCircleOutlineIcon /></ListItemIcon>
                                 <ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} />
                             </ListItemButton>
                         </ListItem>
-
                         <ListItem disablePadding>
                             <ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}>
                                 <ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon>
                                 <ListItemText primary="Apagar Conta" />
                             </ListItemButton>
                         </ListItem>
-
+                        <ListItem disablePadding>
+                            <ListItemButton component={RouterLink} to="/politica-de-privacidade">
+                                <ListItemIcon><PolicyIcon /></ListItemIcon>
+                                <ListItemText primary="Política de Privacidade" />
+                            </ListItemButton>
+                        </ListItem>
                         <ListItem disablePadding>
                             <ListItemButton onClick={handleLogout}>
                                 <ListItemIcon><LogoutIcon /></ListItemIcon>
