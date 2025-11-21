@@ -1,12 +1,12 @@
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
-import { ref, remove, set, update } from 'firebase/database'; // ADICIONADO 'set' e 'update'
+import { ref, remove, set } from 'firebase/database';
 import { useState } from 'react';
 
 // Componentes e Ícones do MUI
 import {
   Card, CardHeader, CardContent, CardActions, IconButton, Typography,
-  Box, Menu, MenuItem, Avatar, Tooltip, Divider, Button // ADICIONADO 'Divider' e 'Button'
+  Box, Menu, MenuItem, Avatar, Tooltip, Divider, Button
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -15,9 +15,9 @@ import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import ThumbDownOutlinedIcon from '@mui/icons-material/ThumbDownOutlined';
 
-function Post({ postData, onAuthorClick }) {
+// Recebe onPostDelete
+function Post({ postData, onAuthorClick, onPostDelete }) {
   const { currentUser } = useAuth();
-  // likes e dislikes são adicionados à desestruturação
   const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL, likes, dislikes } = postData;
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
@@ -37,8 +37,15 @@ function Post({ postData, onAuthorClick }) {
     handleMenuClose();
     if (window.confirm("Tem certeza de que deseja apagar este post?")) {
       try {
+        // 1. Remove do Firebase
         const postRef = ref(rtdb, `posts/${id}`);
         await remove(postRef);
+        
+        // 2. Remove da tela imediatamente
+        if (onPostDelete) {
+          onPostDelete(id);
+        }
+        
       } catch (error) {
         console.error("Erro ao apagar o post:", error);
         alert("Não foi possível apagar o post. Tente novamente.");
@@ -51,7 +58,6 @@ function Post({ postData, onAuthorClick }) {
     return videoUrl.replace(/\.\w+$/, '.jpg');
   };
 
-  // Lógica de curtidas corrigida e completa
   const likesCount = likes ? Object.keys(likes).length : 0;
   const hasLiked = currentUser && likes && likes[currentUser.uid];
   const hasDisliked = currentUser && dislikes && dislikes[currentUser.uid];
@@ -66,9 +72,7 @@ function Post({ postData, onAuthorClick }) {
       await remove(postLikesRef);
     } else {
       await set(postLikesRef, true);
-      if (hasDisliked) {
-        await remove(postDislikesRef);
-      }
+      if (hasDisliked) await remove(postDislikesRef);
     }
   };
 
@@ -82,9 +86,7 @@ function Post({ postData, onAuthorClick }) {
       await remove(postDislikesRef);
     } else {
       await set(postDislikesRef, true);
-      if (hasLiked) {
-        await remove(postLikesRef);
-      }
+      if (hasLiked) await remove(postLikesRef);
     }
   };
 
@@ -94,9 +96,7 @@ function Post({ postData, onAuthorClick }) {
         avatar={<Avatar src={authorPhotoURL}>{!authorPhotoURL && authorNickname.charAt(0).toUpperCase()}</Avatar>}
         action={
           <>
-            <Tooltip title="Ver opções">
-              <IconButton aria-label="settings" onClick={handleMenuClick}><MoreVertIcon /></IconButton>
-            </Tooltip>
+            <Tooltip title="Ver opções"><IconButton onClick={handleMenuClick}><MoreVertIcon /></IconButton></Tooltip>
             <Menu anchorEl={anchorEl} open={openMenu} onClose={handleMenuClose}>
               <MenuItem onClick={handleAuthorClick}>Ver Perfil</MenuItem>
               {isOwner && <MenuItem onClick={handleDeletePost} sx={{ color: 'error.main' }}><DeleteIcon sx={{ mr: 1 }} /> Apagar Post</MenuItem>}
@@ -126,18 +126,10 @@ function Post({ postData, onAuthorClick }) {
 
       <Divider />
       <CardActions sx={{ justifyContent: 'space-around', p: 1 }}>
-        <Button 
-          startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />}
-          onClick={handleLike}
-          color={hasLiked ? 'primary' : 'inherit'}
-        >
+        <Button startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />} onClick={handleLike} color={hasLiked ? 'primary' : 'inherit'}>
           {likesCount}
         </Button>
-        <Button 
-          startIcon={hasDisliked ? <ThumbDownIcon /> : <ThumbDownOutlinedIcon />}
-          onClick={handleDislike}
-          color={hasDisliked ? 'error' : 'inherit'}
-        >
+        <Button startIcon={hasDisliked ? <ThumbDownIcon /> : <ThumbDownOutlinedIcon />} onClick={handleDislike} color={hasDisliked ? 'error' : 'inherit'}>
           Descurtir
         </Button>
       </CardActions>
