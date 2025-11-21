@@ -1,23 +1,27 @@
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
-import { ref, remove } from 'firebase/database';
-import { useState } from 'react'; // Apenas useState é necessário
+import { ref, remove, set, update } from 'firebase/database'; // ADICIONADO 'set' e 'update'
+import { useState } from 'react';
 
 // Componentes e Ícones do MUI
 import {
-  Card, CardHeader, CardContent, IconButton, Typography,
-  Box, Menu, MenuItem, Avatar, Tooltip
+  Card, CardHeader, CardContent, CardActions, IconButton, Typography,
+  Box, Menu, MenuItem, Avatar, Tooltip, Divider, Button // ADICIONADO 'Divider' e 'Button'
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import ThumbDownIcon from '@mui/icons-material/ThumbDown';
+import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
+import ThumbDownOutlinedIcon from '@mui/icons-material/ThumbDownOutlined';
 
 function Post({ postData, onAuthorClick }) {
   const { currentUser } = useAuth();
-  const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL } = postData;
+  // likes e dislikes são adicionados à desestruturação
+  const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL, likes, dislikes } = postData;
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
 
-  // Apenas o estado para o menu de opções é necessário agora
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
 
@@ -47,6 +51,43 @@ function Post({ postData, onAuthorClick }) {
     return videoUrl.replace(/\.\w+$/, '.jpg');
   };
 
+  // Lógica de curtidas corrigida e completa
+  const likesCount = likes ? Object.keys(likes).length : 0;
+  const hasLiked = currentUser && likes && likes[currentUser.uid];
+  const hasDisliked = currentUser && dislikes && dislikes[currentUser.uid];
+
+  const handleLike = async () => {
+    if (!currentUser) return;
+    const uid = currentUser.uid;
+    const postLikesRef = ref(rtdb, `posts/${id}/likes/${uid}`);
+    const postDislikesRef = ref(rtdb, `posts/${id}/dislikes/${uid}`);
+
+    if (hasLiked) {
+      await remove(postLikesRef);
+    } else {
+      await set(postLikesRef, true);
+      if (hasDisliked) {
+        await remove(postDislikesRef);
+      }
+    }
+  };
+
+  const handleDislike = async () => {
+    if (!currentUser) return;
+    const uid = currentUser.uid;
+    const postLikesRef = ref(rtdb, `posts/${id}/likes/${uid}`);
+    const postDislikesRef = ref(rtdb, `posts/${id}/dislikes/${uid}`);
+
+    if (hasDisliked) {
+      await remove(postDislikesRef);
+    } else {
+      await set(postDislikesRef, true);
+      if (hasLiked) {
+        await remove(postLikesRef);
+      }
+    }
+  };
+
   return (
     <Card sx={{ mb: 3 }}>
       <CardHeader
@@ -69,21 +110,10 @@ function Post({ postData, onAuthorClick }) {
       {mediaURL && (
         <Box sx={{ bgcolor: 'black', display: 'flex', justifyContent: 'center' }}>
           {mediaType === 'image' && (
-            <Box
-              component="img"
-              src={mediaURL}
-              sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
-            />
+            <Box component="img" src={mediaURL} sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
           )}
-
           {mediaType === 'video' && (
-            <Box
-              component="video"
-              poster={getVideoThumbnail(mediaURL)}
-              src={mediaURL}
-              controls
-              sx={{ maxWidth: '100%', maxHeight: '80vh' }}
-            />
+            <Box component="video" poster={getVideoThumbnail(mediaURL)} src={mediaURL} controls sx={{ maxWidth: '100%', maxHeight: '80vh' }} />
           )}
         </Box>
       )}
@@ -93,6 +123,24 @@ function Post({ postData, onAuthorClick }) {
           <Typography variant="body1" color="text.secondary">{textContent}</Typography>
         </CardContent>
       )}
+
+      <Divider />
+      <CardActions sx={{ justifyContent: 'space-around', p: 1 }}>
+        <Button 
+          startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />}
+          onClick={handleLike}
+          color={hasLiked ? 'primary' : 'inherit'}
+        >
+          {likesCount}
+        </Button>
+        <Button 
+          startIcon={hasDisliked ? <ThumbDownIcon /> : <ThumbDownOutlinedIcon />}
+          onClick={handleDislike}
+          color={hasDisliked ? 'error' : 'inherit'}
+        >
+          Descurtir
+        </Button>
+      </CardActions>
     </Card>
   );
 }
