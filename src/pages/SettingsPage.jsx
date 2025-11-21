@@ -14,7 +14,7 @@ function SettingsPage() {
 
   return (
     <Box sx={{ flexGrow: 1, bgcolor: 'grey.100', minHeight: '100vh' }}>
-      <AppBar position="sticky">
+      <AppBar position="sticky" sx={{ pt: { xs: 'env(safe-area-inset-top)', sm: 0 } }}>
         <Toolbar>
           <IconButton edge="start" color="inherit" onClick={() => navigate(-1)} aria-label="voltar">
             <ArrowBackIcon />
