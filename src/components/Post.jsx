@@ -1,14 +1,13 @@
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, remove } from 'firebase/database';
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 
 import { 
   Card, CardHeader, CardContent, IconButton, Typography, 
   Box, Menu, MenuItem, Avatar, Tooltip 
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 function Post({ postData, onAuthorClick }) {
@@ -16,8 +15,6 @@ function Post({ postData, onAuthorClick }) {
   const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL } = postData;
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-  const videoRef = useRef(null);
   
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
@@ -44,7 +41,10 @@ function Post({ postData, onAuthorClick }) {
     }
   };
 
-  const getVideoThumbnail = (videoUrl) => { if (!videoUrl) return ''; return videoUrl.replace(/\.\w+$/, '.jpg'); };
+  const getVideoThumbnail = (videoUrl) => {
+    if (!videoUrl) return '';
+    return videoUrl.replace(/\.\w+$/, '.jpg');
+  };
 
   // Efeito para forçar a repintura do vídeo
   useEffect(() => {
@@ -73,30 +73,24 @@ function Post({ postData, onAuthorClick }) {
       />
 
       {mediaURL && (
-        <Box sx={{ position: 'relative', width: '100%', maxHeight: '80vh', display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'black' }}>
+        <Box sx={{ bgcolor: 'black', display: 'flex', justifyContent: 'center' }}>
           {mediaType === 'image' && (
-            <Box component="img" src={mediaURL} sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
+            <Box 
+              component="img" 
+              src={mediaURL} 
+              sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} 
+            />
           )}
 
           {mediaType === 'video' && (
-            <>
-              {!isVideoPlaying ? (
-                <Box onClick={() => setIsVideoPlaying(true)} sx={{ cursor: 'pointer', position: 'relative' }}>
-                  <Box component="img" src={getVideoThumbnail(mediaURL)} sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
-                  <PlayCircleOutlineIcon sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 80, color: 'rgba(255,255,255,0.8)' }} />
-                </Box>
-              ) : (
-                <Box component="video"
-                  ref={videoRef}
-                  src={mediaURL}
-                  controls
-                  autoPlay
-                  onEnded={() => setIsVideoPlaying(false)}
-                  onPause={(e) => { if (e.target.currentTime < e.target.duration) setIsVideoPlaying(false); }}
-                  sx={{ maxWidth: '100%', maxHeight: '80vh' }}
-                />
-              )}
-            </>
+            <Box 
+              component="video"
+              // O atributo 'poster' é a solução nativa!
+              poster={getVideoThumbnail(mediaURL)}
+              src={mediaURL}
+              controls
+              sx={{ maxWidth: '100%', maxHeight: '80vh' }}
+            />
           )}
         </Box>
       )}
