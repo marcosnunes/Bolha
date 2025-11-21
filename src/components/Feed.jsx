@@ -1,104 +1,83 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { rtdb } from '../firebase/config';
-import { ref, query, orderByChild, get } from 'firebase/database';
+import { ref, onValue, query, orderByChild, limitToLast, endBefore, get } from 'firebase/database';
 import Post from './Post.jsx';
 import ProfileModal from './ProfileModal.jsx';
 import { useAuth } from '../contexts/AuthContext';
 import { Box, Button, CircularProgress, Typography } from '@mui/material';
 
-const POSTS_PER_PAGE = 5;
+const POSTS_PER_PAGE = 5; // Quantos posts carregar por vez
 
 function Feed({ filterNSFW }) {
-  const [allPostMetas, setAllPostMetas] = useState([]); // Guarda {id, createdAt} de TODOS os posts
   const [posts, setPosts] = useState([]);
-  const [currentPage, setCurrentPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
-  // 1. Busca os metadados (ID e timestamp) de TODOS os posts uma única vez.
   useEffect(() => {
-    const fetchAllPostMetas = async () => {
-      const postsRef = ref(rtdb, 'posts');
-      const postsQuery = query(postsRef, orderByChild('createdAt'));
-      try {
-        const snapshot = await get(postsQuery);
-        const data = snapshot.val();
-        if (data) {
-          const metas = Object.keys(data).map(key => ({
-            id: key,
-            createdAt: data[key].createdAt
-          }));
-          setAllPostMetas(metas.reverse()); // Armazena a lista completa, do mais novo para o mais antigo
-        } else {
-          setLoading(false); // Não há posts
-        }
-      } catch (error) {
-        console.error("Erro ao buscar metadados dos posts:", error);
-        setLoading(false);
-      }
-    };
-    fetchAllPostMetas();
-  }, []);
-
-  // 2. Função para buscar o conteúdo completo de um lote de posts
-  const fetchPostBatch = useCallback(async (page) => {
-    if (allPostMetas.length === 0) return [];
+    // Busca inicial dos primeiros posts
+    const postsRef = ref(rtdb, 'posts');
+    const postsQuery = query(postsRef, orderByChild('createdAt'), limitToLast(POSTS_PER_PAGE));
     
-    const startIndex = page * POSTS_PER_PAGE;
-    const endIndex = startIndex + POSTS_PER_PAGE;
-    const postIdsToFetch = allPostMetas.slice(startIndex, endIndex);
-
-    if (postIdsToFetch.length === 0) {
-      setHasMore(false);
-      return [];
-    }
-
-    // Cria uma promessa para cada busca de post individual
-    const postPromises = postIdsToFetch.map(meta => {
-      const postRef = ref(rtdb, `posts/${meta.id}`);
-      return get(postRef);
+    // Usamos onValue para a primeira carga para que o feed seja atualizado em tempo real com novos posts
+    const unsubscribe = onValue(postsQuery, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const postsList = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+        setPosts(postsList.reverse()); // Inverte para mostrar o mais novo primeiro
+        setHasMore(postsList.length === POSTS_PER_PAGE);
+      } else {
+        setPosts([]);
+        setHasMore(false);
+      }
+      setLoading(false);
     });
 
-    const postSnapshots = await Promise.all(postPromises);
-    const newPosts = postSnapshots.map(snapshot => ({ id: snapshot.key, ...snapshot.val() }));
-    
-    setHasMore(endIndex < allPostMetas.length);
-    return newPosts;
-  }, [allPostMetas]);
+    return () => unsubscribe(); // Limpa o listener em tempo real
+  }, []);
 
-  // 3. Efeito para carregar a primeira página QUANDO os metadados estiverem prontos
-  useEffect(() => {
-    if (allPostMetas.length > 0) {
-      setLoading(true);
-      fetchPostBatch(0).then(initialPosts => {
-        setPosts(initialPosts);
-        setCurrentPage(1);
-        setLoading(false);
-      });
-    }
-  }, [allPostMetas, fetchPostBatch]);
-
-  // 4. Função "Carregar Mais" agora é muito mais simples
   const loadMorePosts = async () => {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
-    const newPosts = await fetchPostBatch(currentPage);
-    setPosts(prevPosts => [...prevPosts, ...newPosts]);
-    setCurrentPage(prevPage => prevPage + 1);
+
+    // Pega o timestamp do último post carregado para saber de onde continuar
+    const lastPost = posts[posts.length - 1];
+    const lastKey = lastPost.createdAt;
+
+    const postsRef = ref(rtdb, 'posts');
+    const postsQuery = query(postsRef, orderByChild('createdAt'), endBefore(lastKey), limitToLast(POSTS_PER_PAGE));
+    
+    // Usamos 'get' para o "carregar mais", pois é uma ação única, não em tempo real
+    const snapshot = await get(postsQuery);
+    const data = snapshot.val();
+
+    if (data) {
+      const newPosts = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+      setPosts(prevPosts => [...prevPosts, ...newPosts.reverse()]);
+      setHasMore(newPosts.length === POSTS_PER_PAGE);
+    } else {
+      setHasMore(false);
+    }
     setLoadingMore(false);
   };
-  
+
   const handleOpenProfile = (userData) => setSelectedUser(userData);
   const handleCloseProfile = () => setSelectedUser(null);
 
+  // Aplica os filtros de ocultar e NSFW
   const finalFilteredPosts = posts
     .filter(post => !hiddenUsers.includes(post.authorId))
     .filter(post => filterNSFW ? !post.isNSFW : true);
-  
-  if (loading) { /* ... (sem mudanças) ... */ }
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>
