@@ -11,6 +11,12 @@ import {
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
 
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import ThumbDownIcon from '@mui/icons-material/ThumbDown';
+import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
+import ThumbDownOutlinedIcon from '@mui/icons-material/ThumbDownOutlined';
+
+
 function Post({ postData, onAuthorClick }) {
   const { currentUser } = useAuth();
   const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL } = postData;
@@ -45,6 +51,48 @@ function Post({ postData, onAuthorClick }) {
   const getVideoThumbnail = (videoUrl) => {
     if (!videoUrl) return '';
     return videoUrl.replace(/\.\w+$/, '.jpg');
+  };
+
+  const likesCount = likes ? Object.keys(likes).length : 0;
+  const hasLiked = likes && likes[currentUser.uid];
+  const hasDisliked = dislikes && dislikes[currentUser.uid];
+
+  const handleLike = async () => {
+    if (!currentUser) return;
+    const uid = currentUser.uid;
+    const postLikesRef = ref(rtdb, `posts/${id}/likes/${uid}`);
+    const postDislikesRef = ref(rtdb, `posts/${id}/dislikes/${uid}`);
+
+    if (hasLiked) {
+      // Se já curtiu, remove a curtida (unlike)
+      await remove(postLikesRef);
+    } else {
+      // Se não curtiu, adiciona a curtida
+      await set(postLikesRef, true);
+      // Se havia uma descurtida, remove-a
+      if (hasDisliked) {
+        await remove(postDislikesRef);
+      }
+    }
+  };
+
+  const handleDislike = async () => {
+    if (!currentUser) return;
+    const uid = currentUser.uid;
+    const postLikesRef = ref(rtdb, `posts/${id}/likes/${uid}`);
+    const postDislikesRef = ref(rtdb, `posts/${id}/dislikes/${uid}`);
+
+    if (hasDisliked) {
+      // Se já descurtiu, remove a descurtida
+      await remove(postDislikesRef);
+    } else {
+      // Se não descurtiu, adiciona a descurtida
+      await set(postDislikesRef, true);
+      // Se havia uma curtida, remove-a
+      if (hasLiked) {
+        await remove(postLikesRef);
+      }
+    }
   };
 
   return (
@@ -93,6 +141,23 @@ function Post({ postData, onAuthorClick }) {
           <Typography variant="body1" color="text.secondary">{textContent}</Typography>
         </CardContent>
       )}
+      <Divider />
+      <CardActions sx={{ justifyContent: 'space-around', p: 1 }}>
+        <Button 
+          startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />}
+          onClick={handleLike}
+          color={hasLiked ? 'primary' : 'inherit'}
+        >
+          {likesCount}
+        </Button>
+        <Button 
+          startIcon={hasDisliked ? <ThumbDownIcon /> : <ThumbDownOutlinedIcon />}
+          onClick={handleDislike}
+          color={hasDisliked ? 'error' : 'inherit'}
+        >
+          Descurtir
+        </Button>
+      </CardActions>
     </Card>
   );
 }
