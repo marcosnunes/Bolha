@@ -1,85 +1,72 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { rtdb } from '../firebase/config';
-import { ref, query, orderByChild, limitToLast, endBefore, get } from 'firebase/database';
+import { ref, onValue, query, orderByChild, limitToLast, endBefore, get } from 'firebase/database';
 import Post from './Post.jsx';
 import ProfileModal from './ProfileModal.jsx';
 import { useAuth } from '../contexts/AuthContext';
 import { Box, Button, CircularProgress, Typography } from '@mui/material';
 
-const POSTS_PER_PAGE = 5;
+const POSTS_PER_PAGE = 5; // Quantos posts carregar por vez
 
 function Feed({ filterNSFW }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [cursor, setCursor] = useState({ key: null, id: null });
   const [selectedUser, setSelectedUser] = useState(null);
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
-  const fetchPosts = useCallback(async (currentCursor) => {
+  useEffect(() => {
+    // Busca inicial dos primeiros posts
     const postsRef = ref(rtdb, 'posts');
-    let postsQuery;
-
-    if (!currentCursor.key) {
-      postsQuery = query(postsRef, orderByChild('createdAt'), limitToLast(POSTS_PER_PAGE));
-    } else {
-      postsQuery = query(
-        postsRef,
-        orderByChild('createdAt'),
-        endBefore(currentCursor.key, currentCursor.id),
-        limitToLast(POSTS_PER_PAGE)
-      );
-    }
-
-    try {
-      const snapshot = await get(postsQuery);
+    const postsQuery = query(postsRef, orderByChild('createdAt'), limitToLast(POSTS_PER_PAGE));
+    
+    // Usamos onValue para a primeira carga para que o feed seja atualizado em tempo real com novos posts
+    const unsubscribe = onValue(postsQuery, (snapshot) => {
       const data = snapshot.val();
-
       if (data) {
         const postsList = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-        if (postsList.length > 0) {
-          const oldestPostInBatch = postsList[0];
-          setCursor({ key: oldestPostInBatch.createdAt, id: oldestPostInBatch.id });
-        }
-        
-        const reversedPosts = postsList.reverse();
-
-        if (!currentCursor.key) {
-          setPosts(reversedPosts);
-        } else {
-          setPosts(prevPosts => [...prevPosts, ...reversedPosts]);
-        }
-        
+        setPosts(postsList.reverse()); // Inverte para mostrar o mais novo primeiro
         setHasMore(postsList.length === POSTS_PER_PAGE);
       } else {
+        setPosts([]);
         setHasMore(false);
-        if (!currentCursor.key) {
-            setPosts([]);
-        }
       }
-    } catch (error) {
-      console.error("Erro ao buscar posts:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    setLoading(true);
-    fetchPosts({ key: null, id: null }).finally(() => {
       setLoading(false);
     });
-  }, [fetchPosts]);
+
+    return () => unsubscribe(); // Limpa o listener em tempo real
+  }, []);
 
   const loadMorePosts = async () => {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
-    await fetchPosts(cursor);
+
+    // Pega o timestamp do último post carregado para saber de onde continuar
+    const lastPost = posts[posts.length - 1];
+    const lastKey = lastPost.createdAt;
+
+    const postsRef = ref(rtdb, 'posts');
+    const postsQuery = query(postsRef, orderByChild('createdAt'), endBefore(lastKey), limitToLast(POSTS_PER_PAGE));
+    
+    // Usamos 'get' para o "carregar mais", pois é uma ação única, não em tempo real
+    const snapshot = await get(postsQuery);
+    const data = snapshot.val();
+
+    if (data) {
+      const newPosts = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+      setPosts(prevPosts => [...prevPosts, ...newPosts.reverse()]);
+      setHasMore(newPosts.length === POSTS_PER_PAGE);
+    } else {
+      setHasMore(false);
+    }
     setLoadingMore(false);
   };
 
   const handleOpenProfile = (userData) => setSelectedUser(userData);
   const handleCloseProfile = () => setSelectedUser(null);
 
+  // Aplica os filtros de ocultar e NSFW
   const finalFilteredPosts = posts
     .filter(post => !hiddenUsers.includes(post.authorId))
     .filter(post => filterNSFW ? !post.isNSFW : true);
@@ -114,7 +101,7 @@ function Feed({ filterNSFW }) {
         </Typography>
       )}
 
-      {hasMore && !loading && (
+      {hasMore && (
         <Box sx={{ textAlign: 'center', my: 2 }}>
           <Button onClick={loadMorePosts} disabled={loadingMore}>
             {loadingMore ? <CircularProgress size={24} /> : 'Carregar Mais Posts'}
