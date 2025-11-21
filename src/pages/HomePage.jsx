@@ -239,7 +239,6 @@ function HomePage() {
                     mb: 2,
                     gap: 2
                 }}>
-                    <Typography variant="h4" component="h2">Posts Recentes</Typography>
                     <FormControlLabel
                         control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />}
                         label="Mostrar conteúdo sensível"
