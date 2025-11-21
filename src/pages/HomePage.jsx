@@ -223,7 +223,7 @@ function HomePage() {
             </Dialog>
 
             <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-                <Divider sx={{ my: 4 }} />
+                
                 <Box sx={{
                     display: 'flex',
                     alignItems: { xs: 'flex-start', sm: 'center' },
