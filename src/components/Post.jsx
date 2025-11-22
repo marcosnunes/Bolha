@@ -160,13 +160,13 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
           {likesCount > 0 ? likesCount : 'Curtir'}
         </Button>
         
-        <Button 
+        {/*<Button 
           startIcon={hasDisliked ? <ThumbDownIcon /> : <ThumbDownOutlinedIcon />} 
           onClick={handleDislike} 
           color={hasDisliked ? 'error' : 'inherit'}
         >
           Descurtir
-        </Button>
+        </Button>*/}
       </CardActions>
     </Card>
   );
