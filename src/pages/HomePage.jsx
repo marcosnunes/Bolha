@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
-import { ref, push, set, update, serverTimestamp } from 'firebase/database';
+import { ref, push, set, update, serverTimestamp, onValue } from 'firebase/database';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import SettingsIcon from '@mui/icons-material/Settings';
 
@@ -11,7 +11,7 @@ import {
     AppBar, Toolbar, Typography, Button, IconButton, Drawer, List, ListItem,
     ListItemButton, ListItemIcon, ListItemText, Box, Container, Divider,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
-    Tooltip, Switch, Avatar, Fab, FormControlLabel, TextField
+    Tooltip, Switch, Avatar, Fab, FormControlLabel, TextField, Chip // <--- AQUI
 } from '@mui/material';
 
 // Ícones do MUI
@@ -22,6 +22,7 @@ import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import AddIcon from '@mui/icons-material/Add';
 import PolicyIcon from '@mui/icons-material/Policy';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import PeopleIcon from '@mui/icons-material/People';
 
 // Nossos componentes
 import CreatePostForm from '../components/CreatePostForm.jsx';
@@ -39,10 +40,21 @@ function HomePage() {
     const [openInviteDialog, setOpenInviteDialog] = useState(false);
     const [openPostDialog, setOpenPostDialog] = useState(false);
     
-    // NOVO: Estado para forçar a atualização do Feed
+    // Estado para forçar a atualização do Feed
     const [refreshFeed, setRefreshFeed] = useState(0);
 
     const profilePicInputRef = useRef(null);
+
+    const [userCount, setUserCount] = useState(0);
+
+    useEffect(() => {
+        const profilesRef = ref(rtdb, 'profiles');
+        const unsubscribe = onValue(profilesRef, (snapshot) => {
+            // snapshot.size retorna a quantidade de filhos (usuários) no nó profiles
+            setUserCount(snapshot.size);
+        });
+        return () => unsubscribe();
+    }, []);
 
     const handleProfilePicChange = async (e) => {
         const file = e.target.files[0];
@@ -168,6 +180,17 @@ function HomePage() {
             <AppBar component="nav" position="sticky" sx={{ pt: { xs: 'env(safe-area-inset-top)', sm: 0 } }}>
                 <Toolbar>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Bolha</Typography>
+                    <Chip 
+                        icon={<PeopleIcon style={{ color: 'inherit' }} />} 
+                        label={`${userCount} membros`}
+                        variant="outlined"
+                        sx={{ 
+                            mr: 2, 
+                            color: 'white', 
+                            borderColor: 'rgba(255, 255, 255, 0.5)',
+                            '& .MuiChip-icon': { color: 'white' }
+                        }} 
+                    />
                     <IconButton color="inherit" aria-label="open drawer" edge="end" onClick={handleDrawerToggle}><MenuIcon /></IconButton>
                 </Toolbar>
             </AppBar>
