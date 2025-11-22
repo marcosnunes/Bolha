@@ -151,7 +151,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       )}
 
       <Divider />
-      <CardActions sx={{ justifyContent: 'space-around', p: 1 }}>
+      <CardActions sx={{ justifyContent: 'flex-start', p: 1, gap: 1 }}>
         <Button 
           startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />} 
           onClick={handleLike} 
