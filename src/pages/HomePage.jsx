@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react'; // Adicione useEffect
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
-import { ref, push, set, update, serverTimestamp, onValue } from 'firebase/database';
+import { ref, push, set, update, serverTimestamp, onValue } from 'firebase/database'; // Adicione onValue
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import SettingsIcon from '@mui/icons-material/Settings';
 
@@ -11,7 +11,7 @@ import {
     AppBar, Toolbar, Typography, Button, IconButton, Drawer, List, ListItem,
     ListItemButton, ListItemIcon, ListItemText, Box, Container, Divider,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
-    Tooltip, Switch, Avatar, Fab, FormControlLabel, TextField, Chip // <--- AQUI
+    Tooltip, Switch, Avatar, Fab, FormControlLabel, TextField, Chip
 } from '@mui/material';
 
 // Ícones do MUI
@@ -42,15 +42,16 @@ function HomePage() {
     
     // Estado para forçar a atualização do Feed
     const [refreshFeed, setRefreshFeed] = useState(0);
+    
+    // Estado para contador de usuários
+    const [userCount, setUserCount] = useState(0);
 
     const profilePicInputRef = useRef(null);
 
-    const [userCount, setUserCount] = useState(0);
-
+    // Efeito para contar usuários em tempo real
     useEffect(() => {
         const profilesRef = ref(rtdb, 'profiles');
         const unsubscribe = onValue(profilesRef, (snapshot) => {
-            // snapshot.size retorna a quantidade de filhos (usuários) no nó profiles
             setUserCount(snapshot.size);
         });
         return () => unsubscribe();
@@ -134,10 +135,10 @@ function HomePage() {
         }
     };
 
-    // NOVO: Função chamada quando um post é criado com sucesso
+    // Callback para fechar o modal e atualizar o feed
     const handlePostSuccess = () => {
         setOpenPostDialog(false);
-        setRefreshFeed(prev => prev + 1); // Incrementa o contador para disparar o reload no Feed
+        setRefreshFeed(prev => prev + 1); // Incrementa o contador
     };
 
     const drawer = (
@@ -177,23 +178,23 @@ function HomePage() {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'grey.100' }}>
             <input type="file" hidden ref={profilePicInputRef} onChange={handleProfilePicChange} accept="image/*" />
+            
             <AppBar component="nav" position="sticky" sx={{ pt: { xs: 'env(safe-area-inset-top)', sm: 0 } }}>
                 <Toolbar>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Bolha</Typography>
+                    
+                    {/* Contador de Usuários */}
                     <Chip 
                         icon={<PeopleIcon style={{ color: 'inherit' }} />} 
                         label={`${userCount} membros`}
                         variant="outlined"
-                        sx={{ 
-                            mr: 2, 
-                            color: 'white', 
-                            borderColor: 'rgba(255, 255, 255, 0.5)',
-                            '& .MuiChip-icon': { color: 'white' }
-                        }} 
+                        sx={{ mr: 2, color: 'white', borderColor: 'rgba(255, 255, 255, 0.5)', '& .MuiChip-icon': { color: 'white' } }} 
                     />
+                    
                     <IconButton color="inherit" aria-label="open drawer" edge="end" onClick={handleDrawerToggle}><MenuIcon /></IconButton>
                 </Toolbar>
             </AppBar>
+            
             <Drawer variant="temporary" open={mobileOpen} onClose={handleDrawerToggle} anchor="right" ModalProps={{ keepMounted: true }} sx={{ '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 } }}>{drawer}</Drawer>
 
             <Dialog open={openInviteDialog} onClose={() => setOpenInviteDialog(false)}>
@@ -211,17 +212,17 @@ function HomePage() {
             <Dialog open={openPostDialog} onClose={() => setOpenPostDialog(false)} fullWidth maxWidth="sm">
                 <DialogTitle>Crie um novo post</DialogTitle>
                 <DialogContent>
-                    {/* Passamos o handlePostSuccess para fechar o modal e atualizar o feed */}
                     <CreatePostForm onPostSuccess={handlePostSuccess} />
                 </DialogContent>
             </Dialog>
 
             <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', mb: 2, gap: 2 }}>
+                    <Typography variant="h4" component="h2">Posts Recentes</Typography>
                     <FormControlLabel control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />} label="Mostrar conteúdo sensível" labelPlacement="start" />
                 </Box>
                 
-                {/* Passamos o refreshTrigger para o Feed */}
+                {/* Passando a prop refreshTrigger */}
                 <Feed filterNSFW={!showNSFW} refreshTrigger={refreshFeed} />
             </Container>
 
