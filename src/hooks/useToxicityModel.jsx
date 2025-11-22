@@ -7,8 +7,9 @@ const useToxicityModel = () => {
   useEffect(() => {
     const loadModel = async () => {
       try {
-        // 'toxicity' fica disponível globalmente por causa do script que adicionamos no HTML
-        const toxicityModel = await window.toxicity.load(0.9, []); // threshold = 0.9
+        // 'toxicity' fica disponível globalmente por causa do script no HTML
+        // Carregamos com threshold 0.85 (levemente menos estrito que 0.9)
+        const toxicityModel = await window.toxicity.load(0.85, []); 
         setModel(toxicityModel);
         setLoading(false);
         console.log("Modelo de toxicidade carregado com sucesso!");
@@ -18,24 +19,29 @@ const useToxicityModel = () => {
       }
     };
     loadModel();
-  }, []); // Array vazio garante que o modelo só será carregado uma vez
+  }, []); 
 
   const classifyText = async (text) => {
-    if (!model) return null;
+    // SE O TEXTO FOR VAZIO OU NULO, NÃO É TÓXICO.
+    if (!model || !text || text.trim() === '') return false;
     
-    const predictions = await model.classify([text]);
-    // predictions é um array de resultados como:
-    console.log("Previsões do Modelo:", predictions);
-    // [{ label: 'toxicity', results: [{ probabilities: [0.1, 0.9], match: true }] }]
-    
-    let isToxic = false;
-    predictions.forEach(p => {
-      if (p.results[0].match) {
-        isToxic = true;
-      }
-    });
+    try {
+      const predictions = await model.classify([text]);
+      
+      let isToxic = false;
+      predictions.forEach(p => {
+        // Verifica se houve match em alguma categoria
+        if (p.results[0].match) {
+          isToxic = true;
+        }
+      });
 
-    return isToxic;
+      return isToxic;
+    } catch (error) {
+      console.error("Erro na classificação do texto:", error);
+      // Em caso de erro na IA, deixamos passar (fail-open) para não travar o usuário
+      return false;
+    }
   };
 
   return { model, loadingModel: loading, classifyText };
