@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 
 // Componentes e Ícones do MUI

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { rtdb } from '../firebase/config';
 import { ref, set, update, serverTimestamp } from 'firebase/database';
 import { useNavigate, useParams, Link as RouterLink } from 'react-router-dom';
