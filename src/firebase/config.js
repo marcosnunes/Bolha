@@ -5,9 +5,6 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getDatabase } from "firebase/database";
 
-// DEBUG: Mostra a chave de API que está sendo carregada pelo Vite
-console.log("VITE_API_KEY being used:", import.meta.env.VITE_API_KEY);
-
 // Configuração do Firebase
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_API_KEY,

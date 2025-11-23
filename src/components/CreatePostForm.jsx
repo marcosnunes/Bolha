@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, push, serverTimestamp, update } from 'firebase/database';
 import useToxicityModel from '../hooks/useToxicityModel';
@@ -116,7 +116,7 @@ function CreatePostForm({ onPostSuccess }) {
           const uploadData = await uploadWithProgress(file);
           mediaURL = uploadData.secure_url;
           mediaType = uploadData.resource_type;
-        } catch {
+        } catch (uploadErr) {
           throw new Error("Não foi possível enviar o arquivo. Verifique sua conexão ou tamanho do arquivo.");
         }
       }

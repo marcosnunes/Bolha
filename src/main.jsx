@@ -13,8 +13,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import CadastroPage from './pages/CadastroPage.jsx';
 import PagamentoPage from './pages/PagamentoPage.jsx';
 import ConvitePage from './pages/ConvitePage.jsx';
-import AssistantPage from './pages/AssistantPage.jsx'; // Corrigido: Importando a página correta
-import AuthProvider from './contexts/AuthContext.jsx';
+import { AuthProvider } from './contexts/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage.jsx';
 import ReportAbusePage from './pages/ReportAbusePage.jsx';
@@ -35,10 +34,6 @@ const router = createBrowserRouter([
       {
         path: '/configuracoes',
         element: <ProtectedRoute><SettingsPage /></ProtectedRoute>,
-      },
-      {
-        path: '/assistente', // Corrigido: Rota para a página do assistente
-        element: <ProtectedRoute><AssistantPage /></ProtectedRoute>,
       },
       {
         path: '/login',

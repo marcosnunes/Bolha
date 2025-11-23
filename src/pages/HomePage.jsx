@@ -1,9 +1,8 @@
-
-import { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useState, useRef, useEffect } from 'react'; // Adicione useEffect
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
-import { ref, push, set, update, serverTimestamp, onValue } from 'firebase/database';
+import { ref, push, set, update, serverTimestamp, onValue } from 'firebase/database'; // Adicione onValue
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import SettingsIcon from '@mui/icons-material/Settings';
 
@@ -24,14 +23,13 @@ import AddIcon from '@mui/icons-material/Add';
 import PolicyIcon from '@mui/icons-material/Policy';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import PeopleIcon from '@mui/icons-material/People';
-import SparklesIcon from '@mui/icons-material/AutoAwesome';
 
 // Nossos componentes
 import CreatePostForm from '../components/CreatePostForm.jsx';
 import Feed from '../components/Feed.jsx';
 
 function HomePage() {
-    const { currentUser, userProfile, logout } = useAuth(); // CORRIGIDO
+    const { currentUser, userProfile, logout } = useAuth();
     const navigate = useNavigate();
 
     // Estados do componente
@@ -41,11 +39,16 @@ function HomePage() {
     const [loadingInvite, setLoadingInvite] = useState(false);
     const [openInviteDialog, setOpenInviteDialog] = useState(false);
     const [openPostDialog, setOpenPostDialog] = useState(false);
+    
+    // Estado para forçar a atualização do Feed
     const [refreshFeed, setRefreshFeed] = useState(0);
+    
+    // Estado para contador de usuários
     const [userCount, setUserCount] = useState(0);
 
     const profilePicInputRef = useRef(null);
 
+    // Efeito para contar usuários em tempo real
     useEffect(() => {
         const profilesRef = ref(rtdb, 'profiles');
         const unsubscribe = onValue(profilesRef, (snapshot) => {
@@ -132,9 +135,10 @@ function HomePage() {
         }
     };
 
+    // Callback para fechar o modal e atualizar o feed
     const handlePostSuccess = () => {
         setOpenPostDialog(false);
-        setRefreshFeed(prev => prev + 1);
+        setRefreshFeed(prev => prev + 1); // Incrementa o contador
     };
 
     const drawer = (
@@ -160,7 +164,6 @@ function HomePage() {
                         </ListItem>
                         <Divider />
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/configuracoes"><ListItemIcon><SettingsIcon /></ListItemIcon><ListItemText primary="Configurações" /></ListItemButton></ListItem>
-                        <ListItem disablePadding><ListItemButton component={RouterLink} to="/assistente"><ListItemIcon><SparklesIcon /></ListItemIcon><ListItemText primary="Assistente" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton onClick={generateInviteLink} disabled={loadingInvite}><ListItemIcon><AddCircleOutlineIcon /></ListItemIcon><ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}><ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon><ListItemText primary="Apagar Conta" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/politica-de-privacidade"><ListItemIcon><PolicyIcon /></ListItemIcon><ListItemText primary="Política de Privacidade" /></ListItemButton></ListItem>
@@ -180,6 +183,7 @@ function HomePage() {
                 <Toolbar>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Bolha</Typography>
                     
+                    {/* Contador de Usuários */}
                     <Chip 
                         icon={<PeopleIcon style={{ color: 'inherit' }} />} 
                         label={`${userCount} membros`}
@@ -218,6 +222,7 @@ function HomePage() {
                     <FormControlLabel control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />} label="Mostrar conteúdo sensível" labelPlacement="start" />
                 </Box>
                 
+                {/* Passando a prop refreshTrigger */}
                 <Feed filterNSFW={!showNSFW} refreshTrigger={refreshFeed} />
             </Container>
 

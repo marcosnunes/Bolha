@@ -1,38 +1,29 @@
-import globals from "globals";
-import js from "@eslint/js";
-import reactHooks from "eslint-plugin-react-hooks";
-import reactRefresh from "eslint-plugin-react-refresh";
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import { defineConfig, globalIgnores } from 'eslint/config'
 
-export default [
+export default defineConfig([
+  globalIgnores(['dist']),
   {
-    ignores: ["dist/**", "functions/**", "node_modules/**", ".idx/**"],
-  },
-  
-  js.configs.recommended,
-  
-  reactHooks.configs.flat.recommended,
-  
-  {
-    files: ["src/**/*.{js,jsx}"],
-    
+    files: ['**/*.{js,jsx}'],
+    extends: [
+      js.configs.recommended,
+      reactHooks.configs.flat.recommended,
+      reactRefresh.configs.vite,
+    ],
     languageOptions: {
-      globals: {
-        ...globals.browser,
-      },
+      ecmaVersion: 2020,
+      globals: globals.browser,
       parserOptions: {
+        ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
+        sourceType: 'module',
       },
     },
-    
-    plugins: {
-      "react-refresh": reactRefresh,
-    },
-    
     rules: {
-      "react-refresh/only-export-components": "warn",
-      "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
-      "react/prop-types": "off",
-      "react/react-in-jsx-scope": "off"
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
-];
+])

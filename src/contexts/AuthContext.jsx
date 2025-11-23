@@ -1,14 +1,18 @@
-import { useEffect, useState, createContext } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { auth, rtdb } from '../firebase/config.js'; // CORRIGIDO: Caminho relativo
+import { auth, rtdb } from '/src/firebase/config.js';
 import { ref, onValue, set, remove } from 'firebase/database';
 
-// O contexto é criado e exportado daqui
-export const AuthContext = createContext();
+const AuthContext = createContext();
 
-function AuthProvider({ children }) {
+export function useAuth() {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useContext(AuthContext);
+}
+
+export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
+  const [userProfile, setUserProfile] = useState(null); // Para guardar o apelido
   const [loading, setLoading] = useState(true);
   const [hiddenUsers, setHiddenUsers] = useState([]);
 
@@ -36,6 +40,7 @@ function AuthProvider({ children }) {
     return remove(hiddenUserRef);
   };
 
+  // Efeito para monitorar a autenticação
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, user => {
       setCurrentUser(user);
@@ -47,6 +52,7 @@ function AuthProvider({ children }) {
     return unsubscribeAuth;
   }, []);
 
+  // Efeito para buscar o perfil (apelido) do usuário logado
   useEffect(() => {
     if (currentUser) {
       const profileRef = ref(rtdb, `profiles/${currentUser.uid}`);
@@ -61,6 +67,7 @@ function AuthProvider({ children }) {
     }
   }, [currentUser]);
 
+  // Efeito para buscar a lista de usuários ocultos
   useEffect(() => {
     if (currentUser) {
       const hiddenUsersRef = ref(rtdb, `users/${currentUser.uid}/hiddenUsers`);
@@ -89,5 +96,3 @@ function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
-
-export default AuthProvider;
