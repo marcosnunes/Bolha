@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, createContext } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { auth, rtdb } from '/src/firebase/config.js';
+import { auth, rtdb } from '../firebase/config.js'; // CORRIGIDO: Caminho relativo
 import { ref, onValue, set, remove } from 'firebase/database';
-import { AuthContext } from './context.js'; // Importa o contexto do arquivo dedicado
 
-// O componente Provider continua aqui, mas não define mais o contexto.
+// O contexto é criado e exportado daqui
+export const AuthContext = createContext();
+
 function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
@@ -89,5 +90,4 @@ function AuthProvider({ children }) {
   );
 }
 
-// Agora este arquivo exporta APENAS o componente Provider.
 export default AuthProvider;
