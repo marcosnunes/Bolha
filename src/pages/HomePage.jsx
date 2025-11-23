@@ -24,14 +24,14 @@ import AddIcon from '@mui/icons-material/Add';
 import PolicyIcon from '@mui/icons-material/Policy';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import PeopleIcon from '@mui/icons-material/People';
-import SparklesIcon from '@mui/icons-material/AutoAwesome'; // Ícone para Insights
+import SparklesIcon from '@mui/icons-material/AutoAwesome'; // Ícone para Assistente
 
 // Nossos componentes
 import CreatePostForm from '../components/CreatePostForm.jsx';
 import Feed from '../components/Feed.jsx';
 
 function HomePage() {
-    const { currentUser, userProfile, logout } = useAuth();
+    const { currentUser, userProfile } = useAuth();
     const navigate = useNavigate();
 
     // Estados do componente
@@ -166,7 +166,7 @@ function HomePage() {
                         </ListItem>
                         <Divider />
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/configuracoes"><ListItemIcon><SettingsIcon /></ListItemIcon><ListItemText primary="Configurações" /></ListItemButton></ListItem>
-                        <ListItem disablePadding><ListItemButton component={RouterLink} to="/insights"><ListItemIcon><SparklesIcon /></ListItemIcon><ListItemText primary="Insights" /></ListItemButton></ListItem>
+                        <ListItem disablePadding><ListItemButton component={RouterLink} to="/assistente"><ListItemIcon><SparklesIcon /></ListItemIcon><ListItemText primary="Assistente" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton onClick={generateInviteLink} disabled={loadingInvite}><ListItemIcon><AddCircleOutlineIcon /></ListItemIcon><ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}><ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon><ListItemText primary="Apagar Conta" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/politica-de-privacidade"><ListItemIcon><PolicyIcon /></ListItemIcon><ListItemText primary="Política de Privacidade" /></ListItemButton></ListItem>
