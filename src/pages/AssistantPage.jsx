@@ -1,17 +1,50 @@
 
-import { useState } from 'react';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useState, useEffect } from 'react';
+import { getDatabase, ref, query, orderByChild, equalTo, get } from "firebase/database";
+import { useAuth } from '../contexts/AuthContext'; // Garante que o useAuth seja importado
 import ReactMarkdown from 'react-markdown';
 import {
   Box, Button, TextField, Typography, Container, Paper, CircularProgress, Alert
 } from '@mui/material';
-import SparklesIcon from '@mui/icons-material/AutoAwesome'; // Um ícone legal para IA
+import SparklesIcon from '@mui/icons-material/AutoAwesome';
 
-function AssistantPage() { // CORRIGIDO: O nome do componente agora é AssistantPage
+function AssistantPage() {
+  const { currentUser } = useAuth(); // Hook para pegar o usuário logado
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [userPosts, setUserPosts] = useState([]);
+
+  // Efeito para buscar os posts do usuário quando o componente for montado
+  useEffect(() => {
+    if (currentUser) {
+      const fetchUserPosts = async () => {
+        const rtdb = getDatabase();
+        const postsRef = ref(rtdb, 'posts');
+        const userPostsQuery = query(postsRef, orderByChild('authorId'), equalTo(currentUser.uid));
+        
+        try {
+          const snapshot = await get(userPostsQuery);
+          if (snapshot.exists()) {
+            const postsData = snapshot.val();
+            const postsArray = Object.keys(postsData).map(key => ({
+              id: key,
+              ...postsData[key]
+            }));
+            setUserPosts(postsArray);
+          } else {
+            console.log("Nenhum post encontrado para o usuário.");
+          }
+        } catch (error) {
+          console.error("Erro ao buscar os posts:", error);
+          setError("Não foi possível carregar o histórico de posts.");
+        }
+      };
+
+      fetchUserPosts();
+    }
+  }, [currentUser]);
 
   const handleGenerateInsights = async () => {
     if (!prompt) {
@@ -19,26 +52,34 @@ function AssistantPage() { // CORRIGIDO: O nome do componente agora é Assistant
       return;
     }
 
+    if (!currentUser) {
+        setError("Você precisa estar logado para usar o assistente.");
+        return;
+    }
+
     setIsLoading(true);
     setError('');
     setResponse('');
 
     try {
-      const functions = getFunctions();
-      const generatePersonalInsights = httpsCallable(functions, 'generatePersonalInsights');
-      
-      const result = await generatePersonalInsights({ prompt });
-      
-      const data = result.data;
+      const apiResponse = await fetch('/api/generateInsights', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt, userPosts }),
+      });
 
-      if (data.success) {
+      const data = await apiResponse.json();
+
+      if (apiResponse.ok) {
         setResponse(data.text);
       } else {
         setError(data.message || 'Ocorreu um erro desconhecido.');
       }
 
     } catch (err) {
-      console.error("Erro ao chamar a Cloud Function:", err);
+      console.error("Erro ao chamar a API da Vercel:", err);
       setError(err.message || 'Falha ao conectar com o serviço de insights. Tente novamente.');
     } finally {
       setIsLoading(false);
@@ -90,4 +131,4 @@ function AssistantPage() { // CORRIGIDO: O nome do componente agora é Assistant
   );
 }
 
-export default AssistantPage; // CORRIGIDO: A exportação agora corresponde ao nome do componente
+export default AssistantPage;
