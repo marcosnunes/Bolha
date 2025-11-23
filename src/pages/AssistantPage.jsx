@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import SparklesIcon from '@mui/icons-material/AutoAwesome'; // Um ícone legal para IA
 
-function InsightsPage() {
+function AssistantPage() { // CORRIGIDO: O nome do componente agora é AssistantPage
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -90,4 +90,4 @@ function InsightsPage() {
   );
 }
 
-export default InsightsPage;
+export default AssistantPage; // CORRIGIDO: A exportação agora corresponde ao nome do componente
