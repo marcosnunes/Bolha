@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import CadastroPage from './pages/CadastroPage.jsx';
 import PagamentoPage from './pages/PagamentoPage.jsx';
 import ConvitePage from './pages/ConvitePage.jsx';
+import InsightsPage from './pages/InsightsPage.jsx'; // Importando a nova página
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage.jsx';
@@ -34,6 +35,10 @@ const router = createBrowserRouter([
       {
         path: '/configuracoes',
         element: <ProtectedRoute><SettingsPage /></ProtectedRoute>,
+      },
+      {
+        path: '/insights', // Nova rota para a página de insights
+        element: <ProtectedRoute><InsightsPage /></ProtectedRoute>,
       },
       {
         path: '/login',
