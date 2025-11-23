@@ -1,4 +1,5 @@
-const functions = require("firebase-functions");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { logger } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
@@ -7,23 +8,22 @@ admin.initializeApp();
 // Acessa a chave de API do Gemini a partir das variáveis de ambiente do Firebase
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-exports.generatePersonalInsights = functions
-  .runWith({ secrets: ["GEMINI_API_KEY"] }) // Garante que a chave de API está disponível
-  .https.onCall(async (data, context) => {
+// Declaração da função usando a sintaxe "Gen 2", que resolve o erro de deploy.
+exports.generatePersonalInsights = onCall({ secrets: ["GEMINI_API_KEY"], region: "us-central1" }, async (request) => {
 
   // 1. Verifica se o usuário está autenticado
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
+  if (!request.auth) {
+    throw new HttpsError(
       "unauthenticated",
       "Você precisa estar logado para usar o assistente."
     );
   }
 
-  const uid = context.auth.uid;
-  const userPrompt = data.prompt;
+  const uid = request.auth.uid;
+  const userPrompt = request.data.prompt;
 
   if (!userPrompt) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "invalid-argument",
       "A função foi chamada sem um prompt."
     );
@@ -74,8 +74,8 @@ exports.generatePersonalInsights = functions
     return { success: true, text: text };
 
   } catch (error) {
-    console.error("Erro na execução da Cloud Function:", error);
-    throw new functions.https.HttpsError(
+    logger.error("Erro na execução da Cloud Function:", error);
+    throw new HttpsError(
       "internal",
       "Ocorreu um erro ao gerar os insights."
     );
