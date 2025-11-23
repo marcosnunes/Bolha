@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'; // Adicionar useState e useEffect
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { rtdb } from '../firebase/config'; // Importar rtdb
 import { ref, onValue } from 'firebase/database'; // Importar ref e onValue
 
