@@ -1,10 +1,41 @@
 {
   "rules": {
-    "invites": {
-      "$inviteId": {
-        "read": "auth != null",
-        "write": "auth != null && newData.child('usedBy').val() === auth.uid"
+    "posts": {
+      ".read": "auth != null",
+      ".indexOn": ["createdAt"], 
+      "$postId": {
+        ".write": "auth != null && ( (!data.exists() && newData.child('authorId').val() === auth.uid) || (data.exists() && data.child('authorId').val() === auth.uid) )",
+        
+        ".validate": "newData.hasChildren(['authorId', 'authorNickname', 'createdAt']) && (!data.exists() || newData.child('authorId').val() === data.child('authorId').val())",
+        
+        "likes": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        },
+        "dislikes": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
       }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "profiles": {
+      ".read": "auth != null",
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "invites": {
+      ".read": "true",
+      ".write": "auth != null"
     }
   }
 }
