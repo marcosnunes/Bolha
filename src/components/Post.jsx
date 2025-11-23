@@ -1,4 +1,4 @@
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { rtdb } from '../firebase/config';
 import { ref, remove, set, onValue } from 'firebase/database'; // Adicionado onValue
 import { useState, useEffect } from 'react';

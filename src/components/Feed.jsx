@@ -3,7 +3,7 @@ import { rtdb } from '../firebase/config';
 import { ref, query, orderByChild, limitToLast, endBefore, get } from 'firebase/database';
 import Post from './Post.jsx';
 import ProfileModal from './ProfileModal.jsx';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { Box, Button, CircularProgress, Typography } from '@mui/material';
 
 const POSTS_PER_PAGE = 5;

@@ -1,18 +1,13 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth, rtdb } from '/src/firebase/config.js';
 import { ref, onValue, set, remove } from 'firebase/database';
+import { AuthContext } from './context.js'; // Importa o contexto do arquivo dedicado
 
-const AuthContext = createContext();
-
-export function useAuth() {
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  return useContext(AuthContext);
-}
-
-export function AuthProvider({ children }) {
+// O componente Provider continua aqui, mas não define mais o contexto.
+function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null); // Para guardar o apelido
+  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hiddenUsers, setHiddenUsers] = useState([]);
 
@@ -40,7 +35,6 @@ export function AuthProvider({ children }) {
     return remove(hiddenUserRef);
   };
 
-  // Efeito para monitorar a autenticação
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, user => {
       setCurrentUser(user);
@@ -52,7 +46,6 @@ export function AuthProvider({ children }) {
     return unsubscribeAuth;
   }, []);
 
-  // Efeito para buscar o perfil (apelido) do usuário logado
   useEffect(() => {
     if (currentUser) {
       const profileRef = ref(rtdb, `profiles/${currentUser.uid}`);
@@ -67,7 +60,6 @@ export function AuthProvider({ children }) {
     }
   }, [currentUser]);
 
-  // Efeito para buscar a lista de usuários ocultos
   useEffect(() => {
     if (currentUser) {
       const hiddenUsersRef = ref(rtdb, `users/${currentUser.uid}/hiddenUsers`);
@@ -96,3 +88,6 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
+
+// Agora este arquivo exporta APENAS o componente Provider.
+export default AuthProvider;

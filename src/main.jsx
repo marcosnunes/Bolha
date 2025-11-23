@@ -14,7 +14,7 @@ import CadastroPage from './pages/CadastroPage.jsx';
 import PagamentoPage from './pages/PagamentoPage.jsx';
 import ConvitePage from './pages/ConvitePage.jsx';
 import InsightsPage from './pages/InsightsPage.jsx'; // Importando a nova página
-import { AuthProvider } from './contexts/AuthContext.jsx';
+import AuthProvider from './contexts/AuthContext.jsx'; // Corrigido: importação default
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage.jsx';
 import ReportAbusePage from './pages/ReportAbusePage.jsx';
