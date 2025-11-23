@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { getDatabase, ref, query, orderByChild, equalTo, get } from "firebase/database";
-import { useAuth } from '../contexts/AuthContext'; // Garante que o useAuth seja importado
+import { useAuth } from '../hooks/useAuth';
 import ReactMarkdown from 'react-markdown';
 import {
   Box, Button, TextField, Typography, Container, Paper, CircularProgress, Alert
