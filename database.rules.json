@@ -1,0 +1,10 @@
+{
+  "rules": {
+    "invites": {
+      "$inviteId": {
+        "read": "auth != null",
+        "write": "auth != null && newData.child('usedBy').val() === auth.uid"
+      }
+    }
+  }
+}
