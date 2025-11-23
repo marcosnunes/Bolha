@@ -34,7 +34,7 @@ export default function PrivacyPolicyPage() {
           <Typography variant="h6" gutterBottom>3. Compartilhamento de Informações</Typography>
           <Typography variant="body1" paragraph>
             Não compartilhamos suas informações pessoais com empresas, organizações ou indivíduos externos, exceto para o processamento de pagamentos ou para cumprir com a lei. Seu conteúdo (posts, fotos, vídeos) é visível apenas para outros membros do seu grupo que você não tenha bloqueado e que não tenham bloqueado você.
-          </t>
+          </Typography>
 
           <Typography variant="h6" gutterBottom>4. Exclusão de Dados</Typography>
           <Typography variant="body1" paragraph>
