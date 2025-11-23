@@ -101,20 +101,20 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     }
   };
 
-  const handleDislike = async () => {
-    if (!currentUser) return;
-    const uid = currentUser.uid;
-    const postLikesRef = ref(rtdb, `posts/${id}/likes/${uid}`);
-    const postDislikesRef = ref(rtdb, `posts/${id}/dislikes/${uid}`);
+  // const handleDislike = async () => {
+  //   if (!currentUser) return;
+  //   const uid = currentUser.uid;
+  //   const postLikesRef = ref(rtdb, `posts/${id}/likes/${uid}`);
+  //   const postDislikesRef = ref(rtdb, `posts/${id}/dislikes/${uid}`);
 
-    // Se já descurtiu, remove o dislike. Se não, adiciona dislike e remove like (se houver)
-    if (hasDisliked) {
-      await remove(postDislikesRef);
-    } else {
-      await set(postDislikesRef, true);
-      if (hasLiked) await remove(postLikesRef);
-    }
-  };
+  //   // Se já descurtiu, remove o dislike. Se não, adiciona dislike e remove like (se houver)
+  //   if (hasDisliked) {
+  //     await remove(postDislikesRef);
+  //   } else {
+  //     await set(postDislikesRef, true);
+  //     if (hasLiked) await remove(postLikesRef);
+  //   }
+  // };
 
   return (
     <Card sx={{ mb: 3 }}>
