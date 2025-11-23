@@ -13,8 +13,8 @@ import LoginPage from './pages/LoginPage.jsx';
 import CadastroPage from './pages/CadastroPage.jsx';
 import PagamentoPage from './pages/PagamentoPage.jsx';
 import ConvitePage from './pages/ConvitePage.jsx';
-import InsightsPage from './pages/InsightsPage.jsx'; // Importando a nova página
-import AuthProvider from './contexts/AuthContext.jsx'; // Corrigido: importação default
+import AssistantPage from './pages/AssistantPage.jsx'; // Corrigido: Importando a página correta
+import AuthProvider from './contexts/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage.jsx';
 import ReportAbusePage from './pages/ReportAbusePage.jsx';
@@ -37,8 +37,8 @@ const router = createBrowserRouter([
         element: <ProtectedRoute><SettingsPage /></ProtectedRoute>,
       },
       {
-        path: '/insights', // Nova rota para a página de insights
-        element: <ProtectedRoute><InsightsPage /></ProtectedRoute>,
+        path: '/assistente', // Corrigido: Rota para a página do assistente
+        element: <ProtectedRoute><AssistantPage /></ProtectedRoute>,
       },
       {
         path: '/login',
