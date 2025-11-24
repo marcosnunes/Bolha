@@ -23,12 +23,14 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
 
+  // Estados para gerenciar likes/dislikes em tempo real
   const [likesData, setLikesData] = useState(postData.likes || {});
   const [dislikesData, setDislikesData] = useState(postData.dislikes || {});
 
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
 
+  // Listener em tempo real
   useEffect(() => {
     const likesRef = ref(rtdb, `posts/${id}/likes`);
     const dislikesRef = ref(rtdb, `posts/${id}/dislikes`);
@@ -72,7 +74,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     }
   };
 
-  // --- FUNÇÕES DE TRANSFORMAÇÃO DE URL DO CLOUDINARY ---
+  // Funções de URL do Cloudinary
   const getOptimizedUrl = (url, type) => {
     if (!url) return '';
     const transformation = 'upload/a_auto,q_auto,f_auto'; 
@@ -85,6 +87,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     return optimizedVideoUrl.substring(0, optimizedVideoUrl.lastIndexOf('.')) + '.jpg';
   };
 
+  // Cálculos
   const likesCount = Object.keys(likesData).length;
   const hasLiked = currentUser && likesData[currentUser.uid];
   const hasDisliked = currentUser && dislikesData[currentUser.uid];
@@ -95,11 +98,15 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     const postLikesRef = ref(rtdb, `posts/${id}/likes/${uid}`);
     const postDislikesRef = ref(rtdb, `posts/${id}/dislikes/${uid}`);
 
-    if (hasLiked) {
-      await remove(postLikesRef);
-    } else {
-      await set(postLikesRef, true);
-      if (hasDisliked) await remove(postDislikesRef);
+    try {
+      if (hasLiked) {
+        await remove(postLikesRef);
+      } else {
+        await set(postLikesRef, true);
+        if (hasDisliked) await remove(postDislikesRef);
+      }
+    } catch (error) {
+      console.error("Erro ao curtir:", error);
     }
   };
 
@@ -109,11 +116,15 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     const postLikesRef = ref(rtdb, `posts/${id}/likes/${uid}`);
     const postDislikesRef = ref(rtdb, `posts/${id}/dislikes/${uid}`);
 
-    if (hasDisliked) {
-      await remove(postDislikesRef);
-    } else {
-      await set(postDislikesRef, true);
-      if (hasLiked) await remove(postLikesRef);
+    try {
+      if (hasDisliked) {
+        await remove(postDislikesRef);
+      } else {
+        await set(postDislikesRef, true);
+        if (hasLiked) await remove(postLikesRef);
+      }
+    } catch (error) {
+      console.error("Erro ao descurtir:", error);
     }
   };
 
@@ -143,30 +154,28 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
               sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} 
             />
           )}
-
           {mediaType === 'video' && (
             <Box 
-              component="video"
-              poster={getVideoThumbnail(mediaURL)}
-              src={getOptimizedUrl(mediaURL, 'video')}
-              controls
+              component="video" 
+              poster={getVideoThumbnail(mediaURL)} 
+              src={getOptimizedUrl(mediaURL, 'video')} 
+              controls 
               playsInline
-              sx={{ maxWidth: '100%', maxHeight: '80vh' }}
+              sx={{ maxWidth: '100%', maxHeight: '80vh' }} 
             />
           )}
         </Box>
       )}
-      
+
       {textContent && (
         <CardContent>
-          {/* 2. Usar ReactMarkdown para renderizar o texto com formatação */}
           <Box sx={{ 
             color: 'text.secondary',
             typography: 'body1',
-            '& p': { marginTop: 0, marginBottom: 1 }, // Ajusta margens dos parágrafos
-            '& a': { color: 'primary.main', textDecoration: 'underline' }, // Estiliza links (se houver)
-            '& strong': { fontWeight: 600 }, // Estiliza negrito
-            wordBreak: 'break-word' // Quebra palavras longas para não vazar
+            '& p': { marginTop: 0, marginBottom: 1 },
+            '& a': { color: 'primary.main', textDecoration: 'underline' },
+            '& strong': { fontWeight: 600 },
+            wordBreak: 'break-word'
           }}>
             <ReactMarkdown>{textContent}</ReactMarkdown>
           </Box>
@@ -182,6 +191,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
         >
           {likesCount > 0 ? likesCount : 'Curtir'}
         </Button>
+        
         <Button 
           startIcon={hasDisliked ? <ThumbDownIcon /> : <ThumbDownOutlinedIcon />} 
           onClick={handleDislike} 
