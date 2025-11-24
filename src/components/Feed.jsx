@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { rtdb } from '../firebase/config';
-import { ref, query, orderByChild, get, startAt, onChildAdded } from 'firebase/database';
+import { ref, query, orderByChild, get } from 'firebase/database';
 import Post from './Post.jsx';
 import ProfileModal from './ProfileModal.jsx';
 import EditProfileModal from './EditProfileModal.jsx';
@@ -9,8 +9,7 @@ import { Box, Button, CircularProgress, Typography } from '@mui/material';
 
 const POSTS_PER_PAGE = 5;
 
-// Removemos refreshTrigger das props, pois o realtime fará esse trabalho
-function Feed({ filterNSFW }) {
+function Feed({ filterNSFW, refreshTrigger }) {
   const [allPostMetas, setAllPostMetas] = useState([]);
   const [posts, setPosts] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -18,54 +17,13 @@ function Feed({ filterNSFW }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   
-  // Ref para marcar o tempo exato que o componente montou.
-  // Usaremos isso para dizer ao Firebase: "Só me mande posts criados DEPOIS desse horário".
-  const mountTimeRef = useRef(Date.now());
-
   // Estados para controle dos Modais
   const [selectedUser, setSelectedUser] = useState(null);
   const [editProfileData, setEditProfileData] = useState(null);
 
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
-  // ----------------------------------------------------------------
-  // 1. LISTENER REALTIME (Para novos posts instantâneos)
-  // ----------------------------------------------------------------
-  useEffect(() => {
-    const postsRef = ref(rtdb, 'posts');
-    
-    // Consulta: Ordene por data e comece a partir do momento atual (+1ms para segurança)
-    const realtimeQuery = query(
-      postsRef, 
-      orderByChild('createdAt'), 
-      startAt(mountTimeRef.current + 1)
-    );
-
-    const unsubscribe = onChildAdded(realtimeQuery, (snapshot) => {
-      const newPostData = snapshot.val();
-      const newPostId = snapshot.key;
-
-      if (newPostData) {
-        setPosts((prevPosts) => {
-          // Evita duplicatas caso o post já tenha sido carregado por algum motivo
-          if (prevPosts.some(p => p.id === newPostId)) returnHZprevPosts;
-          
-          const newPost = { id: newPostId, ...newPostData };
-          
-          // Adiciona o novo post EXATAMENTE no topo da lista visual
-          return [newPost, ...prevPosts];
-        });
-        
-        // Opcional: Adicionar aos metadados para manter consistência interna, 
-        // embora visualmente o estado 'posts' seja o que importa.
-        setAllPostMetas(prev => [{ id: newPostId, createdAt: newPostData.createdAt }, ...prev]);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Função para buscar todos os metadados (IDs e datas) dos posts
+  // 1. Função para buscar todos os metadados (IDs e datas) dos posts
   const fetchAllPostMetas = useCallback(async () => {
     setLoading(true);
     const postsRef = ref(rtdb, 'posts');
@@ -78,37 +36,34 @@ function Feed({ filterNSFW }) {
           id: key,
           createdAt: data[key].createdAt
         }));
-        // Ordena do mais novo para o mais antigo e salva
+        // Ordena do mais novo para o mais antigo
         setAllPostMetas(metas.reverse());
       } else {
         setAllPostMetas([]);
         setPosts([]);
-        setLoading(false); // Se não tem dados, para o loading aqui
       }
     } catch (error) {
       console.error("Erro ao buscar metadados dos posts:", error);
+    } finally {
       setLoading(false);
     }
-    // O setLoading(false) final acontece no useEffect que carrega o primeiro batch
   }, []);
 
-  // Busca inicial dos metadados
+  // Efeito para buscar dados iniciais e reagir ao refreshTrigger (novo post)
   useEffect(() => {
     fetchAllPostMetas();
-  }, [fetchAllPostMetas]);
+  }, [fetchAllPostMetas, refreshTrigger]);
 
-  // Função para buscar o conteúdo completo de um lote de posts
-  const fetchPostBatch = useCallback(async (page, metasAtual) => {
-    // Usamos 'metasAtual' passado como argumento para garantir que estamos lendo o estado mais fresco
-    const listaMetas = metasAtual || allPostMetas;
-    
-    if (listaMetas.length === 0) return [];
+  // 2. Função para buscar o conteúdo completo de um lote de posts
+  const fetchPostBatch = useCallback(async (page) => {
+    if (allPostMetas.length === 0) return [];
     
     const startIndex = page * POSTS_PER_PAGE;
     const endIndex = startIndex + POSTS_PER_PAGE;
-    const postIdsToFetch = listaMetas.slice(startIndex, endIndex);
+    const postIdsToFetch = allPostMetas.slice(startIndex, endIndex);
 
     if (postIdsToFetch.length === 0) {
+      setHasMore(false);
       return [];
     }
 
@@ -117,60 +72,36 @@ function Feed({ filterNSFW }) {
       return get(postRef);
     });
 
-    constqnpostSnapshots = await Promise.all(postPromises);
+    const postSnapshots = await Promise.all(postPromises);
     
+    // Filtra posts que podem ter sido deletados e formata os dados
     const newPosts = postSnapshots
       .filter(snapshot => snapshot.exists())
       .map(snapshot => ({ id: snapshot.key, ...snapshot.val() }));
     
-    return { newPosts, hasMoreCheck: endIndex < listaMetas.length };
+    setHasMore(endIndex < allPostMetas.length);
+    return newPosts;
   }, [allPostMetas]);
 
-  // Efeito para carregar a primeira página APÓS ter os metadados
+  // 3. Efeito para carregar a primeira página quando os metadados estiverem prontos
   useEffect(() => {
-    if (allPostMetas.length > 0 && currentPage === 0) {
+    if (allPostMetas.length > 0) {
       setLoading(true);
-      
-      // Passamos allPostMetas explicitamente
-      fetchPostBatch(0, allPostMetas).then((result) => {
-        if (result) {
-            const { newPosts, hasMoreCheck } = result;
-            
-            setPosts(currentPosts => {
-                // Mesclagem cuidadosa: mantém o que o realtime já trouxe e adiciona o histórico
-                // Filtrando duplicatas pelo ID
-                const existingIds = new Set(currentPosts.map(p => p.id));
-                const uniqueNewPosts = newPosts.filter(p => !existingIds.has(p.id));
-                return [...currentPosts, ...uniqueNewPosts];
-            });
-            
-            setHasMore(hasMoreCheck);
-            setCurrentPage(1);
-        }
+      fetchPostBatch(0).then(initialPosts => {
+        setPosts(initialPosts);
+        setCurrentPage(1);
         setLoading(false);
       });
     }
-  }, [allPostMetas, fetchPostBatch, currentPage]);
+  }, [allPostMetas, fetchPostBatch]);
 
   // Função para carregar mais posts (paginação)
   const loadMorePosts = async () => {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
-    
-    const result = await fetchPostBatch(currentPage, allPostMetas);
-    
-    if (result) {
-        const { newPosts, hasMoreCheck } = result;
-        
-        setPosts(prevPosts => {
-            const existingIds = new Set(prevPosts.map(p => p.id));
-            const uniqueNewPosts = newPosts.filter(p => !existingIds.has(p.id));
-            return [...prevPosts, ...uniqueNewPosts];
-        });
-
-        setHasMore(hasMoreCheck);
-        setCurrentPage(prevPage => prevPage + 1);
-    }
+    const newPosts = await fetchPostBatch(currentPage);
+    setPosts(prevPosts => [...prevPosts, ...newPosts]);
+    setCurrentPage(prevPage => prevPage + 1);
     setLoadingMore(false);
   };
   
@@ -180,18 +111,28 @@ function Feed({ filterNSFW }) {
     setAllPostMetas(currentMetas => currentMetas.filter(meta => meta.id !== postIdToDelete));
   };
 
-  // Funções de Modal
-  const handleOpenProfile = (userData) => setSelectedUser(userData);
-  const handleCloseProfile = () => setSelectedUser(null);
-  
-  const handleOpenEditProfile = (profileData) => {
-    setSelectedUser(null);
-    setEditProfileData(profileData);
+  // Abre o modal de visualização de perfil
+  const handleOpenProfile = (userData) => {
+    setSelectedUser(userData);
   };
 
-  const handleCloseEditProfile = () => setEditProfileData(null);
+  // Fecha o modal de visualização de perfil
+  const handleCloseProfile = () => {
+    setSelectedUser(null);
+  };
 
-  // Filtros de exibição
+  // Abre o modal de EDIÇÃO (chamado de dentro do ProfileModal)
+  const handleOpenEditProfile = (profileData) => {
+    setSelectedUser(null); // Fecha o modal de visualização primeiro
+    setEditProfileData(profileData); // Abre o modal de edição
+  };
+
+  // Fecha o modal de EDIÇÃO
+  const handleCloseEditProfile = () => {
+    setEditProfileData(null);
+  };
+
+  // Filtros de exibição (Bloqueio e NSFW)
   const finalFilteredPosts = posts
     .filter(post => !hiddenUsers.includes(post.authorId))
     .filter(post => filterNSFW ? !post.isNSFW : true);
@@ -206,6 +147,7 @@ function Feed({ filterNSFW }) {
 
   return (
     <Box>
+      {/* Modal de Visualização de Perfil */}
       <ProfileModal 
         userToDisplay={selectedUser} 
         onClose={handleCloseProfile}
@@ -214,6 +156,7 @@ function Feed({ filterNSFW }) {
         onEditProfile={handleOpenEditProfile}
       />
 
+      {/* Modal de Edição de Perfil */}
       {editProfileData && (
         <EditProfileModal 
           open={!!editProfileData}
@@ -223,6 +166,7 @@ function Feed({ filterNSFW }) {
         />
       )}
 
+      {/* Lista de Posts */}
       {finalFilteredPosts.length > 0 ? (
         finalFilteredPosts.map(post => 
           <Post 
@@ -239,7 +183,7 @@ function Feed({ filterNSFW }) {
         )
       )}
 
-      {/* Botão Carregar Mais - Só aparece se não estiver carregando e tiver mais itens */}
+      {/* Botão Carregar Mais */}
       {hasMore && !loading && (
         <Box sx={{ textAlign: 'center', my: 2 }}>
           <Button onClick={loadMorePosts} disabled={loadingMore}>
