@@ -14,7 +14,7 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, currentUser, useEffect } = useAuth();
+  const { login, currentUser } = useAuth();
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
@@ -32,11 +32,10 @@ function LoginPage() {
   }
 
   // Redireciona se o usuário já estiver logado
-  useEffect(() => {
-    if (currentUser) {
-      navigate('/');
-    }
-  }, [currentUser, navigate]);
+  if (currentUser) {
+    navigate('/');
+    return null; // Renderiza nada enquanto redireciona
+  }
 
   return (
     <Container component="main" maxWidth="xs" sx={{ mt: 8 }}>

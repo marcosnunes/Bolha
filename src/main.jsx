@@ -17,7 +17,6 @@ import { AuthProvider } from './contexts/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage.jsx';
 import ReportAbusePage from './pages/ReportAbusePage.jsx';
-import AssistantPage from './pages/AssistantPage.jsx';
 
 // Criando o roteador
 const router = createBrowserRouter([
@@ -51,10 +50,6 @@ const router = createBrowserRouter([
       {
         path: '/convite/:token', // O :token significa que é um parâmetro dinâmico
         element: <ConvitePage />,
-      },
-      {
-        path: '/assistente',
-        element: <ProtectedRoute><AssistantPage /></ProtectedRoute>,
       },
       {
         path: '/politica-de-privacidade',
