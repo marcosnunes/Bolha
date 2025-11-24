@@ -6,7 +6,7 @@ import useToxicityModel from '../hooks/useToxicityModel';
 
 // Componentes e Ícones do MUI
 import {
-  Box, TextField, Button, CircularProgress, Alert, Typography, LinearProgress
+  TextField, Button, CircularProgress, Alert, Box, Typography, LinearProgress
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
@@ -33,6 +33,9 @@ function CreatePostForm({ onPostSuccess }) {
 
   const containsLink = (text) => {
     if (!text) return false;
+    // Regex mais permissivo para permitir texto comum, mas ainda pegar URLs óbvias
+    // Nota: ReactMarkdown vai renderizar links automaticamente se o texto tiver http.
+    // Se você quer bloquear links externos, mantenha esta verificação.
     const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])|(\bwww\.[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/ig;
     return urlRegex.test(text);
   };
@@ -49,25 +52,20 @@ function CreatePostForm({ onPostSuccess }) {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-      // Limite de 100MB (100 * 1024 * 1024 bytes)
       const maxSize = 100 * 1024 * 1024;
-      
       if (selectedFile.size > maxSize) {
          setError("O arquivo excede o limite máximo de 100MB.");
          setFile(null);
          setFileName("");
-         // Limpa o input para permitir selecionar o mesmo arquivo novamente se necessário
          e.target.value = null; 
          return;
       }
-      
       setFile(selectedFile);
       setFileName(selectedFile.name);
       setError('');
     }
   };
 
-  // Função de Upload usando XMLHttpRequest
   const uploadToCloudinary = (file) => {
     return new Promise((resolve, reject) => {
       const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
@@ -83,8 +81,7 @@ function CreatePostForm({ onPostSuccess }) {
       formData.append('upload_preset', uploadPreset);
 
       xhr.open('POST', url, true);
-      
-      xhr.timeout = 300000; // 5 minutos
+      xhr.timeout = 300000; 
 
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
@@ -129,7 +126,6 @@ function CreatePostForm({ onPostSuccess }) {
       let mediaURL = null;
       let mediaType = null;
 
-      // 1. Upload
       if (file) {
         try {
           const uploadData = await uploadToCloudinary(file);
@@ -141,7 +137,6 @@ function CreatePostForm({ onPostSuccess }) {
         }
       }
 
-      // 2. Salvar no Firebase
       const postsListRef = ref(rtdb, 'posts');
       const newPostRef = push(postsListRef);
       
@@ -159,7 +154,6 @@ function CreatePostForm({ onPostSuccess }) {
 
       await update(newPostRef, newPostData);
 
-      // 3. Limpeza
       setPostContent('');
       setFile(null);
       setFileName('');
@@ -167,7 +161,6 @@ function CreatePostForm({ onPostSuccess }) {
       if (fileInputRef.current) fileInputRef.current.value = "";
       if (onPostSuccess) onPostSuccess();
 
-      // 4. Moderação em Background
       if (postContent && postContent.trim().length > 0) {
         const isToxicFromModel = await classifyText(postContent);
         const isForbiddenFromList = containsForbiddenWord(postContent);
@@ -194,9 +187,10 @@ function CreatePostForm({ onPostSuccess }) {
       <TextField
         fullWidth multiline rows={4} variant="outlined" label="No que você está pensando?"
         value={postContent} onChange={(e) => setPostContent(e.target.value)}
+        // Dica para o usuário
+        helperText="Dica: Use **negrito** ou *itálico* para estilizar. Pule uma linha para novo parágrafo."
       />
 
-      {/* Barra de Progresso */}
       {loading && file && (
         <Box sx={{ width: '100%' }}>
            <LinearProgress variant="determinate" value={uploadProgress} />
@@ -222,7 +216,6 @@ function CreatePostForm({ onPostSuccess }) {
         </Button>
       </Box>
 
-      {/* Nome do arquivo e Aviso de Limite */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, ml: 1 }}>
           {fileName && (
             <Typography variant="caption" noWrap sx={{ fontWeight: 'bold' }}>
