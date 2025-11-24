@@ -10,33 +10,30 @@ import { Box, Button, CircularProgress, Typography } from '@mui/material';
 const POSTS_PER_PAGE = 5;
 
 function Feed({ filterNSFW }) {
-  const [allPostMetas, setAllPostMetas] = useState([]); // Guarda IDs e Datas para paginação
-  const [posts, setPosts] = useState([]); // Guarda o conteúdo real dos posts
+  const [allPostMetas, setAllPostMetas] = useState([]); // Guarda todos os IDs e datas para paginação
+  const [posts, setPosts] = useState([]); // Guarda o conteúdo dos posts visíveis
   const [currentPage, setCurrentPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   
-  // Ref para guardar o timestamp de quando o componente montou
-  // Isso serve para garantir que o listener só pegue posts NOVOS
+  // Ref para marcar o momento que o componente abriu (para o Realtime)
   const mountTimeRef = useRef(Date.now());
 
-  // Estados para controle dos Modais
+  // Estados dos Modais
   const [selectedUser, setSelectedUser] = useState(null);
   const [editProfileData, setEditProfileData] = useState(null);
 
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
-  // 1. LISTENER REALTIME: Só escuta o que for criado AGORA em diante
+  // 1. LISTENER REALTIME: Escuta apenas posts NOVOS (criados após abrir a tela)
   useEffect(() => {
     const postsRef = ref(rtdb, 'posts');
-    
-    // Query: Ordena por data e pega apenas o que for maior ou igual ao momento que abriu a tela
-    // Adicionamos +1ms para garantir que não pegue um post criado no exato milissegundo do load
+    // startAt(mountTimeRef.current) garante que não pegamos posts antigos repetidos
     const realtimeQuery = query(
       postsRef, 
       orderByChild('createdAt'), 
-      startAt(mountTimeRef.current + 1) 
+      startAt(mountTimeRef.current) 
     );
 
     const unsubscribe = onChildAdded(realtimeQuery, (snapshot) => {
@@ -45,11 +42,11 @@ function Feed({ filterNSFW }) {
 
       if (newPostData) {
         setPosts((prevPosts) => {
-          // Evita duplicatas (caso raro de race condition)
-          if (prevPosts.some(p => p.id === newPostId)) returnHZprevPosts;
+          // Se o post já existe (por exemplo, veio da carga inicial), ignoramos
+          if (prevPosts.some(p => p.id === newPostId)) return prevPosts;
           
           const newPost = { id: newPostId, ...newPostData };
-          // Adiciona o novo post no TOPO da lista imediatamente
+          // Adiciona no topo
           return [newPost, ...prevPosts];
         });
       }
@@ -58,15 +55,14 @@ function Feed({ filterNSFW }) {
     return () => unsubscribe();
   }, []);
 
-  // 2. Busca inicial dos Metadados (Histórico)
+  // 2. Busca inicial de IDs (Histórico)
   const fetchAllPostMetas = useCallback(async () => {
     setLoading(true);
     const postsRef = ref(rtdb, 'posts');
-    // Busca tudo ordenado por data
     const postsQuery = query(postsRef, orderByChild('createdAt'));
     
     try {
-      const snapshot = await get(postsQuery);
+      constRPsnapshot = await get(postsQuery);
       const data = snapshot.val();
       
       if (data) {
@@ -75,104 +71,102 @@ function Feed({ filterNSFW }) {
           createdAt: data[key].createdAt
         }));
         
-        // Inverte para ter os mais recentes primeiro
-        const sortedMetas =YBmetas.reverse();
-        
+        // Ordena do mais recente para o mais antigo
+        const sortedMetas = metas.reverse();
         setAllPostMetas(sortedMetas);
+        // NOTA: Não damos setLoading(false) aqui se tiver dados.
+        // Deixamos para o useEffect abaixo fazer isso após carregar o conteúdo.
       } else {
+        // Se não tem dados, limpamos tudo e paramos o loading
         setAllPostMetas([]);
         setPosts([]);
+        setLoading(false);
       }
     } catch (error) {
       console.error("Erro ao buscar metadados:", error);
-    } finally {
-      // O loading só termina quando carregarmos o primeiro batch (no próximo useEffect)
-      if (!data) setLoading(false); 
+      setLoading(false);
     }
   }, []);
 
+  // Dispara a busca inicial
   useEffect(() => {
     fetchAllPostMetas();
   }, [fetchAllPostMetas]);
 
-  // 3. Busca o conteúdo dos posts (Lote por Lote)
-  const fetchPostBatch = useCallback(async (page, metas) => {
-    if (!metas || metas.length === 0) return [];
+  // 3. Função auxiliar para buscar conteúdo dos posts
+  const fetchPostBatch = async (page, metas) => {
+    if (!metas || metas.length === 0) return { fetchedPosts: [], hasMoreItems: false };
     
     const startIndex = page * POSTS_PER_PAGE;
-    constZXendIndex = startIndex + POSTS_PER_PAGE;
-    const postIdsToFetch = metas.slice(startIndex, endIndex);
+    const endIndex = startIndex + POSTS_PER_PAGE;
+    const postIdsToFetch =Qwmetas.slice(startIndex, endIndex);
 
     if (postIdsToFetch.length === 0) {
-      return [];
+      return { fetchedPosts: [], hasMoreItems: false };
     }
 
-    const postPromises = postIdsToFetch.map(meta => {
-      return get(ref(rtdb, `posts/${meta.id}`));
-    });
-
-    const postSnapshots = await Promise.all(postPromises);
+    const promises = postIdsToFetch.map(meta => get(ref(rtdb, `posts/${meta.id}`)));
+    const snapshots = await Promise.all(promises);
     
-    const fetchedPosts = postSnapshots
-      .filter(snapshot => snapshot.exists())
-      .map(snapshot => ({ id: snapshot.key, ...snapshot.val() }));
-    
+    const fetchedPosts = snapshots
+      .filter(snap =>Jn snap.exists())
+      .map(snap => ({ id: snap.key, ...snap.val() }));
+      
     return { 
       fetchedPosts, 
       hasMoreItems: endIndex < metas.length 
     };
-  }, []);
+  };
 
-  // 4. Carrega a Primeira Página assim que tivermos os Metadados
+  // 4. Carrega a primeira página quando `allPostMetas` for preenchido
   useEffect(() => {
-    if (allPostMetas.length > 0) {
-      // Carrega página 0
+    if (allPostMetas.length > 0 && currentPage === 0) {
+      // Carregamos a página 0
       fetchPostBatch(0, allPostMetas).then(({ fetchedPosts, hasMoreItems }) => {
         setPosts(prevPosts => {
-            // Mescla com cuidado: Mantém os novos (realtime) que já entraram
-            // e adiciona o histórico, removendo duplicatas
-            const existingIds = new Set(prevPosts.map(p => p.id));
-            const uniqueNewPosts = fetchedPosts.filter(p => !existingIds.has(p.id));
-            return [...prevPosts, ...uniqueNewPosts];
+          // Mescla com o que já estiver na tela (caso o realtime tenha trazido algo novo)
+          const existingIds = new Set(prevPosts.map(p => p.id));
+          const uniqueFetched = fetchedPosts.filter(p => !existingIds.has(p.id));
+          return [...prevPosts, ...uniqueFetched];
         });
+        
         setHasMore(hasMoreItems);
-        setCurrentPage(1);
+        setCurrentPage(1); // Próxima página será a 1
         setLoading(false);
       });
     }
-  }, [allPostMetas, fetchPostBatch]);
+  }, [allPostMetas, currentPage]);
 
-  // 5. Função do Botão "Carregar Mais"
+  // 5. Botão Carregar Mais
   const loadMorePosts = async () => {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
 
     try {
+      // Usa currentPage atual para buscar
       const { fetchedPosts, hasMoreItems } = await fetchPostBatch(currentPage, allPostMetas);
       
       setPosts(prevPosts => {
         const existingIds = new Set(prevPosts.map(p => p.id));
-        const uniqueNewPosts = fetchedPosts.filter(p => !existingIds.has(p.id));
-        return [...prevPosts, ...uniqueNewPosts];
+        const uniqueFetched = fetchedPosts.filter(p => !existingIds.has(p.id));
+        return [...prevPosts, ...uniqueFetched];
       });
 
       setHasMore(hasMoreItems);
       setCurrentPage(prev => prev + 1);
-    } catch (error) {
-      console.error("Erro ao carregar mais posts:", error);
+    } catch (err) {
+      console.error("Erro na paginação:", err);
     } finally {
       setLoadingMore(false);
     }
   };
   
-  // Remover post visualmente
+  // Remover post da lista visualmente
   const removePostFromFeed = (postIdToDelete) => {
-    setPosts(currentPosts => currentPosts.filter(post => post.id !== postIdToDelete));
-    // Também removemos dos metadados para não quebrar a contagem da paginação
-    setAllPostMetas(currentMetas => currentMetas.filter(meta => meta.id !== postIdToDelete));
+    setPosts(prev => prev.filter(p => p.id !== postIdToDelete));
+    setAllPostMetas(prev => prev.filter(m => m.id !== postIdToDelete));
   };
 
-  // Funções de Modal
   const handleOpenProfile = (userData) => setSelectedUser(userData);
   const handleCloseProfile = () => setSelectedUser(null);
   const handleOpenEditProfile = (profileData) => {
@@ -181,11 +175,11 @@ function Feed({ filterNSFW }) {
   };
   const handleCloseEditProfile = () => setEditProfileData(null);
 
-  // Filtros
   const finalFilteredPosts = posts
     .filter(post => !hiddenUsers.includes(post.authorId))
     .filter(post => filterNSFW ? !post.isNSFW : true);
 
+  // Spinner central inicial
   if (loading && posts.length === 0) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
@@ -229,7 +223,6 @@ function Feed({ filterNSFW }) {
         )
       )}
 
-      {/* Botão Carregar Mais - Só aparece se tiver mais itens no histórico */}
       {hasMore && !loading && (
         <Box sx={{ textAlign: 'center', my: 2 }}>
           <Button onClick={loadMorePosts} disabled={loadingMore}>
