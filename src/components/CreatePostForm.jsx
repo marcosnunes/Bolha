@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, push, serverTimestamp, update } from 'firebase/database';
 import useToxicityModel from '../hooks/useToxicityModel';
+import { v4 as uuidv4 } from 'uuid'; // Vamos precisar de IDs únicos para o upload
 
 // Componentes e Ícones do MUI
 import {
@@ -11,12 +12,17 @@ import {
 import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 
+// Função simples para gerar ID se não quiser instalar a lib uuid
+const generateUniqueId = () => {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+};
+
 function CreatePostForm({ onPostSuccess }) {
   const [postContent, setPostContent] = useState('');
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0); // Estado para a barra de progresso
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
   
   const { currentUser, userProfile } = useAuth();
@@ -48,51 +54,71 @@ function CreatePostForm({ onPostSuccess }) {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-      // Validação simples de tamanho (ex: alerta se for > 200MB, Cloudinary free pode falhar dependendo da conta)
-      if (selectedFile.size > 190 * 1024 * 1024) {
-         setError("Atenção: Arquivos muito grandes podem demorar ou falhar dependendo da sua conexão.");
-      } else {
-         setError('');
-      }
+      // Removemos a limitação artificial de tamanho aqui, o chunking vai lidar com isso.
       setFile(selectedFile);
       setFileName(selectedFile.name);
+      setError('');
     }
   };
 
-  // Função auxiliar para upload com XHR (Progresso Real)
-  const uploadWithProgress = (file) => {
-    return new Promise((resolve, reject) => {
+  const uploadFileInChunks = async (file) => {
+    const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+    
+    // Define se é video ou image baseada no tipo do arquivo
+    const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
+    const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`;
+    
+    const XUniqueUploadId = generateUniqueId(); // ID único para esta sessão de upload
+    const CHUNK_SIZE = 6 * 1024 * 1024; // 6MB por pedaço (seguro para mobile)
+    const totalSize = file.size;
+    let start = 0;
+    let end = Math.min(CHUNK_SIZE, totalSize);
+
+    while (start < totalSize) {
+      const chunk = file.slice(start, end);
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
-
-      const xhr = new XMLHttpRequest();
-      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+      formData.append('file', chunk);
+      formData.append('upload_preset', UPLOAD_PRESET);
+      formData.append('cloud_name', CLOUD_NAME);
       
-      // Cloudinary endpoint
-      xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`);
+      // Cabeçalho CRUCIAL para dizer ao Cloudinary que é um pedaço
+      const contentRange = `bytes ${start}-${end - 1}/${totalSize}`;
 
-      // Monitorar progresso
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percentComplete = (event.loaded / event.total) * 100;
-          setUploadProgress(Math.round(percentComplete));
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Unique-Upload-Id': XUniqueUploadId,
+            'Content-Range': contentRange
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || 'Erro no upload do fragmento.');
         }
-      };
 
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          const data = JSON.parse(xhr.responseText);
-          resolve({ secure_url: data.secure_url, resource_type: data.resource_type });
-        } else {
-          reject(new Error('Falha no upload da mídia.'));
+        // Se for o último pedaço, retorna os dados finais
+        if (end === totalSize) {
+          const data = await response.json();
+          return { secure_url: data.secure_url, resource_type: data.resource_type };
         }
-      };
 
-      xhr.onerror = () => reject(new Error('Erro de rede durante upload.'));
+        // Atualiza progresso
+        const percent = Math.round((end / totalSize) * 100);
+        setUploadProgress(percent);
 
-      xhr.send(formData);
-    });
+        // Prepara próximo pedaço
+        start = end;
+        end = Math.min(start + CHUNK_SIZE, totalSize);
+
+      } catch (err) {
+        console.error("Erro no chunk:", err);
+        throw new Error("Falha na conexão durante o upload. Tente novamente.");
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -110,18 +136,24 @@ function CreatePostForm({ onPostSuccess }) {
       let mediaURL = null;
       let mediaType = null;
 
-      // 1. Upload da Mídia com Progresso
+      // 1. Upload Inteligente
       if (file) {
-        try {
-          const uploadData = await uploadWithProgress(file);
-          mediaURL = uploadData.secure_url;
-          mediaType = uploadData.resource_type;
-        } catch (uploadErr) {
-          throw new Error("Não foi possível enviar o arquivo. Verifique sua conexão ou tamanho do arquivo.");
+        // Se o arquivo for pequeno (< 10MB), usa upload normal (mais rápido)
+        // Se for grande, usa o chunked (mais seguro)
+        if (file.size < 10 * 1024 * 1024) {
+             // Lógica simplificada para arquivos pequenos dentro da mesma função se possível, 
+             // mas para garantir, vamos chamar o chunked para tudo acima de 10MB ou videos
+             const uploadData = await uploadFileInChunks(file);
+             mediaURL = uploadData.secure_url;
+             mediaType = uploadData.resource_type;
+        } else {
+             const uploadData = await uploadFileInChunks(file);
+             mediaURL = uploadData.secure_url;
+             mediaType = uploadData.resource_type;
         }
       }
 
-      // 2. Criação do Post
+      // 2. Criação do Post no Firebase
       const postsListRef = ref(rtdb, 'posts');
       const newPostRef = push(postsListRef);
       
@@ -140,15 +172,16 @@ function CreatePostForm({ onPostSuccess }) {
 
       await update(newPostRef, newPostData);
 
+      // Limpeza e Sucesso
       setPostContent('');
       setFile(null);
       setFileName('');
       setUploadProgress(0);
       
       if (fileInputRef.current) fileInputRef.current.value = "";
-      if (onPostSuccess) onPostSuccess(); // Atualiza o Feed na Home
+      if (onPostSuccess) onPostSuccess(); 
 
-      // 3. Moderação
+      // 3. Moderação (Fundo)
       if (postContent && postContent.trim().length > 0) {
         const isToxicFromModel = await classifyText(postContent);
         const isForbiddenFromList = containsForbiddenWord(postContent);
@@ -161,7 +194,7 @@ function CreatePostForm({ onPostSuccess }) {
 
     } catch (err) {
       console.error("Erro ao publicar:", err);
-      setError(err.message || "Erro ao publicar post.");
+      setError(err.message || "Erro ao publicar post. Verifique sua conexão.");
     } finally {
       setLoading(false);
     }
@@ -169,7 +202,7 @@ function CreatePostForm({ onPostSuccess }) {
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-      {loadingModel && <Typography variant="caption">Iniciando segurança...</Typography>}
+      {loadingModel && <Typography variant="caption">Verificando segurança...</Typography>}
       {error && <Alert severity="error">{error}</Alert>}
 
       <TextField
@@ -182,7 +215,7 @@ function CreatePostForm({ onPostSuccess }) {
         <Box sx={{ width: '100%' }}>
            <LinearProgress variant="determinate" value={uploadProgress} />
            <Typography variant="caption" color="text.secondary" align="center" display="block">
-             Enviando mídia: {uploadProgress}%
+             Enviando arquivo... {uploadProgress}%
            </Typography>
         </Box>
       )}
