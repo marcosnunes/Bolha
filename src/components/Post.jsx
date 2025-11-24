@@ -1,12 +1,13 @@
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
-import { ref, remove } from 'firebase/database';
-import { useState } from 'react';
+import { ref, remove, set, onValue } from 'firebase/database';
+import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 // Componentes e Ícones do MUI
-import { 
-  Card, CardHeader, CardContent, CardActions, IconButton, Typography, 
-  Box, Menu, MenuItem, Avatar, Tooltip, Divider, Button 
+import {
+  Card, CardHeader, CardContent, CardActions, IconButton, Typography,
+  Box, Menu, MenuItem, Avatar, Tooltip, Divider, Button
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -15,15 +16,37 @@ import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import ThumbDownOutlinedIcon from '@mui/icons-material/ThumbDownOutlined';
 
-function Post({ postData, onAuthorClick }) {
+function Post({ postData, onAuthorClick, onPostDelete }) {
   const { currentUser } = useAuth();
-  const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL, likes, dislikes } = postData;
+  const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL } = postData;
+  
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
-  
+
+  const [likesData, setLikesData] = useState(postData.likes || {});
+  const [dislikesData, setDislikesData] = useState(postData.dislikes || {});
+
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
-  
+
+  useEffect(() => {
+    const likesRef = ref(rtdb, `posts/${id}/likes`);
+    const dislikesRef = ref(rtdb, `posts/${id}/dislikes`);
+
+    const unsubscribeLikes = onValue(likesRef, (snapshot) => {
+      setLikesData(snapshot.val() || {});
+    });
+
+    const unsubscribeDislikes = onValue(dislikesRef, (snapshot) => {
+      setDislikesData(snapshot.val() || {});
+    });
+
+    return () => {
+      unsubscribeLikes();
+      unsubscribeDislikes();
+    };
+  }, [id]);
+
   const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
 
@@ -38,6 +61,10 @@ function Post({ postData, onAuthorClick }) {
       try {
         const postRef = ref(rtdb, `posts/${id}`);
         await remove(postRef);
+        
+        if (onPostDelete) {
+          onPostDelete(id);
+        }
       } catch (error) {
         console.error("Erro ao apagar o post:", error);
         alert("Não foi possível apagar o post. Tente novamente.");
@@ -46,30 +73,21 @@ function Post({ postData, onAuthorClick }) {
   };
 
   // --- FUNÇÕES DE TRANSFORMAÇÃO DE URL DO CLOUDINARY ---
-
-  // Injeta parâmetros de transformação na URL do Cloudinary
   const getOptimizedUrl = (url, type) => {
     if (!url) return '';
-    // Encontra a parte '/upload/' na URL e insere as transformações depois dela
-    // a_auto: rotaciona automaticamente baseado nos metadados (corrige celular)
-    // q_auto: otimiza a qualidade para carregar mais rápido
-    // f_auto: escolhe o melhor formato de vídeo/imagem para o navegador
     const transformation = 'upload/a_auto,q_auto,f_auto'; 
     return url.replace('upload', transformation);
   };
 
   const getVideoThumbnail = (videoUrl) => {
     if (!videoUrl) return '';
-    // Pega a URL otimizada do vídeo e troca a extensão para jpg
     const optimizedVideoUrl = getOptimizedUrl(videoUrl, 'video');
-    // Remove a extensão original e adiciona .jpg
     return optimizedVideoUrl.substring(0, optimizedVideoUrl.lastIndexOf('.')) + '.jpg';
   };
 
-  // --- Lógica de Curtidas ---
-  const likesCount = likes ? Object.keys(likes).length : 0;
-  const hasLiked = currentUser && likes && likes[currentUser.uid];
-  const hasDisliked = currentUser && dislikes && dislikes[currentUser.uid];
+  const likesCount = Object.keys(likesData).length;
+  const hasLiked = currentUser && likesData[currentUser.uid];
+  const hasDisliked = currentUser && dislikesData[currentUser.uid];
 
   const handleLike = async () => {
     if (!currentUser) return;
@@ -105,9 +123,7 @@ function Post({ postData, onAuthorClick }) {
         avatar={<Avatar src={authorPhotoURL}>{!authorPhotoURL && authorNickname.charAt(0).toUpperCase()}</Avatar>}
         action={
           <>
-            <Tooltip title="Ver opções">
-              <IconButton aria-label="settings" onClick={handleMenuClick}><MoreVertIcon /></IconButton>
-            </Tooltip>
+            <Tooltip title="Ver opções"><IconButton onClick={handleMenuClick}><MoreVertIcon /></IconButton></Tooltip>
             <Menu anchorEl={anchorEl} open={openMenu} onClose={handleMenuClose}>
               <MenuItem onClick={handleAuthorClick}>Ver Perfil</MenuItem>
               {isOwner && <MenuItem onClick={handleDeletePost} sx={{ color: 'error.main' }}><DeleteIcon sx={{ mr: 1 }} /> Apagar Post</MenuItem>}
@@ -123,7 +139,6 @@ function Post({ postData, onAuthorClick }) {
           {mediaType === 'image' && (
             <Box 
               component="img" 
-              // Usa a URL otimizada e rotacionada
               src={getOptimizedUrl(mediaURL, 'image')} 
               sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} 
             />
@@ -132,12 +147,10 @@ function Post({ postData, onAuthorClick }) {
           {mediaType === 'video' && (
             <Box 
               component="video"
-              // Usa a thumbnail gerada com rotação
               poster={getVideoThumbnail(mediaURL)}
-              // Usa o vídeo com rotação e otimização
               src={getOptimizedUrl(mediaURL, 'video')}
               controls
-              playsInline // Importante para mobile
+              playsInline
               sx={{ maxWidth: '100%', maxHeight: '80vh' }}
             />
           )}
@@ -146,7 +159,17 @@ function Post({ postData, onAuthorClick }) {
       
       {textContent && (
         <CardContent>
-          <Typography variant="body1" color="text.secondary">{textContent}</Typography>
+          {/* 2. Usar ReactMarkdown para renderizar o texto com formatação */}
+          <Box sx={{ 
+            color: 'text.secondary',
+            typography: 'body1',
+            '& p': { marginTop: 0, marginBottom: 1 }, // Ajusta margens dos parágrafos
+            '& a': { color: 'primary.main', textDecoration: 'underline' }, // Estiliza links (se houver)
+            '& strong': { fontWeight: 600 }, // Estiliza negrito
+            wordBreak: 'break-word' // Quebra palavras longas para não vazar
+          }}>
+            <ReactMarkdown>{textContent}</ReactMarkdown>
+          </Box>
         </CardContent>
       )}
 
