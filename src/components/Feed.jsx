@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { rtdb } from '../firebase/config';
-import { ref, query, orderByChild, get, startAt, onChildAdded } from 'firebase/database';
+import { ref, query, orderByChild, get } from 'firebase/database';
 import Post from './Post.jsx';
 import ProfileModal from './ProfileModal.jsx';
 import EditProfileModal from './EditProfileModal.jsx';
@@ -9,7 +9,7 @@ import { Box, Button, CircularProgress, Typography } from '@mui/material';
 
 const POSTS_PER_PAGE = 5;
 
-function Feed({ filterNSFW }) {
+function Feed({ filterNSFW, refreshTrigger }) {
   const [allPostMetas, setAllPostMetas] = useState([]);
   const [posts, setPosts] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -17,52 +17,13 @@ function Feed({ filterNSFW }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   
-  // Ref para guardar o momento exato que a tela abriu
-  const mountTimeRef = useRef(Date.now());
-  
   // Estados para controle dos Modais
   const [selectedUser, setSelectedUser] = useState(null);
   const [editProfileData, setEditProfileData] = useState(null);
 
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
-  useEffect(() => {
-    const postsRef = ref(rtdb, 'posts');
-    
-    const realtimeQuery = query(
-      postsRef, 
-      orderByChild('createdAt'), 
-      startAt(mountTimeRef.current + 1)
-    );
-
-    const unsubscribe = onChildAdded(realtimeQuery, (snapshot) => {
-      const newPostData = snapshot.val();
-      const newPostId = snapshot.key;
-
-      if (newPostData) {
-        setPosts((currentPosts) => {
-          // Verifica se o post já existe na tela para evitar duplicidade
-          if (currentPosts.some(post => post.id === newPostId)) {
-            returnHZcurrentPosts;
-          }
-
-          const newPost = { id: newPostId, ...newPostData };
-          
-          // Adiciona o novo post no TOPO da lista visual
-          return [newPost, ...currentPosts];
-        });
-
-        // Atualiza os metadados também para manter a consistência se o usuário rolar muito
-        setAllPostMetas(currentMetas => {
-            if (currentMetas.some(m => m.id === newPostId)) return currentMetas;
-            return [{ id: newPostId, createdAt: newPostData.createdAt }, ...currentMetas];
-        });
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
+  // 1. Função para buscar todos os metadados (IDs e datas) dos posts
   const fetchAllPostMetas = useCallback(async () => {
     setLoading(true);
     const postsRef = ref(rtdb, 'posts');
@@ -84,17 +45,14 @@ function Feed({ filterNSFW }) {
     } catch (error) {
       console.error("Erro ao buscar metadados dos posts:", error);
     } finally {
-      // O loading será setado como false no useEffect nº 3 após carregar o conteúdo
-      // Se não tiver posts, paramos aqui
-      const snapshot = await get(postsQuery); // Redundância para check rápido
-      if (!snapshot.exists()) setLoading(false);
+      setLoading(false);
     }
   }, []);
 
-  // Efeito para buscar dados iniciais
+  // Efeito para buscar dados iniciais e reagir ao refreshTrigger (novo post)
   useEffect(() => {
     fetchAllPostMetas();
-  }, [fetchAllPostMetas]);
+  }, [fetchAllPostMetas, refreshTrigger]);
 
   // 2. Função para buscar o conteúdo completo de um lote de posts
   const fetchPostBatch = useCallback(async (page) => {
@@ -114,7 +72,7 @@ function Feed({ filterNSFW }) {
       return get(postRef);
     });
 
-    constqnpostSnapshots = await Promise.all(postPromises);
+    const postSnapshots = await Promise.all(postPromises);
     
     // Filtra posts que podem ter sido deletados e formata os dados
     const newPosts = postSnapshots
@@ -127,37 +85,22 @@ function Feed({ filterNSFW }) {
 
   // 3. Efeito para carregar a primeira página quando os metadados estiverem prontos
   useEffect(() => {
-    if (allPostMetas.length > 0 && currentPage === 0) {
+    if (allPostMetas.length > 0) {
       setLoading(true);
       fetchPostBatch(0).then(initialPosts => {
-        setPosts(currentPosts => {
-            // Mesclagem segura: Mantém o que o Realtime já trouxe e adiciona o histórico
-            const existingIds = new Set(currentPosts.map(p => p.id));
-            const uniqueInitial = initialPosts.filter(p => !existingIds.has(p.id));
-            return [...currentPosts, ...uniqueInitial];
-        });
+        setPosts(initialPosts);
         setCurrentPage(1);
         setLoading(false);
       });
-    } else if (allPostMetas.length === 0 && !loading) {
-        // Caso não tenha posts
-        setLoading(false);
     }
-  }, [allPostMetas, fetchPostBatch, currentPage, loading]);
+  }, [allPostMetas, fetchPostBatch]);
 
   // Função para carregar mais posts (paginação)
   const loadMorePosts = async () => {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
     const newPosts = await fetchPostBatch(currentPage);
-    
-    setPosts(prevPosts => {
-        // Evita duplicatas ao carregar mais
-        const existingIds = new Set(prevPosts.map(p => p.id));
-        const uniqueNew = newPosts.filter(p => !existingIds.has(p.id));
-        return [...prevPosts, ...uniqueNew];
-    });
-    
+    setPosts(prevPosts => [...prevPosts, ...newPosts]);
     setCurrentPage(prevPage => prevPage + 1);
     setLoadingMore(false);
   };
@@ -178,10 +121,10 @@ function Feed({ filterNSFW }) {
     setSelectedUser(null);
   };
 
-  // Abre o modal de EDIÇÃO
+  // Abre o modal de EDIÇÃO (chamado de dentro do ProfileModal)
   const handleOpenEditProfile = (profileData) => {
-    setSelectedUser(null); 
-    setEditProfileData(profileData); 
+    setSelectedUser(null); // Fecha o modal de visualização primeiro
+    setEditProfileData(profileData); // Abre o modal de edição
   };
 
   // Fecha o modal de EDIÇÃO
@@ -189,7 +132,7 @@ function Feed({ filterNSFW }) {
     setEditProfileData(null);
   };
 
-  // Filtros de exibição
+  // Filtros de exibição (Bloqueio e NSFW)
   const finalFilteredPosts = posts
     .filter(post => !hiddenUsers.includes(post.authorId))
     .filter(post => filterNSFW ? !post.isNSFW : true);
@@ -204,6 +147,7 @@ function Feed({ filterNSFW }) {
 
   return (
     <Box>
+      {/* Modal de Visualização de Perfil */}
       <ProfileModal 
         userToDisplay={selectedUser} 
         onClose={handleCloseProfile}
@@ -212,6 +156,7 @@ function Feed({ filterNSFW }) {
         onEditProfile={handleOpenEditProfile}
       />
 
+      {/* Modal de Edição de Perfil */}
       {editProfileData && (
         <EditProfileModal 
           open={!!editProfileData}
@@ -221,6 +166,7 @@ function Feed({ filterNSFW }) {
         />
       )}
 
+      {/* Lista de Posts */}
       {finalFilteredPosts.length > 0 ? (
         finalFilteredPosts.map(post => 
           <Post 
@@ -237,6 +183,7 @@ function Feed({ filterNSFW }) {
         )
       )}
 
+      {/* Botão Carregar Mais */}
       {hasMore && !loading && (
         <Box sx={{ textAlign: 'center', my: 2 }}>
           <Button onClick={loadMorePosts} disabled={loadingMore}>
