@@ -23,6 +23,7 @@ import AddIcon from '@mui/icons-material/Add';
 import PolicyIcon from '@mui/icons-material/Policy';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import PeopleIcon from '@mui/icons-material/People';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 
 // Nossos componentes
 import CreatePostForm from '../components/CreatePostForm.jsx';
@@ -39,10 +40,10 @@ function HomePage() {
     const [loadingInvite, setLoadingInvite] = useState(false);
     const [openInviteDialog, setOpenInviteDialog] = useState(false);
     const [openPostDialog, setOpenPostDialog] = useState(false);
-    
+
     // Estado para forçar a atualização do Feed
     const [refreshFeed, setRefreshFeed] = useState(0);
-    
+
     // Estado para contador de usuários
     const [userCount, setUserCount] = useState(0);
 
@@ -165,6 +166,7 @@ function HomePage() {
                         <Divider />
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/configuracoes"><ListItemIcon><SettingsIcon /></ListItemIcon><ListItemText primary="Configurações" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton onClick={generateInviteLink} disabled={loadingInvite}><ListItemIcon><AddCircleOutlineIcon /></ListItemIcon><ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} /></ListItemButton></ListItem>
+                        <ListItem disablePadding><ListItemButton component={RouterLink} to="/assistente"><ListItemIcon><AutoAwesomeIcon color="primary" /></ListItemIcon><ListItemText primary="Assistente IA" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}><ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon><ListItemText primary="Apagar Conta" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/politica-de-privacidade"><ListItemIcon><PolicyIcon /></ListItemIcon><ListItemText primary="Política de Privacidade" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/denuncia"><ListItemIcon><ReportProblemIcon color="warning" /></ListItemIcon><ListItemText primary="Denunciar Abuso" /></ListItemButton></ListItem>
@@ -178,23 +180,23 @@ function HomePage() {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'grey.100' }}>
             <input type="file" hidden ref={profilePicInputRef} onChange={handleProfilePicChange} accept="image/*" />
-            
+
             <AppBar component="nav" position="sticky" sx={{ pt: { xs: 'env(safe-area-inset-top)', sm: 0 } }}>
                 <Toolbar>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Bolha</Typography>
-                    
+
                     {/* Contador de Usuários */}
-                    <Chip 
-                        icon={<PeopleIcon style={{ color: 'inherit' }} />} 
+                    <Chip
+                        icon={<PeopleIcon style={{ color: 'inherit' }} />}
                         label={`${userCount} membros`}
                         variant="outlined"
-                        sx={{ mr: 2, color: 'white', borderColor: 'rgba(255, 255, 255, 0.5)', '& .MuiChip-icon': { color: 'white' } }} 
+                        sx={{ mr: 2, color: 'white', borderColor: 'rgba(255, 255, 255, 0.5)', '& .MuiChip-icon': { color: 'white' } }}
                     />
-                    
+
                     <IconButton color="inherit" aria-label="open drawer" edge="end" onClick={handleDrawerToggle}><MenuIcon /></IconButton>
                 </Toolbar>
             </AppBar>
-            
+
             <Drawer variant="temporary" open={mobileOpen} onClose={handleDrawerToggle} anchor="right" ModalProps={{ keepMounted: true }} sx={{ '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 } }}>{drawer}</Drawer>
 
             <Dialog open={openInviteDialog} onClose={() => setOpenInviteDialog(false)}>
@@ -221,7 +223,7 @@ function HomePage() {
                     <Typography variant="h4" component="h2">Posts Recentes</Typography>
                     <FormControlLabel control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />} label="Mostrar conteúdo sensível" labelPlacement="start" />
                 </Box>
-                
+
                 {/* Passando a prop refreshTrigger */}
                 <Feed filterNSFW={!showNSFW} refreshTrigger={refreshFeed} />
             </Container>

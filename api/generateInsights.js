@@ -1,53 +1,55 @@
-
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// Esta função roda nos servidores da Vercel (Node.js)
+// Ela protege sua chave de API.
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Apenas o método POST é permitido' });
+    return res.status(405).json({ message: 'Apenas POST é permitido' });
   }
 
   const { prompt, userPosts } = req.body;
+  const apiKey = process.env.GEMINI_API_KEY;
 
-  if (!prompt) {
-    return res.status(400).json({ message: 'O prompt é obrigatório' });
+  if (!apiKey) {
+    return res.status(500).json({ message: 'Chave da API não configurada no servidor.' });
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-    let postContext = "";
-    if (userPosts && userPosts.length > 0) {
-        postContext = "Aqui está um histórico dos meus posts:\n\n";
-        userPosts.forEach(post => {
-            postContext += `- Postagem: \"${post.content}\" (Likes: ${post.likes || 0}, Dislikes: ${post.dislikes || 0})\n`;
-        });
-    } else {
-        postContext = "O usuário ainda não fez nenhum post.";
-    }
-
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const finalPrompt = `
-      Você é um assistente pessoal para uma rede social chamada \"Bolha Social\".
-      Sua tarefa é analisar a atividade de um usuário e fornecer insights úteis.
-      Responda em markdown.
-
-      Contexto do usuário (posts anteriores):
-      ${postContext}
-
-      Pergunta do usuário:
-      \"${prompt}\"
-
-      Sua análise:
+    // Construir o contexto para o Gemini com base nos posts do usuário
+    const postsContext = userPosts.map(p => `- ${p.textContent} (${new Date(p.createdAt).toLocaleDateString()})`).join('\n');
+    
+    const fullPrompt = `
+      Você é um assistente de uma rede social pessoal.
+      Aqui estão as postagens recentes do usuário:
+      ${postsContext}
+      
+      Pergunta do usuário: "${prompt}"
+      
+      Responda de forma amigável, curta e direta, baseando-se apenas nos posts acima. Se não houver posts suficientes, diga isso.
     `;
 
-    const result = await model.generateContent(finalPrompt);
-    const response = await result.response;
-    const text = response.text();
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: fullPrompt }]
+        }]
+      })
+    });
 
-    return res.status(200).json({ success: true, text });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'Erro na API do Gemini');
+    }
+
+    const generatedText = data.candidates[0].content.parts[0].text;
+    return res.status(200).json({ text: generatedText });
 
   } catch (error) {
-    console.error("Erro ao chamar a API do Gemini:", error);
-    return res.status(500).json({ message: 'Ocorreu um erro ao gerar os insights.' });
+    console.error('Erro na função serverless:', error);
+    return res.status(500).json({ message: 'Erro ao gerar insights.', details: error.message });
   }
 }
