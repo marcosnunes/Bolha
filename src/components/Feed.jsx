@@ -18,7 +18,7 @@ function Feed({ filterNSFW, refreshTrigger }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
-  // Função para buscar todos os metadados (reutilizável)
+  // 1. Busca Metadados
   const fetchAllPostMetas = useCallback(async () => {
     setLoading(true);
     const postsRef = ref(rtdb, 'posts');
@@ -43,12 +43,11 @@ function Feed({ filterNSFW, refreshTrigger }) {
     }
   }, []);
 
-  // Busca inicial e RE-BUSCA quando refreshTrigger muda
   useEffect(() => {
     fetchAllPostMetas();
   }, [fetchAllPostMetas, refreshTrigger]);
 
-  // Função para buscar o conteúdo completo de um lote de posts
+  // 2. Busca Lote de Posts
   const fetchPostBatch = useCallback(async (page) => {
     if (allPostMetas.length === 0) return [];
     
@@ -67,7 +66,6 @@ function Feed({ filterNSFW, refreshTrigger }) {
     });
 
     const postSnapshots = await Promise.all(postPromises);
-    // Filtra posts que podem ter sido apagados mas ainda estavam nos metadados
     const newPosts = postSnapshots
       .filter(snapshot => snapshot.exists())
       .map(snapshot => ({ id: snapshot.key, ...snapshot.val() }));
@@ -76,7 +74,7 @@ function Feed({ filterNSFW, refreshTrigger }) {
     return newPosts;
   }, [allPostMetas]);
 
-  // Efeito para carregar a primeira página QUANDO os metadados mudarem
+  // 3. Carrega primeira página
   useEffect(() => {
     if (allPostMetas.length > 0) {
       setLoading(true);
@@ -97,11 +95,11 @@ function Feed({ filterNSFW, refreshTrigger }) {
     setLoadingMore(false);
   };
   
-  // Função para remover o post da lista visualmente na hora
+  // --- FUNÇÃO QUE REMOVE O POST DA LISTA ---
   const removePostFromFeed = (postIdToDelete) => {
+    // Remove da lista visual
     setPosts(currentPosts => currentPosts.filter(post => post.id !== postIdToDelete));
-    
-    // Também removemos dos metadados para manter a consistência
+    // Remove dos metadados para não quebrar paginação futura
     setAllPostMetas(currentMetas => currentMetas.filter(meta => meta.id !== postIdToDelete));
   };
 
@@ -111,13 +109,9 @@ function Feed({ filterNSFW, refreshTrigger }) {
   const finalFilteredPosts = posts
     .filter(post => !hiddenUsers.includes(post.authorId))
     .filter(post => filterNSFW ? !post.isNSFW : true);
-  
+
   if (loading && posts.length === 0) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
+    return <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>;
   }
 
   return (
@@ -133,7 +127,7 @@ function Feed({ filterNSFW, refreshTrigger }) {
             key={post.id} 
             postData={post} 
             onAuthorClick={handleOpenProfile}
-            onPostDelete={removePostFromFeed} // <-- PASSAMOS A FUNÇÃO AQUI
+            onPostDelete={removePostFromFeed} // <-- PASSANDO A FUNÇÃO CORRETAMENTE
           />)
       ) : (
         !loading && <Typography variant="body1" color="text.secondary" align="center" sx={{my: 4}}>Ainda não há posts para exibir.</Typography>
