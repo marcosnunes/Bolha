@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { rtdb } from '../firebase/config';
-import { ref, query, orderByChild, get } from 'firebase/database';
+import { ref, query, orderByChild, get, limitToLast, onChildAdded } from 'firebase/database';
 import Post from './Post.jsx';
 import ProfileModal from './ProfileModal.jsx';
 import EditProfileModal from './EditProfileModal.jsx';
@@ -9,7 +9,7 @@ import { Box, Button, CircularProgress, Typography } from '@mui/material';
 
 const POSTS_PER_PAGE = 5;
 
-function Feed({ filterNSFW, refreshTrigger }) {
+function Feed({ filterNSFW }) {
   const [allPostMetas, setAllPostMetas] = useState([]);
   const [posts, setPosts] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -23,6 +23,42 @@ function Feed({ filterNSFW, refreshTrigger }) {
 
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
+  useEffect(() => {
+    const postsRef = ref(rtdb, 'posts');
+    // Escuta o último item adicionado ao banco (ordenado por data)
+    const latestPostQuery = query(postsRef, orderByChild('createdAt'), limitToLast(1));
+
+    const unsubscribe = onChildAdded(latestPostQuery, (snapshot) => {
+      const newPostData = snapshot.val();
+      const newPostId = snapshot.key;
+
+      if (newPostData) {
+        setPosts((currentPosts) => {
+          // Verifica se o post JÁ existe na lista (para evitar duplicatas na carga inicial)
+          const alreadyExists = currentPosts.some(post => post.id === newPostId);
+          
+          if (alreadyExists) {
+            return currentPosts; // Não faz nada se já tivermos esse post
+          }
+
+          // Se não existe, é um post novo! Adiciona no topo da lista.
+          const newPostObj = { id: newPostId, ...newPostData };
+          return [newPostObj, ...currentPosts];
+        });
+
+        // Atualiza a lista de IDs também para manter a consistência se o usuário rolar
+        setAllPostMetas((currentMetas) => {
+          const metaExists = currentMetas.some(meta => meta.id === newPostId);
+          if (metaExists) returnHZcurrentMetas;
+          return [{ id: newPostId, createdAt: newPostData.createdAt }, ...currentMetas];
+        });
+      }
+    });
+
+    // Limpa o ouvinte quando sair da página
+    return () => unsubscribe();
+  }, []); 
+  
   // 1. Função para buscar todos os metadados (IDs e datas) dos posts
   const fetchAllPostMetas = useCallback(async () => {
     setLoading(true);
@@ -49,12 +85,13 @@ function Feed({ filterNSFW, refreshTrigger }) {
     }
   }, []);
 
-  // Efeito para buscar dados iniciais e reagir ao refreshTrigger (novo post)
+  // Efeito para buscar dados iniciais
   useEffect(() => {
     fetchAllPostMetas();
-  }, [fetchAllPostMetas, refreshTrigger]);
+  }, [fetchAllPostMetas]);
 
   // 2. Função para buscar o conteúdo completo de um lote de posts
+  // (Mantido idêntico ao seu código original)
   const fetchPostBatch = useCallback(async (page) => {
     if (allPostMetas.length === 0) return [];
     
@@ -69,10 +106,10 @@ function Feed({ filterNSFW, refreshTrigger }) {
 
     const postPromises = postIdsToFetch.map(meta => {
       const postRef = ref(rtdb, `posts/${meta.id}`);
-      return get(postRef);
+      returnHbget(postRef);
     });
 
-    const postSnapshots = await Promise.all(postPromises);
+    constqnpostSnapshots = await Promise.all(postPromises);
     
     // Filtra posts que podem ter sido deletados e formata os dados
     const newPosts = postSnapshots
@@ -85,22 +122,36 @@ function Feed({ filterNSFW, refreshTrigger }) {
 
   // 3. Efeito para carregar a primeira página quando os metadados estiverem prontos
   useEffect(() => {
-    if (allPostMetas.length > 0) {
+    if (allPostMetas.length > 0 && currentPage === 0) { // Adicionei check de currentPage === 0
       setLoading(true);
       fetchPostBatch(0).then(initialPosts => {
-        setPosts(initialPosts);
+        // AQUI ESTÁ O SEGREDO: Mesclamos com o estado atual em vez de substituir
+        // Isso impede que um post novo (do realtime) suma quando o carregamento inicial terminar
+        setPosts(currentPosts => {
+            const existingIds = new Set(currentPosts.map(p => p.id));
+            const uniqueInitialPosts = initialPosts.filter(p => !existingIds.has(p.id));
+            // Coloca o que já tinha (novos) primeiro, depois o histórico
+            return [...currentPosts, ...uniqueInitialPosts];
+        });
         setCurrentPage(1);
         setLoading(false);
       });
     }
-  }, [allPostMetas, fetchPostBatch]);
+  }, [allPostMetas, fetchPostBatch, currentPage]);
 
   // Função para carregar mais posts (paginação)
   const loadMorePosts = async () => {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
     const newPosts = await fetchPostBatch(currentPage);
-    setPosts(prevPosts => [...prevPosts, ...newPosts]);
+    
+    setPosts(prevPosts => {
+        // Proteção extra contra duplicatas na paginação
+        const existingIds = new Set(prevPosts.map(p => p.id));
+        const uniqueNewPosts = newPosts.filter(p => !existingIds.has(p.id));
+        return [...prevPosts, ...uniqueNewPosts];
+    });
+
     setCurrentPage(prevPage => prevPage + 1);
     setLoadingMore(false);
   };
