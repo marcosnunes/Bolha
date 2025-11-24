@@ -12,40 +12,31 @@ import {
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
-import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
-import ThumbDownOutlinedIcon from '@mui/icons-material/ThumbDownOutlined';
 
 function Post({ postData, onAuthorClick, onPostDelete }) {
   const { currentUser } = useAuth();
-  const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL } = postData;
+  const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL, likes } = postData;
   
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
 
-  // Estados para gerenciar likes/dislikes em tempo real
+  // Estado apenas para likes
   const [likesData, setLikesData] = useState(postData.likes || {});
-  const [dislikesData, setDislikesData] = useState(postData.dislikes || {});
-
+  
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
 
-  // Listener em tempo real
+  // Listener em tempo real APENAS para Likes
   useEffect(() => {
     const likesRef = ref(rtdb, `posts/${id}/likes`);
-    const dislikesRef = ref(rtdb, `posts/${id}/dislikes`);
 
     const unsubscribeLikes = onValue(likesRef, (snapshot) => {
       setLikesData(snapshot.val() || {});
     });
 
-    const unsubscribeDislikes = onValue(dislikesRef, (snapshot) => {
-      setDislikesData(snapshot.val() || {});
-    });
-
     return () => {
       unsubscribeLikes();
-      unsubscribeDislikes();
     };
   }, [id]);
 
@@ -90,41 +81,21 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   // Cálculos
   const likesCount = Object.keys(likesData).length;
   const hasLiked = currentUser && likesData[currentUser.uid];
-  const hasDisliked = currentUser && dislikesData[currentUser.uid];
 
+  // Função simplificada: Apenas toggle de like
   const handleLike = async () => {
     if (!currentUser) return;
     const uid = currentUser.uid;
     const postLikesRef = ref(rtdb, `posts/${id}/likes/${uid}`);
-    const postDislikesRef = ref(rtdb, `posts/${id}/dislikes/${uid}`);
 
     try {
       if (hasLiked) {
         await remove(postLikesRef);
       } else {
         await set(postLikesRef, true);
-        if (hasDisliked) await remove(postDislikesRef);
       }
     } catch (error) {
       console.error("Erro ao curtir:", error);
-    }
-  };
-
-  const handleDislike = async () => {
-    if (!currentUser) return;
-    const uid = currentUser.uid;
-    const postLikesRef = ref(rtdb, `posts/${id}/likes/${uid}`);
-    const postDislikesRef = ref(rtdb, `posts/${id}/dislikes/${uid}`);
-
-    try {
-      if (hasDisliked) {
-        await remove(postDislikesRef);
-      } else {
-        await set(postDislikesRef, true);
-        if (hasLiked) await remove(postLikesRef);
-      }
-    } catch (error) {
-      console.error("Erro ao descurtir:", error);
     }
   };
 
@@ -183,21 +154,13 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       )}
 
       <Divider />
-      <CardActions sx={{ justifyContent: 'flex-start', p: 1, gap: 1 }}>
+      <CardActions sx={{ justifyContent: 'flex-start', p: 1 }}>
         <Button 
           startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />} 
           onClick={handleLike} 
           color={hasLiked ? 'primary' : 'inherit'}
         >
           {likesCount > 0 ? likesCount : 'Curtir'}
-        </Button>
-        
-        <Button 
-          startIcon={hasDisliked ? <ThumbDownIcon /> : <ThumbDownOutlinedIcon />} 
-          onClick={handleDislike} 
-          color={hasDisliked ? 'error' : 'inherit'}
-        >
-          Descurtir
         </Button>
       </CardActions>
     </Card>
