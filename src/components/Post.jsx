@@ -6,7 +6,7 @@ import ReactMarkdown from 'react-markdown';
 
 // Componentes e Ícones do MUI
 import {
-  Card, CardHeader, CardContent, CardActions, IconButton, Typography,
+  Card, CardHeader, CardContent, CardActions, IconButton,
   Box, Menu, MenuItem, Avatar, Tooltip, Divider, Button
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -16,18 +16,46 @@ import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 
 function Post({ postData, onAuthorClick, onPostDelete }) {
   const { currentUser } = useAuth();
-  const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL, likes } = postData;
   
+  // Desestruturamos os dados fixos do post
+  const { 
+    textContent, createdAt, mediaURL, mediaType, authorId, id, likes 
+  } = postData;
+  
+  // ESTADO PARA DADOS DO PERFIL (Dinâmico)
+  // Inicializamos com os dados que vieram no post para não ficar em branco enquanto carrega
+  const [authorProfile, setAuthorProfile] = useState({
+    nickname: postData.authorNickname,
+    photoURL: postData.authorPhotoURL
+  });
+
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
 
-  // Estado apenas para likes
-  const [likesData, setLikesData] = useState(postData.likes || {});
+  // Estado para likes
+  const [likesData, setLikesData] = useState(likes || {});
   
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
 
-  // Listener em tempo real APENAS para Likes
+  // 1. EFEITO: Escuta alterações no PERFIL do autor em tempo real
+  useEffect(() => {
+    const profileRef = ref(rtdb, `profiles/${authorId}`);
+    
+    const unsubscribeProfile = onValue(profileRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setAuthorProfile({
+          nickname: data.nickname,
+          photoURL: data.photoURL
+        });
+      }
+    });
+
+    return () => unsubscribeProfile();
+  }, [authorId]);
+
+  // 2. EFEITO: Escuta alterações nos LIKES em tempo real
   useEffect(() => {
     const likesRef = ref(rtdb, `posts/${id}/likes`);
 
@@ -35,9 +63,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       setLikesData(snapshot.val() || {});
     });
 
-    return () => {
-      unsubscribeLikes();
-    };
+    return () => unsubscribeLikes();
   }, [id]);
 
   const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
@@ -45,7 +71,8 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
 
   const handleAuthorClick = () => {
     handleMenuClose();
-    onAuthorClick({ authorId: authorId, authorNickname: authorNickname });
+    // Passamos os dados mais atualizados do perfil
+    onAuthorClick({ authorId: authorId, authorNickname: authorProfile.nickname });
   };
 
   const handleDeletePost = async () => {
@@ -82,7 +109,6 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const likesCount = Object.keys(likesData).length;
   const hasLiked = currentUser && likesData[currentUser.uid];
 
-  // Função simplificada: Apenas toggle de like
   const handleLike = async () => {
     if (!currentUser) return;
     const uid = currentUser.uid;
@@ -102,7 +128,12 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   return (
     <Card sx={{ mb: 3 }}>
       <CardHeader
-        avatar={<Avatar src={authorPhotoURL}>{!authorPhotoURL && authorNickname.charAt(0).toUpperCase()}</Avatar>}
+        // AQUI: Usamos o state authorProfile, que se atualiza sozinho
+        avatar={
+          <Avatar src={authorProfile.photoURL}>
+            {!authorProfile.photoURL && authorProfile.nickname.charAt(0).toUpperCase()}
+          </Avatar>
+        }
         action={
           <>
             <Tooltip title="Ver opções"><IconButton onClick={handleMenuClick}><MoreVertIcon /></IconButton></Tooltip>
@@ -112,7 +143,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
             </Menu>
           </>
         }
-        title={authorNickname}
+        title={authorProfile.nickname} // Nome também atualiza se mudar
         subheader={formattedDate}
       />
 
