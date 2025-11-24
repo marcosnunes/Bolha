@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { rtdb } from '../firebase/config';
 import { ref, query, orderByChild, limitToLast, endBefore, get } from 'firebase/database';
 import Post from './Post.jsx';
@@ -8,87 +8,101 @@ import { Box, Button, CircularProgress, Typography } from '@mui/material';
 
 const POSTS_PER_PAGE = 5;
 
-// Recebe refreshTrigger (do createPost) e filterNSFW
 function Feed({ filterNSFW, refreshTrigger }) {
+  const [allPostMetas, setAllPostMetas] = useState([]);
   const [posts, setPosts] = useState([]);
+  const [currentPage, setCurrentPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
-  // Busca inicial e Reload quando refreshTrigger muda
-  useEffect(() => {
-    const fetchInitialPosts = async () => {
-      setLoading(true);
-      try {
-        const postsRef = ref(rtdb, 'posts');
-        const postsQuery = query(postsRef, orderByChild('createdAt'), limitToLast(POSTS_PER_PAGE));
-        
-        const snapshot = await get(postsQuery);
-        
-        if (snapshot.exists()) {
-          const postsList = [];
-          snapshot.forEach((childSnapshot) => {
-            postsList.push({ id: childSnapshot.key, ...childSnapshot.val() });
-          });
-          
-          setPosts(postsList.reverse()); 
-          setHasMore(postsList.length === POSTS_PER_PAGE);
-        } else {
-          setPosts([]);
-          setHasMore(false);
-        }
-      } catch (error) {
-        console.error("Erro ao carregar feed:", error);
-      } finally {
-        setLoading(false);
+  // Função para buscar todos os metadados (reutilizável)
+  const fetchAllPostMetas = useCallback(async () => {
+    setLoading(true);
+    const postsRef = ref(rtdb, 'posts');
+    const postsQuery = query(postsRef, orderByChild('createdAt'));
+    try {
+      const snapshot = await get(postsQuery);
+      const data = snapshot.val();
+      if (data) {
+        const metas = Object.keys(data).map(key => ({
+          id: key,
+          createdAt: data[key].createdAt
+        }));
+        setAllPostMetas(metas.reverse());
+      } else {
+        setAllPostMetas([]);
+        setPosts([]);
       }
-    };
+    } catch (error) {
+      console.error("Erro ao buscar metadados dos posts:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-    fetchInitialPosts();
-  }, [refreshTrigger]); // IMPORTANTE: Recarrega quando o trigger muda
+  // Busca inicial e RE-BUSCA quando refreshTrigger muda
+  useEffect(() => {
+    fetchAllPostMetas();
+  }, [fetchAllPostMetas, refreshTrigger]);
+
+  // Função para buscar o conteúdo completo de um lote de posts
+  const fetchPostBatch = useCallback(async (page) => {
+    if (allPostMetas.length === 0) return [];
+    
+    const startIndex = page * POSTS_PER_PAGE;
+    const endIndex = startIndex + POSTS_PER_PAGE;
+    const postIdsToFetch = allPostMetas.slice(startIndex, endIndex);
+
+    if (postIdsToFetch.length === 0) {
+      setHasMore(false);
+      return [];
+    }
+
+    const postPromises = postIdsToFetch.map(meta => {
+      const postRef = ref(rtdb, `posts/${meta.id}`);
+      return get(postRef);
+    });
+
+    const postSnapshots = await Promise.all(postPromises);
+    // Filtra posts que podem ter sido apagados mas ainda estavam nos metadados
+    const newPosts = postSnapshots
+      .filter(snapshot => snapshot.exists())
+      .map(snapshot => ({ id: snapshot.key, ...snapshot.val() }));
+    
+    setHasMore(endIndex < allPostMetas.length);
+    return newPosts;
+  }, [allPostMetas]);
+
+  // Efeito para carregar a primeira página QUANDO os metadados mudarem
+  useEffect(() => {
+    if (allPostMetas.length > 0) {
+      setLoading(true);
+      fetchPostBatch(0).then(initialPosts => {
+        setPosts(initialPosts);
+        setCurrentPage(1);
+        setLoading(false);
+      });
+    }
+  }, [allPostMetas, fetchPostBatch]);
 
   const loadMorePosts = async () => {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
-
-    try {
-      const lastPost = posts[posts.length - 1];
-      if (!lastPost || !lastPost.createdAt) {
-        setHasMore(false);
-        setLoadingMore(false);
-        return;
-      }
-      
-      const lastKey = lastPost.createdAt;
-      const postsRef = ref(rtdb, 'posts');
-      const postsQuery = query(postsRef, orderByChild('createdAt'), endBefore(lastKey), limitToLast(POSTS_PER_PAGE));
-      
-      const snapshot = await get(postsQuery);
-
-      if (snapshot.exists()) {
-        const newPosts = [];
-        snapshot.forEach((childSnapshot) => {
-          newPosts.push({ id: childSnapshot.key, ...childSnapshot.val() });
-        });
-
-        setPosts(prevPosts => [...prevPosts, ...newPosts.reverse()]);
-        setHasMore(newPosts.length === POSTS_PER_PAGE);
-      } else {
-        setHasMore(false);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar mais posts:", error);
-      setHasMore(false);
-    } finally {
-      setLoadingMore(false);
-    }
+    const newPosts = await fetchPostBatch(currentPage);
+    setPosts(prevPosts => [...prevPosts, ...newPosts]);
+    setCurrentPage(prevPage => prevPage + 1);
+    setLoadingMore(false);
   };
-
+  
   // Função para remover o post da lista visualmente na hora
   const removePostFromFeed = (postIdToDelete) => {
     setPosts(currentPosts => currentPosts.filter(post => post.id !== postIdToDelete));
+    
+    // Também removemos dos metadados para manter a consistência
+    setAllPostMetas(currentMetas => currentMetas.filter(meta => meta.id !== postIdToDelete));
   };
 
   const handleOpenProfile = (userData) => setSelectedUser(userData);
@@ -97,9 +111,13 @@ function Feed({ filterNSFW, refreshTrigger }) {
   const finalFilteredPosts = posts
     .filter(post => !hiddenUsers.includes(post.authorId))
     .filter(post => filterNSFW ? !post.isNSFW : true);
-
-  if (loading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>;
+  
+  if (loading && posts.length === 0) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
@@ -115,15 +133,13 @@ function Feed({ filterNSFW, refreshTrigger }) {
             key={post.id} 
             postData={post} 
             onAuthorClick={handleOpenProfile}
-            onPostDelete={removePostFromFeed} // Passamos a função de remoção
+            onPostDelete={removePostFromFeed} // <-- PASSAMOS A FUNÇÃO AQUI
           />)
       ) : (
-        <Typography variant="body1" color="text.secondary" align="center" sx={{my: 4}}>
-          {posts.length > 0 ? "Posts ocultados pelos filtros." : "Ainda não há posts."}
-        </Typography>
+        !loading && <Typography variant="body1" color="text.secondary" align="center" sx={{my: 4}}>Ainda não há posts para exibir.</Typography>
       )}
 
-      {hasMore && (
+      {hasMore && !loading && (
         <Box sx={{ textAlign: 'center', my: 2 }}>
           <Button onClick={loadMorePosts} disabled={loadingMore}>
             {loadingMore ? <CircularProgress size={24} /> : 'Carregar Mais Posts'}
