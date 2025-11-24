@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { rtdb } from '../firebase/config';
-import { ref, query, orderByChild, get } from 'firebase/database';
+import { ref, query, orderByChild, get, startAt, onChildAdded } from 'firebase/database';
 import Post from './Post.jsx';
 import ProfileModal from './ProfileModal.jsx';
 import EditProfileModal from './EditProfileModal.jsx';
@@ -9,134 +9,170 @@ import { Box, Button, CircularProgress, Typography } from '@mui/material';
 
 const POSTS_PER_PAGE = 5;
 
-function Feed({ filterNSFW, refreshTrigger }) {
+function Feed({ filterNSFW }) {
   const [allPostMetas, setAllPostMetas] = useState([]);
   const [posts, setPosts] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Começa carregando
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(false); // Começa falso até verificar
   
-  // Estados para controle dos Modais
+  // Marca o tempo de início para o Realtime só pegar posts futuros
+  const mountTimeRef = useRef(Date.now());
+
   const [selectedUser, setSelectedUser] = useState(null);
   const [editProfileData, setEditProfileData] = useState(null);
 
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
-  // 1. Função para buscar todos os metadados (IDs e datas) dos posts
+  // 1. LISTENER REALTIME (Apenas novos posts)
+  useEffect(() => {
+    const postsRef = ref(rtdb, 'posts');
+    // +1ms para garantir que não pegue nada do passado
+    const realtimeQuery = query(postsRef, orderByChild('createdAt'), startAt(mountTimeRef.current + 1));
+
+    const unsubscribe = onChildAdded(realtimeQuery, (snapshot) => {
+      const newPostData = snapshot.val();
+      const newPostId = snapshot.key;
+
+      if (newPostData) {
+        setPosts(prev => {
+          // Evita duplicatas
+          if (prev.some(p => p.id === newPostId)) return prev;
+          return [{ id: newPostId, ...newPostData }, ...prev];
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // 2. Busca Inicial de IDs (Histórico)
   const fetchAllPostMetas = useCallback(async () => {
     setLoading(true);
     const postsRef = ref(rtdb, 'posts');
     const postsQuery = query(postsRef, orderByChild('createdAt'));
+    
     try {
       const snapshot = await get(postsQuery);
-      const data = snapshot.val();
-      if (data) {
-        const metas = Object.keys(data).map(key => ({
-          id: key,
-          createdAt: data[key].createdAt
-        }));
-        // Ordena do mais novo para o mais antigo
-        setAllPostMetas(metas.reverse());
+      
+      if (snapshot.exists()) {
+        const metas = [];
+        // Importante: Usar forEach para garantir a ordem correta do Firebase
+        snapshot.forEach((child) => {
+          metas.push({
+            id: child.key,
+            createdAt: child.val().createdAt
+          });
+        });
+        
+        // Inverte para o mais recente ficar primeiro (Descrescente)
+        metas.reverse();
+        
+        setAllPostMetas(metas);
+        // Não setamos loading(false) aqui ainda, esperamos carregar o conteúdo abaixo
       } else {
         setAllPostMetas([]);
         setPosts([]);
+        setLoading(false); // Se não tem nada, paramos aqui
       }
     } catch (error) {
-      console.error("Erro ao buscar metadados dos posts:", error);
-    } finally {
+      console.error("Erro ao buscar lista de posts:", error);
       setLoading(false);
     }
   }, []);
 
-  // Efeito para buscar dados iniciais e reagir ao refreshTrigger (novo post)
+  // Inicia a busca
   useEffect(() => {
     fetchAllPostMetas();
-  }, [fetchAllPostMetas, refreshTrigger]);
+  }, [fetchAllPostMetas]);
 
-  // 2. Função para buscar o conteúdo completo de um lote de posts
-  const fetchPostBatch = useCallback(async (page) => {
-    if (allPostMetas.length === 0) return [];
+  // 3. Carrega o conteúdo dos posts (Paginação)
+  const fetchPostBatch = async (page, metas) => {
+    if (!metas || metas.length === 0) return { fetchedPosts: [], hasMoreItems: false };
     
     const startIndex = page * POSTS_PER_PAGE;
     const endIndex = startIndex + POSTS_PER_PAGE;
-    const postIdsToFetch = allPostMetas.slice(startIndex, endIndex);
+    const postIdsToFetch = metas.slice(startIndex, endIndex);
 
     if (postIdsToFetch.length === 0) {
-      setHasMore(false);
-      return [];
+      return { fetchedPosts: [], hasMoreItems: false };
     }
 
-    const postPromises = postIdsToFetch.map(meta => {
-      const postRef = ref(rtdb, `posts/${meta.id}`);
-      return get(postRef);
-    });
-
-    const postSnapshots = await Promise.all(postPromises);
+    // Busca cada post individualmente pelo ID
+    const promises = postIdsToFetch.map(meta => get(ref(rtdb, `posts/${meta.id}`)));
+    const snapshots = await Promise.all(promises);
     
-    // Filtra posts que podem ter sido deletados e formata os dados
-    const newPosts = postSnapshots
-      .filter(snapshot => snapshot.exists())
-      .map(snapshot => ({ id: snapshot.key, ...snapshot.val() }));
-    
-    setHasMore(endIndex < allPostMetas.length);
-    return newPosts;
-  }, [allPostMetas]);
+    const fetchedPosts = snapshots
+      .filter(snap => snap.exists())
+      .map(snap => ({ id: snap.key, ...snap.val() }));
+      
+    return { 
+      fetchedPosts, 
+      hasMoreItems: endIndex < metas.length 
+    };
+  };
 
-  // 3. Efeito para carregar a primeira página quando os metadados estiverem prontos
+  // 4. Efeito que carrega a página 0 assim que temos os Metas
   useEffect(() => {
-    if (allPostMetas.length > 0) {
-      setLoading(true);
-      fetchPostBatch(0).then(initialPosts => {
-        setPosts(initialPosts);
+    if (allPostMetas.length > 0 && currentPage === 0) {
+      // Ainda estamos na fase de loading inicial
+      fetchPostBatch(0, allPostMetas).then(({ fetchedPosts, hasMoreItems }) => {
+        setPosts(prev => {
+          // Mescla posts do realtime (se houver) com o histórico
+          const existingIds = new Set(prev.map(p => p.id));
+          const uniqueFetched = fetchedPosts.filter(p => !existingIds.has(p.id));
+          return [...prev, ...uniqueFetched];
+        });
+        
+        setHasMore(hasMoreItems);
         setCurrentPage(1);
-        setLoading(false);
+        setLoading(false); // FIM DO LOADING INICIAL
       });
     }
-  }, [allPostMetas, fetchPostBatch]);
+  }, [allPostMetas, currentPage]);
 
-  // Função para carregar mais posts (paginação)
+  // Botão Carregar Mais
   const loadMorePosts = async () => {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
-    const newPosts = await fetchPostBatch(currentPage);
-    setPosts(prevPosts => [...prevPosts, ...newPosts]);
-    setCurrentPage(prevPage => prevPage + 1);
-    setLoadingMore(false);
+
+    try {
+      const { fetchedPosts, hasMoreItems } = await fetchPostBatch(currentPage, allPostMetas);
+      
+      setPosts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const uniqueFetched = fetchedPosts.filter(p => !existingIds.has(p.id));
+        return [...prev, ...uniqueFetched];
+      });
+
+      setHasMore(hasMoreItems);
+      setCurrentPage(prev => prev + 1);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMore(false);
+    }
   };
   
-  // Função para remover o post da lista visualmente na hora
-  const removePostFromFeed = (postIdToDelete) => {
-    setPosts(currentPosts => currentPosts.filter(post => post.id !== postIdToDelete));
-    setAllPostMetas(currentMetas => currentMetas.filter(meta => meta.id !== postIdToDelete));
+  // Remove visualmente (delete)
+  const removePostFromFeed = (postId) => {
+    setPosts(prev => prev.filter(p => p.id !== postId));
+    setAllPostMetas(prev => prev.filter(m => m.id !== postId));
   };
 
-  // Abre o modal de visualização de perfil
-  const handleOpenProfile = (userData) => {
-    setSelectedUser(userData);
-  };
+  // Modais
+  const handleOpenProfile = (u) => setSelectedUser(u);
+  const handleCloseProfile = () => setSelectedUser(null);
+  const handleOpenEditProfile = (data) => { setSelectedUser(null); setEditProfileData(data); };
+  const handleCloseEditProfile = () => setEditProfileData(null);
 
-  // Fecha o modal de visualização de perfil
-  const handleCloseProfile = () => {
-    setSelectedUser(null);
-  };
-
-  // Abre o modal de EDIÇÃO (chamado de dentro do ProfileModal)
-  const handleOpenEditProfile = (profileData) => {
-    setSelectedUser(null); // Fecha o modal de visualização primeiro
-    setEditProfileData(profileData); // Abre o modal de edição
-  };
-
-  // Fecha o modal de EDIÇÃO
-  const handleCloseEditProfile = () => {
-    setEditProfileData(null);
-  };
-
-  // Filtros de exibição (Bloqueio e NSFW)
+  // Filtros
   const finalFilteredPosts = posts
     .filter(post => !hiddenUsers.includes(post.authorId))
     .filter(post => filterNSFW ? !post.isNSFW : true);
 
+  // Spinner apenas se estiver carregando E não tiver nenhum post na tela
   if (loading && posts.length === 0) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
@@ -147,7 +183,6 @@ function Feed({ filterNSFW, refreshTrigger }) {
 
   return (
     <Box>
-      {/* Modal de Visualização de Perfil */}
       <ProfileModal 
         userToDisplay={selectedUser} 
         onClose={handleCloseProfile}
@@ -156,7 +191,6 @@ function Feed({ filterNSFW, refreshTrigger }) {
         onEditProfile={handleOpenEditProfile}
       />
 
-      {/* Modal de Edição de Perfil */}
       {editProfileData && (
         <EditProfileModal 
           open={!!editProfileData}
@@ -166,7 +200,6 @@ function Feed({ filterNSFW, refreshTrigger }) {
         />
       )}
 
-      {/* Lista de Posts */}
       {finalFilteredPosts.length > 0 ? (
         finalFilteredPosts.map(post => 
           <Post 
@@ -183,7 +216,7 @@ function Feed({ filterNSFW, refreshTrigger }) {
         )
       )}
 
-      {/* Botão Carregar Mais */}
+      {/* O botão aparece se tiver mais itens E se o carregamento inicial já terminou */}
       {hasMore && !loading && (
         <Box sx={{ textAlign: 'center', my: 2 }}>
           <Button onClick={loadMorePosts} disabled={loadingMore}>
