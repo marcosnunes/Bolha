@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
-import { ref, push, set, update, serverTimestamp } from 'firebase/database';
+import { ref, push, set, update, serverTimestamp, onValue } from 'firebase/database';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import SettingsIcon from '@mui/icons-material/Settings';
 
@@ -11,7 +11,7 @@ import {
     AppBar, Toolbar, Typography, Button, IconButton, Drawer, List, ListItem,
     ListItemButton, ListItemIcon, ListItemText, Box, Container, Divider,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
-    Tooltip, Switch, Avatar, Fab, FormControlLabel, TextField, Chip
+    Tooltip, Switch, Avatar, Fab, FormControlLabel, TextField, Chip, ListItemAvatar
 } from '@mui/material';
 
 // Ícones do MUI
@@ -40,15 +40,35 @@ function HomePage() {
     const [openInviteDialog, setOpenInviteDialog] = useState(false);
     const [openPostDialog, setOpenPostDialog] = useState(false);
     
-    // Estado para forçar a atualização do Feed
-    const [refreshFeed, setRefreshFeed] = useState(0);
-    
-    // Estado para contador de usuários (Adicionado de volta)
+    // Estados para Usuários e Lista
     const [userCount, setUserCount] = useState(0);
+    const [allUsers, setAllUsers] = useState([]); // Lista de objetos de usuários
+    const [openUserListDialog, setOpenUserListDialog] = useState(false); // Controle do modal da lista
 
+    const [refreshFeed, setRefreshFeed] = useState(0);
     const profilePicInputRef = useRef(null);
 
-    // Função para lidar com a mudança da foto de perfil
+    // Efeito para contar e listar usuários em tempo real
+    useEffect(() => {
+        const profilesRef = ref(rtdb, 'profiles');
+        const unsubscribe = onValue(profilesRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                setUserCount(snapshot.size);
+                // Transforma o objeto de perfis em um array para a lista
+                const usersArray = Object.keys(data).map(key => ({
+                    uid: key,
+                    ...data[key]
+                }));
+                setAllUsers(usersArray);
+            } else {
+                setUserCount(0);
+                setAllUsers([]);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
+
     const handleProfilePicChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -72,8 +92,6 @@ function HomePage() {
         } catch (error) {
             console.error("Erro ao atualizar a foto de perfil:", error);
             alert("Não foi possível atualizar sua foto de perfil.");
-        } finally {
-            console.log("Upload finalizado.");
         }
     };
 
@@ -120,35 +138,36 @@ function HomePage() {
                 const functions = getFunctions();
                 const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
                 
-                // 1. Chama a função no backend para apagar tudo
+                // 1. Chama a função no backend para limpar o banco de dados
                 await deleteUserAccount();
                 
-                alert("Sua conta foi apagada com sucesso.");
-                
-                // 2. Força o logout no frontend para limpar o estado local
-                await logout();
+                alert("Sua conta e todos os seus dados foram apagados com sucesso.");
 
-                // 3. Redireciona explicitamente para a página de cadastro
-                navigate('/cadastro');
-                
+                // 2. Tenta fazer o logout no cliente (pode falhar se a conta já sumiu no backend, por isso o try/catch)
+                try {
+                    await logout();
+                } catch (e) {
+                    console.log("Usuário já desconectado ou inexistente.");
+                }
+
             } catch (error) {
-                console.error("Erro ao apagar a conta:", error);
-                alert("Ocorreu um erro ao apagar sua conta. Por favor, tente novamente.");
+                console.error("Erro no processo de exclusão:", error);
+                alert("Houve um erro, mas tentaremos redirecionar você.");
+            } finally {
+                // 3. INDEPENDENTE de erro ou sucesso, força o redirecionamento para cadastro
+                navigate('/cadastro');
             }
         }
     };
-    
+
     const handlePostSuccess = () => {
         setOpenPostDialog(false);
-        setRefreshFeed(prev => prev + 1);
+        setRefreshFeed(prev => prev + 1); 
     };
 
-    // JSX do menu lateral (Drawer) COMPLETO
     const drawer = (
         <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
-            <Typography variant="h6" sx={{ my: 2 }}>
-                Bolha
-            </Typography>
+            <Typography variant="h6" sx={{ my: 2 }}>Bolha</Typography>
             <Divider />
             <List>
                 {currentUser && (
@@ -168,32 +187,12 @@ function HomePage() {
                             />
                         </ListItem>
                         <Divider />
-                        <ListItem disablePadding>
-                            <ListItemButton component={RouterLink} to="/configuracoes">
-                                <ListItemIcon><SettingsIcon /></ListItemIcon>
-                                <ListItemText primary="Configurações" />
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton onClick={generateInviteLink} disabled={loadingInvite}>
-                                <ListItemIcon><AddCircleOutlineIcon /></ListItemIcon>
-                                <ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} />
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}>
-                                <ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon>
-                                <ListItemText primary="Apagar Conta" />
-                            </ListItemButton>
-                        </ListItem>
+                        <ListItem disablePadding><ListItemButton component={RouterLink} to="/configuracoes"><ListItemIcon><SettingsIcon /></ListItemIcon><ListItemText primary="Configurações" /></ListItemButton></ListItem>
+                        <ListItem disablePadding><ListItemButton onClick={generateInviteLink} disabled={loadingInvite}><ListItemIcon><AddCircleOutlineIcon /></ListItemIcon><ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} /></ListItemButton></ListItem>
+                        <ListItem disablePadding><ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}><ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon><ListItemText primary="Apagar Conta" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/politica-de-privacidade"><ListItemIcon><PolicyIcon /></ListItemIcon><ListItemText primary="Política de Privacidade" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/denuncia"><ListItemIcon><ReportProblemIcon color="warning" /></ListItemIcon><ListItemText primary="Denunciar Abuso" /></ListItemButton></ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton onClick={handleLogout}>
-                                <ListItemIcon><LogoutIcon /></ListItemIcon>
-                                <ListItemText primary="Sair" />
-                            </ListItemButton>
-                        </ListItem>
+                        <ListItem disablePadding><ListItemButton onClick={handleLogout}><ListItemIcon><LogoutIcon /></ListItemIcon><ListItemText primary="Sair" /></ListItemButton></ListItem>
                     </>
                 )}
             </List>
@@ -202,54 +201,73 @@ function HomePage() {
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'grey.100' }}>
-            {/* Input de arquivo escondido para a foto de perfil */}
-            <input
-                type="file"
-                hidden
-                ref={profilePicInputRef}
-                onChange={handleProfilePicChange}
-                accept="image/*"
-            />
-
+            <input type="file" hidden ref={profilePicInputRef} onChange={handleProfilePicChange} accept="image/*" />
+            
             <AppBar component="nav" position="sticky" sx={{ pt: { xs: 'env(safe-area-inset-top)', sm: 0 } }}>
                 <Toolbar>
-                    <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                        Bolha
-                    </Typography>
+                    <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Bolha</Typography>
                     
-                    {/* Chip Contador de Usuários (Visual apenas, lógica removida para evitar erros se não configurado) */}
-                    {/* Para reativar, descomente e adicione a lógica de useEffect do userCount */}
-                     {/* <Chip 
+                    {/* Contador de Usuários - Agora Clicável */}
+                    <Chip 
                         icon={<PeopleIcon style={{ color: 'inherit' }} />} 
                         label={`${userCount} membros`}
                         variant="outlined"
-                        sx={{ mr: 2, color: 'white', borderColor: 'rgba(255, 255, 255, 0.5)', '& .MuiChip-icon': { color: 'white' } }} 
-                    /> */}
-
-                    <IconButton color="inherit" aria-label="open drawer" edge="end" onClick={handleDrawerToggle}>
-                        <MenuIcon />
-                    </IconButton>
+                        onClick={() => setOpenUserListDialog(true)} // Abre o modal
+                        sx={{ 
+                            mr: 2, 
+                            color: 'white', 
+                            borderColor: 'rgba(255, 255, 255, 0.5)',
+                            '& .MuiChip-icon': { color: 'white' },
+                            cursor: 'pointer',
+                            '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+                        }} 
+                    />
+                    
+                    <IconButton color="inherit" aria-label="open drawer" edge="end" onClick={handleDrawerToggle}><MenuIcon /></IconButton>
                 </Toolbar>
             </AppBar>
+            
+            <Drawer variant="temporary" open={mobileOpen} onClose={handleDrawerToggle} anchor="right" ModalProps={{ keepMounted: true }} sx={{ '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 } }}>{drawer}</Drawer>
 
-            <Drawer variant="temporary" open={mobileOpen} onClose={handleDrawerToggle} anchor="right" ModalProps={{ keepMounted: true }} sx={{ '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 } }}>
-                {drawer}
-            </Drawer>
+            {/* DIÁLOGO: Lista de Membros */}
+            <Dialog 
+                open={openUserListDialog} 
+                onClose={() => setOpenUserListDialog(false)}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle>Membros da Bolha ({userCount})</DialogTitle>
+                <DialogContent dividers>
+                    <List>
+                        {allUsers.map((user) => (
+                            <ListItem key={user.uid}>
+                                <ListItemAvatar>
+                                    <Avatar src={user.photoURL} alt={user.nickname}>
+                                        {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
+                                    </Avatar>
+                                </ListItemAvatar>
+                                <ListItemText primary={user.nickname} />
+                            </ListItem>
+                        ))}
+                    </List>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenUserListDialog(false)}>Fechar</Button>
+                </DialogActions>
+            </Dialog>
 
             <Dialog open={openInviteDialog} onClose={() => setOpenInviteDialog(false)}>
                 <DialogTitle>Link de Convite Gerado</DialogTitle>
                 <DialogContent>
                     <DialogContentText>Copie o link abaixo e compartilhe com seu amigo.</DialogContentText>
-                    <TextField autoFocus margin="dense" id="link" label="Link de Convite" type="text"
-                        fullWidth variant="standard" value={inviteLink} InputProps={{ readOnly: true }}
-                    />
+                    <TextField autoFocus margin="dense" id="link" label="Link de Convite" type="text" fullWidth variant="standard" value={inviteLink} InputProps={{ readOnly: true }} />
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => { navigator.clipboard.writeText(inviteLink); setOpenInviteDialog(false); }}>Copiar e Fechar</Button>
                     <Button onClick={() => setOpenInviteDialog(false)}>Fechar</Button>
                 </DialogActions>
             </Dialog>
-            
+
             <Dialog open={openPostDialog} onClose={() => setOpenPostDialog(false)} fullWidth maxWidth="sm">
                 <DialogTitle>Crie um novo post</DialogTitle>
                 <DialogContent>
@@ -258,29 +276,15 @@ function HomePage() {
             </Dialog>
 
             <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', mb: 2, gap: 2 }}>
                     <Typography variant="h4" component="h2">Posts Recentes</Typography>
-                    <Tooltip title="Mostrar/Ocultar conteúdo sensível">
-                         <FormControlLabel
-                            control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />}
-                            label="Mostrar conteúdo sensível"
-                            labelPlacement="start"
-                        />
-                    </Tooltip>
+                    <FormControlLabel control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />} label="Mostrar conteúdo sensível" labelPlacement="start" />
                 </Box>
+                
                 <Feed filterNSFW={!showNSFW} refreshTrigger={refreshFeed} />
             </Container>
-            
-            <Fab
-                color="primary"
-                aria-label="add"
-                onClick={() => setOpenPostDialog(true)}
-                sx={{
-                    position: 'fixed',
-                    bottom: { xs: 80, sm: 32 },
-                    right: 32,
-                }}
-            >
+
+            <Fab color="primary" aria-label="add" onClick={() => setOpenPostDialog(true)} sx={{ position: 'fixed', bottom: { xs: 80, sm: 32 }, right: 32 }}>
                 <AddIcon />
             </Fab>
         </Box>
