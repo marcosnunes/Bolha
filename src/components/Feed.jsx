@@ -18,7 +18,7 @@ function Feed({ filterNSFW, refreshTrigger }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
-  // 1. Busca Metadados
+  // Busca inicial e quando refreshTrigger muda
   const fetchAllPostMetas = useCallback(async () => {
     setLoading(true);
     const postsRef = ref(rtdb, 'posts');
@@ -31,7 +31,7 @@ function Feed({ filterNSFW, refreshTrigger }) {
           id: key,
           createdAt: data[key].createdAt
         }));
-        setAllPostMetas(metas.reverse());
+        setAllPostMetas(metas.reverse()); // Mais novos primeiro
       } else {
         setAllPostMetas([]);
         setPosts([]);
@@ -45,9 +45,8 @@ function Feed({ filterNSFW, refreshTrigger }) {
 
   useEffect(() => {
     fetchAllPostMetas();
-  }, [fetchAllPostMetas, refreshTrigger]);
+  }, [fetchAllPostMetas, refreshTrigger]); // Aqui está a mágica da atualização instantânea
 
-  // 2. Busca Lote de Posts
   const fetchPostBatch = useCallback(async (page) => {
     if (allPostMetas.length === 0) return [];
     
@@ -74,7 +73,6 @@ function Feed({ filterNSFW, refreshTrigger }) {
     return newPosts;
   }, [allPostMetas]);
 
-  // 3. Carrega primeira página
   useEffect(() => {
     if (allPostMetas.length > 0) {
       setLoading(true);
@@ -95,11 +93,8 @@ function Feed({ filterNSFW, refreshTrigger }) {
     setLoadingMore(false);
   };
   
-  // --- FUNÇÃO QUE REMOVE O POST DA LISTA ---
   const removePostFromFeed = (postIdToDelete) => {
-    // Remove da lista visual
     setPosts(currentPosts => currentPosts.filter(post => post.id !== postIdToDelete));
-    // Remove dos metadados para não quebrar paginação futura
     setAllPostMetas(currentMetas => currentMetas.filter(meta => meta.id !== postIdToDelete));
   };
 
@@ -127,7 +122,7 @@ function Feed({ filterNSFW, refreshTrigger }) {
             key={post.id} 
             postData={post} 
             onAuthorClick={handleOpenProfile}
-            onPostDelete={removePostFromFeed} // <-- PASSANDO A FUNÇÃO CORRETAMENTE
+            onPostDelete={removePostFromFeed}
           />)
       ) : (
         !loading && <Typography variant="body1" color="text.secondary" align="center" sx={{my: 4}}>Ainda não há posts para exibir.</Typography>
