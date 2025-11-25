@@ -31,9 +31,16 @@ function CrosswordsPage() {
     }
   }, [currentLevelIndex, levelData]);
 
+  // Função auxiliar para normalizar caracteres (ex: ç -> c, ã -> a)
+  const normalizeChar = (char) => {
+    if (typeof char !== 'string') return '';
+    return char.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
   const handleInputChange = (row, col, value) => {
     if (won) return;
-    const char = value.slice(-1).toUpperCase().replace(/[^A-Z]/g, '');
+    // Permite qualquer caractere, apenas o converte para maiúsculo. A verificação lidará com a validação.
+    const char = value.slice(-1).toUpperCase();
     
     const newGrid = userGrid.map((r, rIndex) => 
       rIndex === row ? r.map((c, cIndex) => cIndex === col ? char : c) : r
@@ -47,11 +54,21 @@ function CrosswordsPage() {
 
     for (let r = 0; r < levelData.rows; r++) {
       for (let c = 0; c < levelData.cols; c++) {
-        if (levelData.grid[r][c] !== '.' && currentGrid[r][c] !== levelData.grid[r][c]) {
-          return;
+        const answerChar = levelData.grid[r][c];
+        const userChar = currentGrid[r][c];
+        
+        if (answerChar === '.') continue; // Ignora blocos vazios na grade de respostas
+
+        // Normaliza a entrada do usuário e a resposta para comparação
+        const normalizedUserChar = normalizeChar(userChar);
+        const normalizedAnswerChar = normalizeChar(answerChar);
+
+        if (normalizedUserChar !== normalizedAnswerChar) {
+          return; // Se qualquer caractere não corresponder, o quebra-cabeça ainda não está resolvido
         }
       }
     }
+    // Se o loop for concluído, todos os caracteres correspondem corretamente
     setWon(true);
   };
 
@@ -59,8 +76,11 @@ function CrosswordsPage() {
     for (let r = 0; r < levelData.rows; r++) {
       for (let c = 0; c < levelData.cols; c++) {
         const answerChar = levelData.grid[r][c];
-        if (answerChar !== '.' && userGrid[r][c] !== answerChar) {
-          handleInputChange(r, c, answerChar);
+        const userChar = userGrid[r][c];
+
+        if (answerChar !== '.' && normalizeChar(userChar) !== normalizeChar(answerChar)) {
+          // Esta célula está incorreta, vamos revelar a resposta correta
+          handleInputChange(r, c, answerChar); // Isso colocará o caractere correto (ex: 'Ç') na grade
           setHintMessage(`Dica revelada!`);
           return;
         }
@@ -79,7 +99,7 @@ function CrosswordsPage() {
 
   const prevLevel = () => {
     if (currentLevelIndex > 0) {
-      setCurrentLevelIndex(prev => prev - 1);
+      setCurrentLevelIndex(prev => prev + 1);
     }
   };
   
