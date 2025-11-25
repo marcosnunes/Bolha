@@ -43,7 +43,6 @@ function CrosswordsPage() {
   };
 
   const checkWin = (currentGrid) => {
-    // Adicionada guarda para previnir erro durante a transição de nível
     if (!levelData || !levelData.grid || currentGrid.length !== levelData.rows) return;
 
     for (let r = 0; r < levelData.rows; r++) {
@@ -84,8 +83,6 @@ function CrosswordsPage() {
     }
   };
   
-  // Guarda: Se os dados não estiverem prontos, ou a grade não corresponder ao nível atual,
-  // mostra um spinner. Isso previne a renderização com estado inconsistente.
   if (!levelData || !levelData.grid || !userGrid.length || userGrid.length !== levelData.rows) {
      return (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -121,12 +118,12 @@ function CrosswordsPage() {
 
         {hintMessage && <Typography color="primary" align="center" sx={{ mb: 2, fontWeight: 'bold' }}>{hintMessage}</Typography>}
 
-        <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${levelData.cols}, 1fr)`, gap: '4px', maxWidth: '100%', aspectRatio: '1/1', mb: 4, border: '2px solid black', p: '4px', bgcolor: 'black' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${levelData.cols}, 1fr)`, gap: '4px', maxWidth: '100%', aspectRatio: '1/1', mb: 4, border: '2px solid #0d47a1', p: '4px', bgcolor: '#0d47a1' }}>
           {userGrid.map((row, rowIndex) => (
             row.map((cell, colIndex) => {
               const isBlock = levelData.grid[rowIndex][colIndex] === '.';
               return (
-                <Box key={`${rowIndex}-${colIndex}`} sx={{ bgcolor: isBlock ? 'black' : 'white', display: 'flex' }}>
+                <Box key={`${rowIndex}-${colIndex}`} sx={{ bgcolor: isBlock ? '#0d47a1' : 'white', display: 'flex' }}>
                   {!isBlock && (
                     <input
                       type="text" value={cell} maxLength={1}

@@ -1,50 +1,95 @@
 export const levels = [
   {
     id: 1,
-    title: "Nível 1: O Básico da Web",
-    rows: 6,
-    cols: 6,
-    // Mapa do Grid: '.' é espaço vazio (preto), letras são a resposta
+    title: 'Conceitos de Programação',
+    rows: 5,
+    cols: 5,
     grid: [
-      ['R', 'E', 'A', 'C', 'T', '.'],
-      ['.', '.', 'P', '.', '.', '.'],
-      ['.', 'W', 'E', 'B', '.', '.'],
-      ['.', '.', '.', 'O', '.', '.'],
-      ['H', 'T', 'M', 'L', '.', '.'],
-      ['.', '.', '.', 'H', 'U', 'B']
+      ['G', 'R', 'I', 'D', '.'],
+      ['O', '.', '.', '.', '.'],
+      ['O', '.', 'F', 'U', 'N'],
+      ['P', '.', '.', '.', '.'],
+      ['S', '.', '.', '.', '.']
     ],
     clues: [
-      { id: 1, direction: 'Horizontal', text: 'Biblioteca JS usada neste app' },
-      { id: 2, direction: 'Horizontal', text: 'Rede mundial de computadores' },
-      { id: 3, direction: 'Horizontal', text: 'Linguagem de marcação' },
-      { id: 4, direction: 'Horizontal', text: 'Final do nome do repositório Git...' },
-      { id: 5, direction: 'Vertical', text: 'Interface de Programação de Aplicações (sigla)' },
-      { id: 6, direction: 'Vertical', text: 'A Bolha é uma rede...' }
+      { id: 1, direction: 'HORIZONTAL', text: 'Estrutura de linhas e colunas (inglês).' },
+      { id: 2, direction: 'VERTICAL', text: 'Repetição de código.' },
+      { id: 3, direction: 'HORIZONTAL', text: 'Sinônimo de diversão em inglês, para o que a programação deve ser.' },
+      { id: 4, direction: 'VERTICAL', text: 'Programação Orientada a Objetos (sigla).' }
     ]
   },
   {
     id: 2,
-    title: "Nível 2: Cultura Pop",
-    rows: 8,
-    cols: 8,
+    title: 'Frameworks JavaScript',
+    rows: 5,
+    cols: 5,
     grid: [
-      ['B', 'R', 'A', 'S', 'I', 'L', '.', '.'],
-      ['.', 'O', '.', '.', '.', '.', '.', '.'],
-      ['.', 'C', 'A', 'F', 'E', '.', '.', '.'],
-      ['.', 'K', '.', '.', '.', 'S', '.', '.'],
-      ['.', '.', '.', 'N', 'E', 'O', '.', '.'],
-      ['.', '.', 'M', '.', '.', 'M', '.', '.'],
-      ['.', 'G', 'A', 'T', 'O', '.', '.', '.'],
-      ['.', '.', 'R', '.', '.', '.', '.', '.']
+      ['R', 'E', 'A', 'C', 'T'],
+      ['.', '.', '.', '.', 'U'],
+      ['.', 'V', 'U', 'E', '.'],
+      ['.', '.', '.', '.', '.'],
+      ['.', '.', '.', '.', '.']
     ],
     clues: [
-      { id: 1, direction: 'Horizontal', text: 'Nosso país' },
-      { id: 2, direction: 'Horizontal', text: 'Bebida amada pelos programadores' },
-      { id: 3, direction: 'Horizontal', text: 'Protagonista de Matrix' },
-      { id: 4, direction: 'Horizontal', text: 'Animal de estimação' },
-      { id: 5, direction: 'Vertical', text: 'Gênero musical (e dança)' },
-      { id: 6, direction: 'Vertical', text: 'Planeta vermelho' },
-      { id: 7, direction: 'Vertical', text: 'O que ouvimos no app (abreviado)' }
+      { id: 1, direction: 'HORIZONTAL', text: 'Biblioteca da Meta para interfaces.' },
+      { id: 2, direction: 'VERTICAL', text: 'Criado por Evan You, focado em reatividade.' }
+    ]
+  },
+  {
+    id: 3,
+    title: 'Frutas',
+    rows: 5,
+    cols: 5,
+    grid: [
+      ['M', 'A', 'Ç', 'Ã', '.'],
+      ['.', '.', '.', '.', 'P'],
+      ['.', 'U', 'V', 'A', '.'],
+      ['.', '.', '.', '.', 'R'],
+      ['.', '.', '.', '.', 'A']
+    ],
+    clues: [
+      { id: 1, direction: 'HORIZONTAL', text: 'Fruta que pode ser vermelha ou verde.' },
+      { id: 2, direction: 'HORIZONTAL', text: 'Fruta pequena em cachos.' },
+      { id: 3, direction: 'VERTICAL', text: 'Fruta comum em sobremesas (plural invertido).
+' }
+    ]
+  },
+  {
+    id: 4,
+    title: 'Animais',
+    rows: 5,
+    cols: 6,
+    grid: [
+      ['G', 'A', 'T', 'O', '.', '.'],
+      ['.', '.', '.', '.', 'P', '.'],
+      ['C', 'A','V','A','L','O'],
+      ['.', '.', '.', '.', 'T', '.'],
+      ['.', '.', '.', '.', 'O', '.']
+    ],
+    clues: [
+      { id: 1, direction: 'HORIZONTAL', text: 'Animal doméstico que mia.' },
+      { id: 2, direction: 'VERTICAL', text: 'Ave que faz \"quack\".' },
+      { id: 3, direction: 'HORIZONTAL', text: 'Animal de grande porte usado em fazendas.' }
+    ]
+  },
+  {
+    id: 5,
+    title: 'Cores',
+    rows: 6,
+    cols: 5,
+    grid: [
+      ['A', 'Z', 'U', 'L', '.'],
+      ['.', '.', '.', '.', 'V'],
+      ['R', 'O', 'S', 'A', '.'],
+      ['.', '.', '.', '.', 'E'],
+      ['.', '.', '.', '.', 'R'],
+      ['V','E','R','D','E']
+    ],
+    clues: [
+      { id: 1, direction: 'HORIZONTAL', text: 'Cor do céu.' },
+      { id: 2, direction: 'HORIZONTAL', text: 'Cor associada a flores delicadas.' },
+      { id: 3, direction: 'VERTICAL', text: 'Mistura de azul e amarelo.' },
+      { id: 4, direction: 'HORIZONTAL', text: 'Cor da esperança.' }
     ]
   }
 ];
