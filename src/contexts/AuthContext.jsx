@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser } from 'firebase/auth';
-import { auth, rtdb } from '/src/firebase/config.js';
-import { ref, onValue, set, remove, update } from 'firebase/database';
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { httpsCallable } from 'firebase/functions';
+import { auth, rtdb, functions } from '/src/firebase/config.js';
+import { ref, onValue, set, remove } from 'firebase/database';
 
 const AuthContext = createContext();
 
@@ -12,7 +13,7 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null); // Para guardar o apelido
+  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hiddenUsers, setHiddenUsers] = useState([]);
 
@@ -26,32 +27,25 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     await signOut(auth);
-    // Força um recarregamento completo da página para limpar todo o estado em memória.
     window.location.assign('/login');
   }
 
   async function deleteAccount() {
-    const userToDelete = auth.currentUser;
-    if (!userToDelete) {
-      throw new Error("Nenhum usuário logado para apagar.");
-    }
+    // A lógica de exclusão agora é delegada a uma Cloud Function.
+    // Isso resolve o problema de permissão e a condição de corrida.
+    const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
 
     try {
-      // Etapa 1: Apagar os dados do Realtime Database de forma atômica
-      const updates = {};
-      updates[`/profiles/${userToDelete.uid}`] = null;
-      updates[`/users/${userToDelete.uid}`] = null;
-      await update(ref(rtdb), updates);
+      const result = await deleteUserAccount();
+      // Se a função foi executada com sucesso, o servidor cuidou de tudo.
+      console.log('Cloud Function result:', result);
 
-      // Etapa 2: Apenas após a confirmação da exclusão dos dados, apagar o usuário da autenticação.
-      await deleteUser(userToDelete);
-
-      // Etapa 3: Forçar um recarregamento completo para a página de cadastro.
-      // Isso garante que todo o estado do aplicativo (em Contextos ou componentes) seja limpo.
+      // Forçamos o recarregamento para limpar o estado do cliente.
       window.location.assign('/cadastro');
-      
+
     } catch (error) {
-      console.error("Ocorreu um erro durante o processo de exclusão da conta:", error);
+      console.error("Erro ao chamar a Cloud Function para apagar a conta:", error);
+      // Propaga o erro para ser tratado na UI (SettingsPage).
       throw error;
     }
   }
@@ -68,7 +62,6 @@ export function AuthProvider({ children }) {
     return remove(hiddenUserRef);
   };
 
-  // Efeito para monitorar a autenticação
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, user => {
       setCurrentUser(user);
@@ -81,31 +74,28 @@ export function AuthProvider({ children }) {
     return unsubscribeAuth;
   }, []);
 
-  // Efeito para buscar o perfil (apelido) do usuário logado
   useEffect(() => {
     if (currentUser) {
       const profileRef = ref(rtdb, `profiles/${currentUser.uid}`);
       const unsubscribeProfile = onValue(profileRef, (snapshot) => {
-        const data = snapshot.val();
-        // Define o perfil (mesmo que seja null após a exclusão)
-        setUserProfile(data);
+        setUserProfile(snapshot.val());
         setLoading(false);
       });
       return () => unsubscribeProfile();
+    } else {
+      setLoading(false);
     }
   }, [currentUser]);
 
-  // Efeito para buscar a lista de usuários ocultos
   useEffect(() => {
     if (currentUser) {
       const hiddenUsersRef = ref(rtdb, `users/${currentUser.uid}/hiddenUsers`);
       const unsubscribeHidden = onValue(hiddenUsersRef, (snapshot) => {
-        const data = snapshot.val();
-        setHiddenUsers(data ? Object.keys(data) : []);
+        setHiddenUsers(snapshot.val() ? Object.keys(snapshot.val()) : []);
       });
       return () => unsubscribeHidden();
     } else {
-        setHiddenUsers([]);
+      setHiddenUsers([]);
     }
   }, [currentUser]);
 

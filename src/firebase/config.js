@@ -4,6 +4,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getDatabase } from "firebase/database";
+import { getFunctions } from 'firebase/functions';
 
 // Configuração do Firebase
 const firebaseConfig = {
@@ -23,3 +24,5 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const rtdb = getDatabase(app);
+// A região 'us-central1' é a padrão para funções v1, mas é bom ser explícito.
+export const functions = getFunctions(app, 'us-central1');
