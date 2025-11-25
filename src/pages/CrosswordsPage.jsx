@@ -10,7 +10,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 
-// import { levels } from '@/data/crosswordsData.js';
+import { levels } from '@/data/crosswordsData.js';
 
 function CrosswordsPage() {
   const navigate = useNavigate();
@@ -19,13 +19,11 @@ function CrosswordsPage() {
   const [won, setWon] = useState(false);
   const [hintMessage, setHintMessage] = useState('');
   
-  // const levelData = levels[currentLevelIndex];
-  const levelData = {}; // Temporary empty object to avoid undefined errors
-
+  const levelData = levels[currentLevelIndex];
 
   // Efeito para inicializar ou resetar a grade quando o nível muda
   useEffect(() => {
-    if (levelData && levelData.rows) {
+    if (levelData) {
       const initialGrid = Array(levelData.rows).fill(null).map(() => Array(levelData.cols).fill(''));
       setUserGrid(initialGrid);
       setWon(false);
@@ -72,11 +70,11 @@ function CrosswordsPage() {
   };
 
   const nextLevel = () => {
-    // if (currentLevelIndex < levels.length - 1) {
-    //   setCurrentLevelIndex(prev => prev + 1);
-    // } else {
-    //   alert("Você completou todos os níveis!");
-    // }
+    if (currentLevelIndex < levels.length - 1) {
+      setCurrentLevelIndex(prev => prev + 1);
+    } else {
+      alert("Você completou todos os níveis!");
+    }
   };
 
   const prevLevel = () => {
@@ -85,7 +83,7 @@ function CrosswordsPage() {
     }
   };
   
-  if (!levelData || !levelData.grid || !userGrid.length || (levelData.rows && userGrid.length !== levelData.rows)) {
+  if (!levelData || !levelData.grid || !userGrid.length || userGrid.length !== levelData.rows) {
      return (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
             <CircularProgress />
@@ -115,7 +113,7 @@ function CrosswordsPage() {
         <Paper sx={{ p: 2, mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <IconButton onClick={prevLevel} disabled={currentLevelIndex === 0}><ArrowBackIosIcon /></IconButton>
           <Typography variant="h6" align="center">{levelData.title}</Typography>
-          <IconButton onClick={nextLevel} /* disabled={currentLevelIndex >= levels.length - 1} */><ArrowForwardIcon /></IconButton>
+          <IconButton onClick={nextLevel} disabled={currentLevelIndex >= levels.length - 1}><ArrowForwardIcon /></IconButton>
         </Paper>
 
         {hintMessage && <Typography color="primary" align="center" sx={{ mb: 2, fontWeight: 'bold' }}>{hintMessage}</Typography>}
@@ -147,7 +145,7 @@ function CrosswordsPage() {
 
         <Paper sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>Dicas:</Typography>
-            {levelData.clues && levelData.clues.map((clue) => (
+            {levelData.clues.map((clue) => (
               <Typography key={clue.id} variant="body2" sx={{ mb: 1 }}>
                 <strong>{clue.direction}:</strong> {clue.text}
               </Typography>
@@ -160,8 +158,7 @@ function CrosswordsPage() {
         <DialogContent><Typography align="center">Parabéns! Você completou o desafio!</Typography></DialogContent>
         <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
           <Button variant="contained" onClick={() => { setWon(false); nextLevel(); }}>
-            {/* {currentLevelIndex < levels.length - 1 ? 'Próximo Nível' : 'Finalizar'} */}
-            Próximo Nível
+            {currentLevelIndex < levels.length - 1 ? 'Próximo Nível' : 'Finalizar'}
           </Button>
         </DialogActions>
       </Dialog>
