@@ -15,7 +15,7 @@ Este projeto foi construído como um Progressive Web App (PWA) moderno, totalmen
 -**Controle de Visibilidade ("A Mesa"):** Cada usuário pode "ocultar" outros membros para criar um feed personalizado, sem que a outra pessoa seja notificada.
 -**Gerenciamento de Perfil:** Os usuários podem definir um apelido e uma foto de perfil, que pode ser alterada a qualquer momento.
 -**Moderação de Conteúdo no Cliente:** Uso de TensorFlow.js para análise de texto em tempo real, bloqueando links e marcando conteúdo potencialmente sensível.
--**Privacidade:** Exclusão completa da conta e de todos os dados associados através de uma Cloud Function segura.
+-**Privacidade:** Exclusão completa da conta e de todos os dados associados.
 
 ---
 
@@ -29,7 +29,6 @@ Este projeto foi construído como um Progressive Web App (PWA) moderno, totalmen
 -**Backend (BaaS):**
     -   [Firebase Realtime Database](https://firebase.google.com/products/realtime-database) para armazenamento de dados em tempo real.
     -   [Firebase Authentication](https://firebase.google.com/products/auth) para gerenciamento de usuários.
-    -   [Firebase Cloud Functions](https://firebase.google.com/products/functions) para lógica de servidor segura (ex: exclusão de conta).
 -**Armazenamento de Mídia:**
     -   [Cloudinary](https://cloudinary.com/) para upload, armazenamento e otimização de imagens e vídeos.
 -**Deploy:**
