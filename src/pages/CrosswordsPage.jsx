@@ -21,19 +21,14 @@ function CrosswordsPage() {
   
   const levelData = levels[currentLevelIndex];
 
-  // --- CORREÇÃO AQUI ---
-  // Este useEffect agora é o único responsável por configurar o nível
+  // Efeito para inicializar ou resetar a grade quando o nível muda
   useEffect(() => {
-    // Função de reset fica DENTRO do useEffect
-    const resetLevel = () => {
-      if (levelData) {
-        const initialGrid = Array(levelData.rows).fill(null).map(() => Array(levelData.cols).fill(''));
-        setUserGrid(initialGrid);
-        setWon(false);
-        setHintMessage('');
-      }
-    };
-    resetLevel();
+    if (levelData) {
+      const initialGrid = Array(levelData.rows).fill(null).map(() => Array(levelData.cols).fill(''));
+      setUserGrid(initialGrid);
+      setWon(false);
+      setHintMessage('');
+    }
   }, [currentLevelIndex, levelData]);
 
   const handleInputChange = (row, col, value) => {
@@ -48,6 +43,9 @@ function CrosswordsPage() {
   };
 
   const checkWin = (currentGrid) => {
+    // Adicionada guarda para previnir erro durante a transição de nível
+    if (!levelData || !levelData.grid || currentGrid.length !== levelData.rows) return;
+
     for (let r = 0; r < levelData.rows; r++) {
       for (let c = 0; c < levelData.cols; c++) {
         if (levelData.grid[r][c] !== '.' && currentGrid[r][c] !== levelData.grid[r][c]) {
@@ -76,7 +74,7 @@ function CrosswordsPage() {
     if (currentLevelIndex < levels.length - 1) {
       setCurrentLevelIndex(prev => prev + 1);
     } else {
-      setCurrentLevelIndex(0);
+      alert("Você completou todos os níveis!");
     }
   };
 
@@ -86,11 +84,16 @@ function CrosswordsPage() {
     }
   };
   
-  if (userGrid.length === 0) {
-     return <Box sx={{display: 'flex', justifyContent: 'center', mt: 4}}><CircularProgress /></Box>;
+  // Guarda: Se os dados não estiverem prontos, ou a grade não corresponder ao nível atual,
+  // mostra um spinner. Isso previne a renderização com estado inconsistente.
+  if (!levelData || !levelData.grid || !userGrid.length || userGrid.length !== levelData.rows) {
+     return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+            <CircularProgress />
+        </Box>
+     );
   }
 
-  // O JSX do return permanece o mesmo
   return (
     <Box sx={{ flexGrow: 1, bgcolor: 'grey.100', minHeight: '100vh' }}>
       <AppBar position="sticky" sx={{ pt: { xs: 'env(safe-area-inset-top)', sm: 0 } }}>
@@ -113,7 +116,7 @@ function CrosswordsPage() {
         <Paper sx={{ p: 2, mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <IconButton onClick={prevLevel} disabled={currentLevelIndex === 0}><ArrowBackIosIcon /></IconButton>
           <Typography variant="h6" align="center">{levelData.title}</Typography>
-          <IconButton onClick={nextLevel}><ArrowForwardIcon /></IconButton>
+          <IconButton onClick={nextLevel} disabled={currentLevelIndex >= levels.length - 1}><ArrowForwardIcon /></IconButton>
         </Paper>
 
         {hintMessage && <Typography color="primary" align="center" sx={{ mb: 2, fontWeight: 'bold' }}>{hintMessage}</Typography>}
@@ -158,7 +161,7 @@ function CrosswordsPage() {
         <DialogContent><Typography align="center">Parabéns! Você completou o desafio!</Typography></DialogContent>
         <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
           <Button variant="contained" onClick={() => { setWon(false); nextLevel(); }}>
-            {currentLevelIndex < levels.length - 1 ? 'Próximo Nível' : 'Jogar Novamente'}
+            {currentLevelIndex < levels.length - 1 ? 'Próximo Nível' : 'Finalizar'}
           </Button>
         </DialogActions>
       </Dialog>
