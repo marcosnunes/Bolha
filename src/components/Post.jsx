@@ -3,12 +3,12 @@ import { rtdb } from '../firebase/config';
 import { ref, remove, set, onValue } from 'firebase/database';
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import ConfirmDialog from './ConfirmDialog'; // Importa nosso componente reutilizável
 
 // Componentes e Ícones do MUI
 import {
   Card, CardHeader, CardContent, CardActions, IconButton, Typography,
-  Box, Menu, MenuItem, Avatar, Tooltip, Divider, Button,
-  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle
+  Box, Menu, MenuItem, Avatar, Tooltip, Divider, Button
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -32,7 +32,6 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     const unsubscribeLikes = onValue(likesRef, (snapshot) => {
       setLikesData(snapshot.val() || {});
     });
-
     return () => unsubscribeLikes();
   }, [id]);
 
@@ -45,21 +44,18 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   };
 
   const handleDeletePost = async () => {
-    setConfirmDialogOpen(false); // Fechar o diálogo de confirmação
+    // A lógica de fechar o diálogo é movida para o componente ConfirmDialog
     try {
       const postRef = ref(rtdb, `posts/${id}`);
       await remove(postRef);
       if (onPostDelete) onPostDelete(id);
     } catch (error) {
       console.error("Erro ao apagar o post:", error);
-      alert("Não foi possível apagar o post. Tente novamente.");
+      // Idealmente, mostrar um snackbar de erro aqui
     }
   };
 
-  const getOptimizedUrl = (url) => {
-    if (!url) return '';
-    return url.replace('upload', 'upload/a_auto,q_auto,f_auto');
-  };
+  const getOptimizedUrl = (url) => url ? url.replace('upload', 'upload/a_auto,q_auto,f_auto') : '';
 
   const getVideoThumbnail = (videoUrl) => {
     if (!videoUrl) return '';
@@ -133,23 +129,16 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
         </CardActions>
       </Card>
 
-      <Dialog
+      {/* Substituído pelo diálogo de confirmação reutilizável */}
+      <ConfirmDialog
         open={confirmDialogOpen}
         onClose={() => setConfirmDialogOpen(false)}
-      >
-        <DialogTitle>Confirmar Exclusão</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Tem certeza de que deseja apagar este post? Esta ação não poderá ser desfeita.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialogOpen(false)}>Cancelar</Button>
-          <Button onClick={handleDeletePost} color="error" autoFocus>
-            Apagar
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleDeletePost}
+        title="Confirmar Exclusão"
+        message="Tem certeza de que deseja apagar este post? Esta ação não poderá ser desfeita."
+        confirmText="Apagar"
+        cancelText="Cancelar"
+      />
     </>
   );
 }
