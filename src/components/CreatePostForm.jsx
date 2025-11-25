@@ -33,9 +33,6 @@ function CreatePostForm({ onPostSuccess }) {
 
   const containsLink = (text) => {
     if (!text) return false;
-    // Regex mais permissivo para permitir texto comum, mas ainda pegar URLs óbvias
-    // Nota: ReactMarkdown vai renderizar links automaticamente se o texto tiver http.
-    // Se você quer bloquear links externos, mantenha esta verificação.
     const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])|(\bwww\.[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/ig;
     return urlRegex.test(text);
   };
@@ -125,7 +122,18 @@ function CreatePostForm({ onPostSuccess }) {
     try {
       let mediaURL = null;
       let mediaType = null;
+      let isPostNSFW = false;
 
+      // 1. Classificar o texto ANTES de qualquer outra coisa
+      if (postContent && postContent.trim().length > 0) {
+        const isToxicFromModel = await classifyText(postContent);
+        const isForbiddenFromList = containsForbiddenWord(postContent);
+        if (isToxicFromModel || isForbiddenFromList) {
+          isPostNSFW = true;
+        }
+      }
+
+      // 2. Fazer o upload do arquivo, se existir
       if (file) {
         try {
           const uploadData = await uploadToCloudinary(file);
@@ -137,6 +145,7 @@ function CreatePostForm({ onPostSuccess }) {
         }
       }
 
+      // 3. Criar o post no DB com todos os dados corretos em UMA operação
       const postsListRef = ref(rtdb, 'posts');
       const newPostRef = push(postsListRef);
       
@@ -146,30 +155,21 @@ function CreatePostForm({ onPostSuccess }) {
         authorNickname: userProfile.nickname,
         authorPhotoURL: userProfile.photoURL || null,
         createdAt: serverTimestamp(),
-        isNSFW: false,
-        moderationStatus: 'pending',
+        isNSFW: isPostNSFW, // Usar o valor já classificado
+        moderationStatus: 'completed', // O status já está definido
         mediaURL: mediaURL || null,
         mediaType: mediaType || null
       };
 
       await update(newPostRef, newPostData);
 
+      // 4. Limpar o formulário e dar feedback de sucesso
       setPostContent('');
       setFile(null);
       setFileName('');
       setUploadProgress(0);
       if (fileInputRef.current) fileInputRef.current.value = "";
       if (onPostSuccess) onPostSuccess();
-
-      if (postContent && postContent.trim().length > 0) {
-        const isToxicFromModel = await classifyText(postContent);
-        const isForbiddenFromList = containsForbiddenWord(postContent);
-        
-        if (isToxicFromModel || isForbiddenFromList) {
-          const postToUpdateRef = ref(rtdb, `posts/${newPostRef.key}`);
-          await update(postToUpdateRef, { isNSFW: true, moderationStatus: 'completed' });
-        }
-      }
 
     } catch (err) {
       console.error("Erro no processo:", err);
@@ -187,7 +187,6 @@ function CreatePostForm({ onPostSuccess }) {
       <TextField
         fullWidth multiline rows={4} variant="outlined" label="No que você está pensando?"
         value={postContent} onChange={(e) => setPostContent(e.target.value)}
-        // Dica para o usuário
         helperText="Dica: Use **negrito** ou *itálico* para estilizar. Pule uma linha para novo parágrafo."
       />
 

@@ -41,7 +41,7 @@ function PrivacyPolicyPage() {
             Você pode, a qualquer momento, solicitar a exclusão completa da sua conta e de todos os dados associados através da opção "Apagar Conta" disponível no menu. Este processo é irreversível.
           </Typography>
           <Typography variant="caption" display="block" mt={4}>
-            Esta política é efetiva a partir de 20 de Novembro de 2025.
+            Esta política é efetiva a partir de 12 de Junho de 2024.
           </Typography>
         </Paper>
       </Container>

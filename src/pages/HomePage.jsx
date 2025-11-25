@@ -39,6 +39,7 @@ function HomePage() {
     const [loadingInvite, setLoadingInvite] = useState(false);
     const [openInviteDialog, setOpenInviteDialog] = useState(false);
     const [openPostDialog, setOpenPostDialog] = useState(false);
+    const [openDeleteConfirmDialog, setOpenDeleteConfirmDialog] = useState(false);
     
     // Estados para Usuários e Lista
     const [userCount, setUserCount] = useState(0);
@@ -87,11 +88,9 @@ function HomePage() {
             if (currentUser) {
                 const profileRef = ref(rtdb, `profiles/${currentUser.uid}`);
                 await update(profileRef, { photoURL: newPhotoURL });
-                alert("Foto de perfil atualizada com sucesso!");
             }
         } catch (error) {
             console.error("Erro ao atualizar a foto de perfil:", error);
-            alert("Não foi possível atualizar sua foto de perfil.");
         }
     };
 
@@ -126,37 +125,31 @@ function HomePage() {
             setOpenInviteDialog(true);
         } catch (error) {
             console.error("Erro ao gerar convite:", error);
-            alert("Não foi possível gerar o link. Tente novamente.");
         }
         setLoadingInvite(false);
     };
 
-    const handleDeleteAccount = async () => {
-        handleDrawerToggle();
-        if (window.confirm("ATENÇÃO: Você tem certeza de que deseja apagar sua conta? Todos os seus posts e dados serão permanentemente removidos. Esta ação não pode ser desfeita.")) {
+    const handleDeleteAccountClick = () => {
+        handleDrawerToggle(); // Fecha o menu
+        setOpenDeleteConfirmDialog(true); // Abre o diálogo de confirmação
+    };
+
+    const executeDeleteAccount = async () => {
+        setOpenDeleteConfirmDialog(false); // Fecha o diálogo
+        try {
+            const functions = getFunctions();
+            const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
+            await deleteUserAccount();
+            
             try {
-                const functions = getFunctions();
-                const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
-                
-                // 1. Chama a função no backend para limpar o banco de dados
-                await deleteUserAccount();
-                
-                alert("Sua conta e todos os seus dados foram apagados com sucesso.");
-
-                // 2. Tenta fazer o logout no cliente (pode falhar se a conta já sumiu no backend, por isso o try/catch)
-                try {
-                    await logout();
-                } catch {
-                    console.log("Usuário já desconectado ou inexistente.");
-                }
-
-            } catch (error) {
-                console.error("Erro no processo de exclusão:", error);
-                alert("Houve um erro, mas tentaremos redirecionar você.");
-            } finally {
-                // 3. INDEPENDENTE de erro ou sucesso, força o redirecionamento para cadastro
-                navigate('/cadastro');
+                await logout();
+            } catch {
+                console.log("Usuário já desconectado ou inexistente.");
             }
+        } catch (error) {
+            console.error("Erro no processo de exclusão:", error);
+        } finally {
+            navigate('/cadastro');
         }
     };
 
@@ -189,7 +182,7 @@ function HomePage() {
                         <Divider />
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/configuracoes"><ListItemIcon><SettingsIcon /></ListItemIcon><ListItemText primary="Configurações" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton onClick={generateInviteLink} disabled={loadingInvite}><ListItemIcon><AddCircleOutlineIcon /></ListItemIcon><ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} /></ListItemButton></ListItem>
-                        <ListItem disablePadding><ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}><ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon><ListItemText primary="Apagar Conta" /></ListItemButton></ListItem>
+                        <ListItem disablePadding><ListItemButton onClick={handleDeleteAccountClick} sx={{ color: 'error.main' }}><ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon><ListItemText primary="Apagar Conta" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/politica-de-privacidade"><ListItemIcon><PolicyIcon /></ListItemIcon><ListItemText primary="Política de Privacidade" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/denuncia"><ListItemIcon><ReportProblemIcon color="warning" /></ListItemIcon><ListItemText primary="Denunciar Abuso" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton onClick={handleLogout}><ListItemIcon><LogoutIcon /></ListItemIcon><ListItemText primary="Sair" /></ListItemButton></ListItem>
@@ -207,12 +200,11 @@ function HomePage() {
                 <Toolbar>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Bolha</Typography>
                     
-                    {/* Contador de Usuários - Agora Clicável */}
                     <Chip 
                         icon={<PeopleIcon style={{ color: 'inherit' }} />} 
                         label={`${userCount} membros`}
                         variant="outlined"
-                        onClick={() => setOpenUserListDialog(true)} // Abre o modal
+                        onClick={() => setOpenUserListDialog(true)}
                         sx={{ 
                             mr: 2, 
                             color: 'white', 
@@ -229,13 +221,7 @@ function HomePage() {
             
             <Drawer variant="temporary" open={mobileOpen} onClose={handleDrawerToggle} anchor="right" ModalProps={{ keepMounted: true }} sx={{ '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 } }}>{drawer}</Drawer>
 
-            {/* DIÁLOGO: Lista de Membros */}
-            <Dialog 
-                open={openUserListDialog} 
-                onClose={() => setOpenUserListDialog(false)}
-                fullWidth
-                maxWidth="sm"
-            >
+            <Dialog open={openUserListDialog} onClose={() => setOpenUserListDialog(false)} fullWidth maxWidth="sm">
                 <DialogTitle>Membros da Bolha ({userCount})</DialogTitle>
                 <DialogContent dividers>
                     <List>
@@ -273,6 +259,24 @@ function HomePage() {
                 <DialogContent>
                     <CreatePostForm onPostSuccess={handlePostSuccess} />
                 </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={openDeleteConfirmDialog}
+                onClose={() => setOpenDeleteConfirmDialog(false)}
+            >
+                <DialogTitle>Confirmar Exclusão Permanente</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Você tem certeza de que deseja apagar sua conta? Todos os seus posts, perfil e dados serão permanentemente removidos. <strong>Esta ação não pode ser desfeita.</strong>
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenDeleteConfirmDialog(false)}>Cancelar</Button>
+                    <Button onClick={executeDeleteAccount} color="error" autoFocus>
+                        Apagar Conta
+                    </Button>
+                </DialogActions>
             </Dialog>
 
             <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
