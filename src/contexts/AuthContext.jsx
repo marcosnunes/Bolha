@@ -24,8 +24,10 @@ export function AuthProvider({ children }) {
     return signInWithEmailAndPassword(auth, email, password);
   }
 
-  function logout() {
-    return signOut(auth);
+  async function logout() {
+    await signOut(auth);
+    // Força um recarregamento completo da página para limpar todo o estado em memória.
+    window.location.assign('/login');
   }
 
   async function deleteAccount() {
@@ -39,15 +41,17 @@ export function AuthProvider({ children }) {
       const updates = {};
       updates[`/profiles/${userToDelete.uid}`] = null;
       updates[`/users/${userToDelete.uid}`] = null;
-      
       await update(ref(rtdb), updates);
 
       // Etapa 2: Apenas após a confirmação da exclusão dos dados, apagar o usuário da autenticação.
       await deleteUser(userToDelete);
+
+      // Etapa 3: Forçar um recarregamento completo para a página de cadastro.
+      // Isso garante que todo o estado do aplicativo (em Contextos ou componentes) seja limpo.
+      window.location.assign('/cadastro');
       
     } catch (error) {
       console.error("Ocorreu um erro durante o processo de exclusão da conta:", error);
-      // O erro será propagado para a UI (SettingsPage), que irá mostrar a mensagem correta.
       throw error;
     }
   }
@@ -70,6 +74,7 @@ export function AuthProvider({ children }) {
       setCurrentUser(user);
       if (!user) {
         setUserProfile(null);
+        setHiddenUsers([]);
         setLoading(false);
       }
     });
@@ -82,9 +87,8 @@ export function AuthProvider({ children }) {
       const profileRef = ref(rtdb, `profiles/${currentUser.uid}`);
       const unsubscribeProfile = onValue(profileRef, (snapshot) => {
         const data = snapshot.val();
-        if (data) {
-          setUserProfile(data);
-        }
+        // Define o perfil (mesmo que seja null após a exclusão)
+        setUserProfile(data);
         setLoading(false);
       });
       return () => unsubscribeProfile();
@@ -100,6 +104,8 @@ export function AuthProvider({ children }) {
         setHiddenUsers(data ? Object.keys(data) : []);
       });
       return () => unsubscribeHidden();
+    } else {
+        setHiddenUsers([]);
     }
   }, [currentUser]);
 
