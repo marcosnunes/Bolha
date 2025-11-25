@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser } from 'firebase/auth';
 import { auth, rtdb } from '/src/firebase/config.js';
-import { ref, onValue, set, remove } from 'firebase/database';
+import { ref, onValue, set, remove, update } from 'firebase/database';
 
 const AuthContext = createContext();
 
@@ -30,18 +30,25 @@ export function AuthProvider({ children }) {
 
   async function deleteAccount() {
     const userToDelete = auth.currentUser;
-    if (userToDelete) {
-      try {
-        // Excluir dados do Realtime Database
-        await remove(ref(rtdb, `profiles/${userToDelete.uid}`));
-        await remove(ref(rtdb, `users/${userToDelete.uid}`));
-  
-        // Excluir usuário do Authentication
-        await deleteUser(userToDelete);
-      } catch (error) {
-        console.error("Erro ao apagar a conta:", error);
-        throw error; // Propaga o erro para ser tratado na UI
-      }
+    if (!userToDelete) {
+      throw new Error("Nenhum usuário logado para apagar.");
+    }
+
+    try {
+      // Etapa 1: Apagar os dados do Realtime Database de forma atômica
+      const updates = {};
+      updates[`/profiles/${userToDelete.uid}`] = null;
+      updates[`/users/${userToDelete.uid}`] = null;
+      
+      await update(ref(rtdb), updates);
+
+      // Etapa 2: Apenas após a confirmação da exclusão dos dados, apagar o usuário da autenticação.
+      await deleteUser(userToDelete);
+      
+    } catch (error) {
+      console.error("Ocorreu um erro durante o processo de exclusão da conta:", error);
+      // O erro será propagado para a UI (SettingsPage), que irá mostrar a mensagem correta.
+      throw error;
     }
   }
 
