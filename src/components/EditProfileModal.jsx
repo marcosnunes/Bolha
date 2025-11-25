@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { updatePassword } from 'firebase/auth';
 import { ref, update } from 'firebase/database';
 import { rtdb } from '../firebase/config';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
