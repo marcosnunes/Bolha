@@ -41,9 +41,9 @@ export const levels = [
     rows: 5,
     cols: 5,
     grid: [
-      ['M', 'A', 'C', 'A', '.'],
+      ['M', 'A', 'Ç', 'Ã', '.'],
       ['.', '.', '.', '.', 'P'],
-      ['U', 'V', 'A', '.', 'E'],
+      ['.', 'U', 'V', 'A', '.'],
       ['.', '.', '.', '.', 'R'],
       ['.', '.', '.', '.', 'A']
     ],
@@ -67,7 +67,7 @@ export const levels = [
     ],
     clues: [
       { id: 1, direction: 'HORIZONTAL', text: 'Animal doméstico que mia.' },
-      { id: 2, direction: 'VERTICAL', text: 'Ave que faz \"quack\".' },
+      { id: 2, direction: 'VERTICAL', text: 'Ave que faz "quack".' },
       { id: 3, direction: 'HORIZONTAL', text: 'Animal de grande porte usado em fazendas.' }
     ]
   },

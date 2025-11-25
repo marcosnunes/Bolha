@@ -98,7 +98,7 @@ function CreatePostForm({ onPostSuccess }) {
           try {
              const errorResp = JSON.parse(xhr.responseText);
              reject(new Error(errorResp.error?.message || 'Erro no Cloudinary'));
-          } catch (e) {
+          } catch (_) {
              reject(new Error('Erro desconhecido no upload.'));
           }
         }
