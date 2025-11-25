@@ -4,7 +4,6 @@ import { CssBaseline } from '@mui/material';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import SettingsPage from './pages/SettingsPage.jsx';
 
-import App from './App.jsx';
 import './index.css';
 
 // Importando nossas páginas
@@ -22,44 +21,43 @@ import ReportAbusePage from './pages/ReportAbusePage.jsx';
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <App />,
-    children: [
-      {
-        path: '/', // Rota principal
-        element:
-          <ProtectedRoute>
-            <HomePage />
-          </ProtectedRoute>,
-      },
-      {
-        path: '/configuracoes',
-        element: <ProtectedRoute><SettingsPage /></ProtectedRoute>,
-      },
-      {
-        path: '/login',
-        element: <LoginPage />,
-      },
-      {
-        path: '/cadastro',
-        element: <CadastroPage />,
-      },
-      {
-        path: '/pagamento',
-        element: <PagamentoPage />,
-      },
-      {
-        path: '/convite/:token', // O :token significa que é um parâmetro dinâmico
-        element: <ConvitePage />,
-      },
-      {
-        path: '/politica-de-privacidade',
-        element: <PrivacyPolicyPage />,
-      },
-      {
-        path: '/denuncia',
-        element: <ReportAbusePage />,
-      },
-    ],
+    element: (
+      <ProtectedRoute>
+        <HomePage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/configuracoes',
+    element: (
+      <ProtectedRoute>
+        <SettingsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/login',
+    element: <LoginPage />,
+  },
+  {
+    path: '/cadastro',
+    element: <CadastroPage />,
+  },
+  {
+    path: '/pagamento',
+    element: <PagamentoPage />,
+  },
+  {
+    path: '/convite/:token',
+    element: <ConvitePage />,
+  },
+  {
+    path: '/politica-de-privacidade',
+    element: <PrivacyPolicyPage />,
+  },
+  {
+    path: '/denuncia',
+    element: <ReportAbusePage />,
   },
 ]);
 
