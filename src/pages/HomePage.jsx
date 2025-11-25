@@ -5,7 +5,6 @@ import { rtdb } from '../firebase/config';
 import { ref, push, set, update, serverTimestamp, onValue } from 'firebase/database';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import SettingsIcon from '@mui/icons-material/Settings';
-import ExtensionIcon from '@mui/icons-material/Extension';
 
 // Componentes do MUI
 import {
@@ -192,7 +191,6 @@ function HomePage() {
                         <ListItem disablePadding><ListItemButton onClick={generateInviteLink} disabled={loadingInvite}><ListItemIcon><AddCircleOutlineIcon /></ListItemIcon><ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}><ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon><ListItemText primary="Apagar Conta" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/politica-de-privacidade"><ListItemIcon><PolicyIcon /></ListItemIcon><ListItemText primary="Política de Privacidade" /></ListItemButton></ListItem>
-                        <ListItem disablePadding><ListItemButton component={RouterLink} to="/palavras-cruzadas"><ListItemIcon><ExtensionIcon color="primary" /></ListItemIcon><ListItemText primary="Palavras Cruzadas" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/denuncia"><ListItemIcon><ReportProblemIcon color="warning" /></ListItemIcon><ListItemText primary="Denunciar Abuso" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton onClick={handleLogout}><ListItemIcon><LogoutIcon /></ListItemIcon><ListItemText primary="Sair" /></ListItemButton></ListItem>
                     </>
