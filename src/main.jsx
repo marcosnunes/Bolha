@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { CssBaseline } from '@mui/material';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import SettingsPage from './pages/SettingsPage.jsx';
+import CrosswordsPage from './pages/CrosswordsPage.jsx';
 
 import App from './App.jsx';
 import './index.css';
@@ -54,6 +55,10 @@ const router = createBrowserRouter([
       {
         path: '/politica-de-privacidade',
         element: <PrivacyPolicyPage />,
+      },
+      {
+       path: '/palavras-cruzadas',
+       element: <ProtectedRoute><CrosswordsPage /></ProtectedRoute>,
       },
       {
         path: '/denuncia',

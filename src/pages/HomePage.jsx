@@ -1,17 +1,18 @@
-import { useState, useRef, useEffect } from 'react'; // Adicione useEffect
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
-import { ref, push, set, update, serverTimestamp, onValue } from 'firebase/database'; // Adicione onValue
+import { ref, push, set, update, serverTimestamp, onValue } from 'firebase/database';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import SettingsIcon from '@mui/icons-material/Settings';
+import ExtensionIcon from '@mui/icons-material/Extension';
 
 // Componentes do MUI
 import {
     AppBar, Toolbar, Typography, Button, IconButton, Drawer, List, ListItem,
     ListItemButton, ListItemIcon, ListItemText, Box, Container, Divider,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
-    Tooltip, Switch, Avatar, Fab, FormControlLabel, TextField, Chip
+    Tooltip, Switch, Avatar, Fab, FormControlLabel, TextField, Chip, ListItemAvatar
 } from '@mui/material';
 
 // Ícones do MUI
@@ -40,19 +41,31 @@ function HomePage() {
     const [openInviteDialog, setOpenInviteDialog] = useState(false);
     const [openPostDialog, setOpenPostDialog] = useState(false);
     
-    // Estado para forçar a atualização do Feed
-    const [refreshFeed, setRefreshFeed] = useState(0);
-    
-    // Estado para contador de usuários
+    // Estados para Usuários e Lista
     const [userCount, setUserCount] = useState(0);
+    const [allUsers, setAllUsers] = useState([]); // Lista de objetos de usuários
+    const [openUserListDialog, setOpenUserListDialog] = useState(false); // Controle do modal da lista
 
+    const [refreshFeed, setRefreshFeed] = useState(0);
     const profilePicInputRef = useRef(null);
 
-    // Efeito para contar usuários em tempo real
+    // Efeito para contar e listar usuários em tempo real
     useEffect(() => {
         const profilesRef = ref(rtdb, 'profiles');
         const unsubscribe = onValue(profilesRef, (snapshot) => {
-            setUserCount(snapshot.size);
+            const data = snapshot.val();
+            if (data) {
+                setUserCount(snapshot.size);
+                // Transforma o objeto de perfis em um array para a lista
+                const usersArray = Object.keys(data).map(key => ({
+                    uid: key,
+                    ...data[key]
+                }));
+                setAllUsers(usersArray);
+            } else {
+                setUserCount(0);
+                setAllUsers([]);
+            }
         });
         return () => unsubscribe();
     }, []);
@@ -60,6 +73,7 @@ function HomePage() {
     const handleProfilePicChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        console.log("Iniciando upload da nova foto de perfil...");
         try {
             const formData = new FormData();
             formData.append('file', file);
@@ -120,25 +134,36 @@ function HomePage() {
 
     const handleDeleteAccount = async () => {
         handleDrawerToggle();
-        if (window.confirm("ATENÇÃO: Você tem certeza de que deseja apagar sua conta? ...")) {
+        if (window.confirm("ATENÇÃO: Você tem certeza de que deseja apagar sua conta? Todos os seus posts e dados serão permanentemente removidos. Esta ação não pode ser desfeita.")) {
             try {
                 const functions = getFunctions();
                 const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
+                
+                // 1. Chama a função no backend para limpar o banco de dados
                 await deleteUserAccount();
-                alert("Sua conta foi apagada com sucesso.");
-                await logout();
-                navigate('/cadastro');
+                
+                alert("Sua conta e todos os seus dados foram apagados com sucesso.");
+
+                // 2. Tenta fazer o logout no cliente (pode falhar se a conta já sumiu no backend, por isso o try/catch)
+                try {
+                    await logout();
+                } catch (e) {
+                    console.log("Usuário já desconectado ou inexistente.");
+                }
+
             } catch (error) {
-                console.error("Erro ao apagar a conta:", error);
-                alert("Ocorreu um erro ao apagar sua conta. Por favor, tente novamente.");
+                console.error("Erro no processo de exclusão:", error);
+                alert("Houve um erro, mas tentaremos redirecionar você.");
+            } finally {
+                // 3. INDEPENDENTE de erro ou sucesso, força o redirecionamento para cadastro
+                navigate('/cadastro');
             }
         }
     };
 
-    // Callback para fechar o modal e atualizar o feed
     const handlePostSuccess = () => {
         setOpenPostDialog(false);
-        setRefreshFeed(prev => prev + 1); // Incrementa o contador
+        setRefreshFeed(prev => prev + 1); 
     };
 
     const drawer = (
@@ -167,6 +192,7 @@ function HomePage() {
                         <ListItem disablePadding><ListItemButton onClick={generateInviteLink} disabled={loadingInvite}><ListItemIcon><AddCircleOutlineIcon /></ListItemIcon><ListItemText primary={loadingInvite ? "Gerando..." : "Convidar"} /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton onClick={handleDeleteAccount} sx={{ color: 'error.main' }}><ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon><ListItemText primary="Apagar Conta" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/politica-de-privacidade"><ListItemIcon><PolicyIcon /></ListItemIcon><ListItemText primary="Política de Privacidade" /></ListItemButton></ListItem>
+                        <ListItem disablePadding><ListItemButton component={RouterLink} to="/palavras-cruzadas"><ListItemIcon><ExtensionIcon color="primary" /></ListItemIcon><ListItemText primary="Palavras Cruzadas" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/denuncia"><ListItemIcon><ReportProblemIcon color="warning" /></ListItemIcon><ListItemText primary="Denunciar Abuso" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton onClick={handleLogout}><ListItemIcon><LogoutIcon /></ListItemIcon><ListItemText primary="Sair" /></ListItemButton></ListItem>
                     </>
@@ -183,12 +209,20 @@ function HomePage() {
                 <Toolbar>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Bolha</Typography>
                     
-                    {/* Contador de Usuários */}
+                    {/* Contador de Usuários - Agora Clicável */}
                     <Chip 
                         icon={<PeopleIcon style={{ color: 'inherit' }} />} 
                         label={`${userCount} membros`}
                         variant="outlined"
-                        sx={{ mr: 2, color: 'white', borderColor: 'rgba(255, 255, 255, 0.5)', '& .MuiChip-icon': { color: 'white' } }} 
+                        onClick={() => setOpenUserListDialog(true)} // Abre o modal
+                        sx={{ 
+                            mr: 2, 
+                            color: 'white', 
+                            borderColor: 'rgba(255, 255, 255, 0.5)',
+                            '& .MuiChip-icon': { color: 'white' },
+                            cursor: 'pointer',
+                            '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+                        }} 
                     />
                     
                     <IconButton color="inherit" aria-label="open drawer" edge="end" onClick={handleDrawerToggle}><MenuIcon /></IconButton>
@@ -196,6 +230,33 @@ function HomePage() {
             </AppBar>
             
             <Drawer variant="temporary" open={mobileOpen} onClose={handleDrawerToggle} anchor="right" ModalProps={{ keepMounted: true }} sx={{ '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 } }}>{drawer}</Drawer>
+
+            {/* DIÁLOGO: Lista de Membros */}
+            <Dialog 
+                open={openUserListDialog} 
+                onClose={() => setOpenUserListDialog(false)}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle>Membros da Bolha ({userCount})</DialogTitle>
+                <DialogContent dividers>
+                    <List>
+                        {allUsers.map((user) => (
+                            <ListItem key={user.uid}>
+                                <ListItemAvatar>
+                                    <Avatar src={user.photoURL} alt={user.nickname}>
+                                        {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
+                                    </Avatar>
+                                </ListItemAvatar>
+                                <ListItemText primary={user.nickname} />
+                            </ListItem>
+                        ))}
+                    </List>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenUserListDialog(false)}>Fechar</Button>
+                </DialogActions>
+            </Dialog>
 
             <Dialog open={openInviteDialog} onClose={() => setOpenInviteDialog(false)}>
                 <DialogTitle>Link de Convite Gerado</DialogTitle>
@@ -222,7 +283,6 @@ function HomePage() {
                     <FormControlLabel control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />} label="Mostrar conteúdo sensível" labelPlacement="start" />
                 </Box>
                 
-                {/* Passando a prop refreshTrigger */}
                 <Feed filterNSFW={!showNSFW} refreshTrigger={refreshFeed} />
             </Container>
 

@@ -10,13 +10,14 @@ import {
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
+import InfoIcon from '@mui/icons-material/Info';
 
 function CreatePostForm({ onPostSuccess }) {
   const [postContent, setPostContent] = useState('');
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0); // Estado para a barra de progresso
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
   
   const { currentUser, userProfile } = useAuth();
@@ -32,6 +33,9 @@ function CreatePostForm({ onPostSuccess }) {
 
   const containsLink = (text) => {
     if (!text) return false;
+    // Regex mais permissivo para permitir texto comum, mas ainda pegar URLs óbvias
+    // Nota: ReactMarkdown vai renderizar links automaticamente se o texto tiver http.
+    // Se você quer bloquear links externos, mantenha esta verificação.
     const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])|(\bwww\.[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/ig;
     return urlRegex.test(text);
   };
@@ -48,35 +52,41 @@ function CreatePostForm({ onPostSuccess }) {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-      // Validação simples de tamanho (ex: alerta se for > 200MB, Cloudinary free pode falhar dependendo da conta)
-      if (selectedFile.size > 190 * 1024 * 1024) {
-         setError("Atenção: Arquivos muito grandes podem demorar ou falhar dependendo da sua conexão.");
-      } else {
-         setError('');
+      const maxSize = 100 * 1024 * 1024;
+      if (selectedFile.size > maxSize) {
+         setError("O arquivo excede o limite máximo de 100MB.");
+         setFile(null);
+         setFileName("");
+         e.target.value = null; 
+         return;
       }
       setFile(selectedFile);
       setFileName(selectedFile.name);
+      setError('');
     }
   };
 
-  // Função auxiliar para upload com XHR (Progresso Real)
-  const uploadWithProgress = (file) => {
+  const uploadToCloudinary = (file) => {
     return new Promise((resolve, reject) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+      const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+      
+      const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
+      const url = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
 
       const xhr = new XMLHttpRequest();
-      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+      const formData = new FormData();
       
-      // Cloudinary endpoint
-      xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`);
+      formData.append('file', file);
+      formData.append('upload_preset', uploadPreset);
 
-      // Monitorar progresso
+      xhr.open('POST', url, true);
+      xhr.timeout = 300000; 
+
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
-          const percentComplete = (event.loaded / event.total) * 100;
-          setUploadProgress(Math.round(percentComplete));
+          const percent = Math.round((event.loaded / event.total) * 100);
+          setUploadProgress(percent);
         }
       };
 
@@ -85,11 +95,17 @@ function CreatePostForm({ onPostSuccess }) {
           const data = JSON.parse(xhr.responseText);
           resolve({ secure_url: data.secure_url, resource_type: data.resource_type });
         } else {
-          reject(new Error('Falha no upload da mídia.'));
+          try {
+             const errorResp = JSON.parse(xhr.responseText);
+             reject(new Error(errorResp.error?.message || 'Erro no Cloudinary'));
+          } catch (e) {
+             reject(new Error('Erro desconhecido no upload.'));
+          }
         }
       };
 
-      xhr.onerror = () => reject(new Error('Erro de rede durante upload.'));
+      xhr.onerror = () => reject(new Error('Erro de rede. Verifique sua conexão.'));
+      xhr.ontimeout = () => reject(new Error('O upload demorou muito e expirou.'));
 
       xhr.send(formData);
     });
@@ -110,18 +126,17 @@ function CreatePostForm({ onPostSuccess }) {
       let mediaURL = null;
       let mediaType = null;
 
-      // 1. Upload da Mídia com Progresso
       if (file) {
         try {
-          const uploadData = await uploadWithProgress(file);
+          const uploadData = await uploadToCloudinary(file);
           mediaURL = uploadData.secure_url;
           mediaType = uploadData.resource_type;
         } catch (uploadErr) {
-          throw new Error("Não foi possível enviar o arquivo. Verifique sua conexão ou tamanho do arquivo.");
+          console.error("Upload error:", uploadErr);
+          throw new Error(`Falha no upload: ${uploadErr.message}`);
         }
       }
 
-      // 2. Criação do Post
       const postsListRef = ref(rtdb, 'posts');
       const newPostRef = push(postsListRef);
       
@@ -129,6 +144,7 @@ function CreatePostForm({ onPostSuccess }) {
         textContent: postContent,
         authorId: currentUser.uid,
         authorNickname: userProfile.nickname,
+        authorPhotoURL: userProfile.photoURL || null,
         createdAt: serverTimestamp(),
         isNSFW: false,
         moderationStatus: 'pending',
@@ -136,19 +152,15 @@ function CreatePostForm({ onPostSuccess }) {
         mediaType: mediaType || null
       };
 
-      if (userProfile.photoURL) newPostData.authorPhotoURL = userProfile.photoURL;
-
       await update(newPostRef, newPostData);
 
       setPostContent('');
       setFile(null);
       setFileName('');
       setUploadProgress(0);
-      
       if (fileInputRef.current) fileInputRef.current.value = "";
-      if (onPostSuccess) onPostSuccess(); // Atualiza o Feed na Home
+      if (onPostSuccess) onPostSuccess();
 
-      // 3. Moderação
       if (postContent && postContent.trim().length > 0) {
         const isToxicFromModel = await classifyText(postContent);
         const isForbiddenFromList = containsForbiddenWord(postContent);
@@ -160,7 +172,7 @@ function CreatePostForm({ onPostSuccess }) {
       }
 
     } catch (err) {
-      console.error("Erro ao publicar:", err);
+      console.error("Erro no processo:", err);
       setError(err.message || "Erro ao publicar post.");
     } finally {
       setLoading(false);
@@ -169,39 +181,55 @@ function CreatePostForm({ onPostSuccess }) {
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-      {loadingModel && <Typography variant="caption">Iniciando segurança...</Typography>}
+      {loadingModel && <Typography variant="caption">Verificando segurança...</Typography>}
       {error && <Alert severity="error">{error}</Alert>}
 
       <TextField
         fullWidth multiline rows={4} variant="outlined" label="No que você está pensando?"
         value={postContent} onChange={(e) => setPostContent(e.target.value)}
+        // Dica para o usuário
+        helperText="Dica: Use **negrito** ou *itálico* para estilizar. Pule uma linha para novo parágrafo."
       />
 
-      {/* Barra de Progresso de Upload */}
       {loading && file && (
         <Box sx={{ width: '100%' }}>
            <LinearProgress variant="determinate" value={uploadProgress} />
            <Typography variant="caption" color="text.secondary" align="center" display="block">
-             Enviando mídia: {uploadProgress}%
+             Enviando arquivo... {uploadProgress}%
            </Typography>
         </Box>
       )}
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Button component="label" startIcon={<AttachFileIcon />}>
-          Anexar Mídia
-          <input type="file" hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*,video/*" />
-        </Button>
-        
-        {fileName && <Typography variant="caption" noWrap sx={{ flexShrink: 1, ml: 1, maxWidth: 120 }}>{fileName}</Typography>}
+        <Box>
+          <Button component="label" startIcon={<AttachFileIcon />}>
+            Anexar Mídia
+            <input type="file" hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*,video/*" />
+          </Button>
+        </Box>
         
         <Button
           variant="contained" type="submit" disabled={loading || loadingModel}
           startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
         >
-          {loading ? 'Enviando...' : 'Publicar'}
+          {loading ? 'Postar' : 'Publicar'}
         </Button>
       </Box>
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, ml: 1 }}>
+          {fileName && (
+            <Typography variant="caption" noWrap sx={{ fontWeight: 'bold' }}>
+              Arquivo: {fileName}
+            </Typography>
+          )}
+          <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
+            <InfoIcon sx={{ fontSize: 16, mr: 0.5 }} />
+            <Typography variant="caption">
+              Limite máximo: 100MB por arquivo (Vídeo/Foto)
+            </Typography>
+          </Box>
+      </Box>
+
     </Box>
   );
 }
