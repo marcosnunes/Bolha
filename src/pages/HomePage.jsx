@@ -96,9 +96,7 @@ function HomePage() {
         }
     };
 
-    const handleDrawerToggle = () => {
-        setMobileOpen(!mobileOpen);
-    };
+    const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
     async function handleLogout() {
         try {
