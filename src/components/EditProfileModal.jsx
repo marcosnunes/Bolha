@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { updatePassword } from 'firebase/auth';
-import { ref, update } from 'firebase/database';
+import { ref, update, query, orderByChild, equalTo, get } from 'firebase/database';
 import { rtdb } from '../firebase/config';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -60,6 +60,21 @@ function EditProfileModal({ open, onClose, currentNickname, currentPhotoURL }) {
           nickname: nickname,
           photoURL: newPhotoURL
         });
+
+        // Se a foto foi alterada, atualizar em TODOS os posts do usuário
+        if (newPhotoURL !== currentPhotoURL) {
+          const postsRef = ref(rtdb, 'posts');
+          const userPostsQuery = query(postsRef, orderByChild('authorId'), equalTo(currentUser.uid));
+          const snapshot = await get(userPostsQuery);
+          
+          if (snapshot.exists()) {
+            const updates = {};
+            snapshot.forEach((child) => {
+              updates[`/posts/${child.key}/authorPhotoURL`] = newPhotoURL;
+            });
+            await update(ref(rtdb), updates);
+          }
+        }
       }
 
       // 3. Atualizar Senha (se fornecida)

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
-import { ref, push, set, update, serverTimestamp, onValue } from 'firebase/database';
+import { ref, push, set, update, serverTimestamp, onValue, query, orderByChild, equalTo, get } from 'firebase/database';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import SettingsIcon from '@mui/icons-material/Settings';
 
@@ -88,6 +88,19 @@ function HomePage() {
             if (currentUser) {
                 const profileRef = ref(rtdb, `profiles/${currentUser.uid}`);
                 await update(profileRef, { photoURL: newPhotoURL });
+
+                // Atualizar a foto em TODOS os posts do usuário
+                const postsRef = ref(rtdb, 'posts');
+                const userPostsQuery = query(postsRef, orderByChild('authorId'), equalTo(currentUser.uid));
+                const snapshot = await get(userPostsQuery);
+                
+                if (snapshot.exists()) {
+                    const updates = {};
+                    snapshot.forEach((child) => {
+                        updates[`/posts/${child.key}/authorPhotoURL`] = newPhotoURL;
+                    });
+                    await update(ref(rtdb), updates);
+                }
             }
         } catch (error) {
             console.error("Erro ao atualizar a foto de perfil:", error);
