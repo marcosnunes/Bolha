@@ -50,8 +50,7 @@ export const levels = [
     clues: [
       { id: 1, direction: 'HORIZONTAL', text: 'Fruta que pode ser vermelha ou verde.' },
       { id: 2, direction: 'HORIZONTAL', text: 'Fruta pequena em cachos.' },
-      { id: 3, direction: 'VERTICAL', text: 'Fruta comum em sobremesas (plural invertido).
-' }
+      { id: 3, direction: 'VERTICAL', text: 'Fruta comum em sobremesas (plural invertido).' }
     ]
   },
   {
