@@ -23,6 +23,8 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const isOwner = currentUser && currentUser.uid === authorId;
 
   const [likesData, setLikesData] = useState(postData.likes || {});
+  const [profilePhotoURL, setProfilePhotoURL] = useState(authorPhotoURL || null);
+  const [displayNickname, setDisplayNickname] = useState(authorNickname || '');
   const [anchorEl, setAnchorEl] = useState(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const openMenu = Boolean(anchorEl);
@@ -34,6 +36,21 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     });
     return () => unsubscribeLikes();
   }, [id]);
+
+  // Listen for profile changes (nickname and photoURL) and prefer them over stored values
+  useEffect(() => {
+    if (!authorId) return undefined;
+    const profileRef = ref(rtdb, `profiles/${authorId}`);
+    const unsubscribeProfile = onValue(profileRef, (snapshot) => {
+      const val = snapshot.val() || {};
+      setProfilePhotoURL(val.photoURL || authorPhotoURL || null);
+      setDisplayNickname(val.nickname || authorNickname || '');
+    });
+
+    return () => unsubscribeProfile();
+  }, [authorId, authorPhotoURL, authorNickname]);
+
+  
 
   const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
@@ -83,8 +100,8 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   return (
     <>
       <Card sx={{ mb: 3 }}>
-        <CardHeader
-          avatar={<Avatar src={authorPhotoURL}>{!authorPhotoURL && authorNickname.charAt(0).toUpperCase()}</Avatar>}
+          <CardHeader
+          avatar={<Avatar src={profilePhotoURL}>{!profilePhotoURL && (displayNickname || authorNickname).charAt(0).toUpperCase()}</Avatar>}
           action={
             <>
               <Tooltip title="Ver opções"><IconButton onClick={handleMenuClick}><MoreVertIcon /></IconButton></Tooltip>
@@ -94,7 +111,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
               </Menu>
             </>
           }
-          title={authorNickname}
+          title={displayNickname || authorNickname}
           subheader={formattedDate}
         />
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { rtdb } from '../firebase/config';
-import { ref, query, orderByChild, get, startAt, onChildAdded, limitToLast, endAt } from 'firebase/database';
+import { ref, query, orderByChild, get, startAt, onChildAdded, onChildChanged, onChildRemoved, limitToLast, endAt } from 'firebase/database';
 import Post from './Post.jsx';
 import ProfileModal from './ProfileModal.jsx';
 import EditProfileModal from './EditProfileModal.jsx';
@@ -26,7 +26,7 @@ function Feed({ filterNSFW }) {
     const postsRef = ref(rtdb, 'posts');
     const realtimeQuery = query(postsRef, orderByChild('createdAt'), startAt(mountTimeRef.current + 1));
 
-    const unsubscribe = onChildAdded(realtimeQuery, (snapshot) => {
+    const unsubAdded = onChildAdded(realtimeQuery, (snapshot) => {
       if (snapshot.exists()) {
         const newPostData = { id: snapshot.key, ...snapshot.val() };
         // Adiciona o novo post no topo, apenas se não for de um usuário oculto
@@ -36,7 +36,20 @@ function Feed({ filterNSFW }) {
       }
     });
 
-    return () => unsubscribe();
+    // Atualiza posts existentes caso aconteça uma mudança (por exemplo, authorPhotoURL atualizado)
+    const unsubChanged = onChildChanged(realtimeQuery, (snapshot) => {
+      if (snapshot.exists()) {
+        const updated = { id: snapshot.key, ...snapshot.val() };
+        setPosts(prev => prev.map(p => p.id === snapshot.key ? updated : p));
+      }
+    });
+
+    // Remove post do feed se for deletado por outro lugar
+    const unsubRemoved = onChildRemoved(realtimeQuery, (snapshot) => {
+      setPosts(prev => prev.filter(p => p.id !== snapshot.key));
+    });
+
+    return () => { unsubAdded(); unsubChanged(); unsubRemoved(); };
   }, [hiddenUsers]);
 
   // Busca posts paginados
