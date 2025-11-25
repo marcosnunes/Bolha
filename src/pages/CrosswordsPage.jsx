@@ -10,7 +10,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 
-import { levels } from '../data/crosswordsData';
+import { levels } from '../../data/crosswordsData.js';
 
 function CrosswordsPage() {
   const navigate = useNavigate();
