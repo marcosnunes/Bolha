@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { rtdb } from '../firebase/config';
 import { ref, push, serverTimestamp, update } from 'firebase/database';
 import useToxicityModel from '../hooks/useToxicityModel';

@@ -1,14 +1,8 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth, rtdb } from '/src/firebase/config.js';
 import { ref, onValue, set, remove } from 'firebase/database';
-
-const AuthContext = createContext();
-
-export function useAuth() {
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  return useContext(AuthContext);
-}
+import { AuthContext } from './context.js';
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);

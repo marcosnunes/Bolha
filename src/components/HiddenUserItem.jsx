@@ -4,8 +4,8 @@ import { ref, onValue } from 'firebase/database';
 
 // Componentes do MUI
 import { 
-  ListItem, ListItemText, ListItemSecondaryAction, IconButton, 
-  Tooltip, Skeleton, ListItemAvatar, Avatar, Button 
+  ListItem, ListItemText, ListItemSecondaryAction, 
+  Skeleton, ListItemAvatar, Avatar, Button 
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 

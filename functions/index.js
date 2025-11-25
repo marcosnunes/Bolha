@@ -6,7 +6,7 @@ admin.initializeApp();
 
 // A definição da função agora é mais direta
 exports.deleteUserAccount = onCall({ region: "us-central1" }, async (request) => {
-  const { auth, data } = request;
+  const { auth } = request;
 
   if (!auth) {
     logger.error("Tentativa de exclusão de conta não autenticada.");

@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Button, Box, Avatar, Typography, Alert, CircularProgress
+  TextField, Button, Box, Avatar, Alert, CircularProgress
 } from '@mui/material';
 
 function EditProfileModal({ open, onClose, currentNickname, currentPhotoURL }) {

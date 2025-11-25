@@ -38,7 +38,7 @@ function PrivacyPolicyPage() {
           </Typography>
           <Typography variant="h6" gutterBottom>4. Exclusão de Dados</Typography>
           <Typography variant="body1" paragraph>
-            Você pode, a qualquer momento, solicitar a exclusão completa da sua conta e de todos os dados associados através da opção "Apagar Conta" disponível no menu. Este processo é irreversível.
+            Você pode, a qualquer momento, solicitar a exclusão completa da sua conta e de todos os dados associados através da opção &quot;Apagar Conta&quot; disponível no menu. Este processo é irreversível.
           </Typography>
           <Typography variant="caption" display="block" mt={4}>
             Esta política é efetiva a partir de 20 de Novembro de 2025.
