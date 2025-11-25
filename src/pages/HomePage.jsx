@@ -146,7 +146,7 @@ function HomePage() {
                 // 2. Tenta fazer o logout no cliente (pode falhar se a conta já sumiu no backend, por isso o try/catch)
                 try {
                     await logout();
-                } catch (e) {
+                } catch {
                     console.log("Usuário já desconectado ou inexistente.");
                 }
 

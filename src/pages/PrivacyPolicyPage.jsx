@@ -22,11 +22,11 @@ function PrivacyPolicyPage() {
         <Paper sx={{p: 4}}>
           <Typography variant="h4" gutterBottom>Política de Privacidade</Typography>
           <Typography variant="body1" paragraph>
-            Sua privacidade é importante para nós. É política do Bolha respeitar a sua privacidade em relação a qualquer informação sua que possamos coletar no nosso aplicativo.
+            Sua privacidade é importante para nós. É política do Bolha respeitar a sua privacidade em relação a qualquer informação sua que possamos coletar em nosso aplicativo.
           </Typography>
           <Typography variant="h6" gutterBottom>1. Informações que Coletamos</Typography>
           <Typography variant="body1" paragraph>
-            Coletamos informações que você nos fornece diretamente, como quando você cria sua conta: seu apelido, endereço de e-mail e foto de perfil. Também coletamos o conteúdo que você cria, como posts, imagens e vídeos.
+            Coletamos as informações que você nos fornece diretamente, como quando você cria sua conta: seu apelido, endereço de e-mail e foto de perfil. Também coletamos o conteúdo que você cria, como posts, imagens e vídeos.
           </Typography>
           <Typography variant="h6" gutterBottom>2. Como Usamos as Informações</Typography>
           <Typography variant="body1" paragraph>
@@ -34,7 +34,7 @@ function PrivacyPolicyPage() {
           </Typography>
           <Typography variant="h6" gutterBottom>3. Compartilhamento de Informações</Typography>
           <Typography variant="body1" paragraph>
-            Não compartilhamos suas informações pessoais com empresas, organizações ou indivíduos externos, exceto para o processamento de pagamentos ou para cumprir com a lei. Seu conteúdo (posts, fotos, vídeos) é visível apenas para outros membros do seu grupo que você não tenha bloqueado e que não tenham bloqueado você.
+            Não compartilhamos suas informações pessoais com empresas, organizações ou indivíduos externos, exceto para o processamento de pagamentos ou para cumprir a lei. Seu conteúdo (posts, fotos, vídeos) é visível apenas para outros membros do seu grupo que você não tenha bloqueado e que não tenham bloqueado você.
           </Typography>
           <Typography variant="h6" gutterBottom>4. Exclusão de Dados</Typography>
           <Typography variant="body1" paragraph>

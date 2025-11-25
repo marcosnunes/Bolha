@@ -98,7 +98,7 @@ function CreatePostForm({ onPostSuccess }) {
           try {
              const errorResp = JSON.parse(xhr.responseText);
              reject(new Error(errorResp.error?.message || 'Erro no Cloudinary'));
-          } catch (e) {
+          } catch {
              reject(new Error('Erro desconhecido no upload.'));
           }
         }
@@ -212,7 +212,7 @@ function CreatePostForm({ onPostSuccess }) {
           variant="contained" type="submit" disabled={loading || loadingModel}
           startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
         >
-          {loading ? 'Postar' : 'Publicar'}
+          {loading ? 'Publicando...' : 'Publicar'}
         </Button>
       </Box>
 

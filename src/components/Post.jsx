@@ -16,7 +16,7 @@ import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 
 function Post({ postData, onAuthorClick, onPostDelete }) {
   const { currentUser } = useAuth();
-  const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL, likes } = postData;
+  const { authorNickname, textContent, createdAt, mediaURL, mediaType, authorId, id, authorPhotoURL } = postData;
   
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
@@ -66,7 +66,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   };
 
   // Funções de URL do Cloudinary
-  const getOptimizedUrl = (url, type) => {
+  const getOptimizedUrl = (url) => {
     if (!url) return '';
     const transformation = 'upload/a_auto,q_auto,f_auto'; 
     return url.replace('upload', transformation);
@@ -74,7 +74,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
 
   const getVideoThumbnail = (videoUrl) => {
     if (!videoUrl) return '';
-    const optimizedVideoUrl = getOptimizedUrl(videoUrl, 'video');
+    const optimizedVideoUrl = getOptimizedUrl(videoUrl);
     return optimizedVideoUrl.substring(0, optimizedVideoUrl.lastIndexOf('.')) + '.jpg';
   };
 
@@ -121,7 +121,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
           {mediaType === 'image' && (
             <Box 
               component="img" 
-              src={getOptimizedUrl(mediaURL, 'image')} 
+              src={getOptimizedUrl(mediaURL)} 
               sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} 
             />
           )}
@@ -129,7 +129,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
             <Box 
               component="video" 
               poster={getVideoThumbnail(mediaURL)} 
-              src={getOptimizedUrl(mediaURL, 'video')} 
+              src={getOptimizedUrl(mediaURL)} 
               controls 
               playsInline
               sx={{ maxWidth: '100%', maxHeight: '80vh' }} 

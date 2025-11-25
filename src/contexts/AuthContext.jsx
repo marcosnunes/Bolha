@@ -5,8 +5,8 @@ import { ref, onValue, set, remove } from 'firebase/database';
 
 const AuthContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   return useContext(AuthContext);
 }
 
