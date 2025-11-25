@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser } from 'firebase/auth';
 import { auth, rtdb } from '/src/firebase/config.js';
 import { ref, onValue, set, remove } from 'firebase/database';
 
@@ -26,6 +26,23 @@ export function AuthProvider({ children }) {
 
   function logout() {
     return signOut(auth);
+  }
+
+  async function deleteAccount() {
+    const userToDelete = auth.currentUser;
+    if (userToDelete) {
+      try {
+        // Excluir dados do Realtime Database
+        await remove(ref(rtdb, `profiles/${userToDelete.uid}`));
+        await remove(ref(rtdb, `users/${userToDelete.uid}`));
+  
+        // Excluir usuário do Authentication
+        await deleteUser(userToDelete);
+      } catch (error) {
+        console.error("Erro ao apagar a conta:", error);
+        throw error; // Propaga o erro para ser tratado na UI
+      }
+    }
   }
 
   const hideUser = (userIdToHide) => {
@@ -88,6 +105,7 @@ export function AuthProvider({ children }) {
     signup,
     login,
     logout,
+    deleteAccount,
   };
 
   return (
