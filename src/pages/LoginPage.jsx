@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 
@@ -17,37 +17,43 @@ function LoginPage() {
   const { login, currentUser } = useAuth();
   const navigate = useNavigate();
 
+  // Efeito para redirecionar se o usuário já estiver logado
+  useEffect(() => {
+    if (currentUser) {
+      navigate('/');
+    }
+  }, [currentUser, navigate]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     try {
       setError('');
       setLoading(true);
       await login(email, password);
-      navigate('/');
+      // A navegação após o login será tratada pelo useEffect acima
+      // quando o currentUser for atualizado.
     } catch (err) {
       console.error(err);
       setError('Falha ao entrar. Verifique seu e-mail e senha.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }
-
-  // Redireciona se o usuário já estiver logado
-  if (currentUser) {
-    navigate('/');
-    return null; // Renderiza nada enquanto redireciona
   }
 
   return (
-    <Container component="main" maxWidth="xs" sx={{ mt: 8 }}>
-      <Card>
-        <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Typography component="h1" variant="h5" align="center">
-            Login na Bolha
+    <Container component="main" maxWidth="xs" sx={{ display: 'flex', alignItems: 'center', height: '100vh' }}>
+      <Card sx={{ width: '100%', boxShadow: 3, borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2 }}>
+          <LoginIcon color="primary" sx={{ fontSize: 40 }}/>
+          <Typography component="h1" variant="h5" sx={{ mt: 1 }}>
+            Login
           </Typography>
-          
-          {error && <Alert severity="error">{error}</Alert>}
-          
-          <Box component="form" onSubmit={handleSubmit} noValidate>
+        </Box>
+
+        <CardContent>
+          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            
             <TextField
               margin="normal"
               required
@@ -72,22 +78,23 @@ function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              disabled={loading}
               sx={{ mt: 3, mb: 2 }}
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LoginIcon />}
+              disabled={loading}
             >
-              {loading ? 'Entrando...' : 'Entrar'}
+              {loading ? <CircularProgress size={24} /> : 'Entrar'}
             </Button>
           </Box>
         </CardContent>
-        <CardActions sx={{ justifyContent: 'center', bgcolor: 'grey.100' }}>
-          <Typography variant="body2">
-            Não tem uma conta? <RouterLink to="/cadastro">Cadastre-se</RouterLink>
-          </Typography>
+
+        <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
+          <RouterLink to="/cadastro" style={{ textDecoration: 'none' }}>
+              <Button>Não tem uma conta? Cadastre-se</Button>
+          </RouterLink>
         </CardActions>
       </Card>
     </Container>
