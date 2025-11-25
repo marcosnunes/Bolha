@@ -4,10 +4,10 @@ import { useNavigate, Link as RouterLink } from 'react-router-dom';
 
 // Componentes e Ícones do MUI
 import { 
-  Container, Box, Card, CardContent, CardActions, Typography, 
-  TextField, Button, CircularProgress, Alert 
+  Container, Box, Paper, Typography, TextField, Button, 
+  CircularProgress, Alert, Avatar, Grid, Link 
 } from '@mui/material';
-import LoginIcon from '@mui/icons-material/Login';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -23,7 +23,7 @@ function LoginPage() {
       setError('');
       setLoading(true);
       await login(email, password);
-      navigate('/');
+      navigate('/'); // Redireciona para a home após o login
     } catch (err) {
       console.error(err);
       setError('Falha ao entrar. Verifique seu e-mail e senha.');
@@ -38,58 +38,75 @@ function LoginPage() {
   }
 
   return (
-    <Container component="main" maxWidth="xs" sx={{ mt: 8 }}>
-      <Card>
-        <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Typography component="h1" variant="h5" align="center">
-            Login na Bolha
-          </Typography>
-          
-          {error && <Alert severity="error">{error}</Alert>}
-          
-          <Box component="form" onSubmit={handleSubmit} noValidate>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Endereço de E-mail"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Senha"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              disabled={loading}
-              sx={{ mt: 3, mb: 2 }}
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LoginIcon />}
-            >
-              {loading ? 'Entrando...' : 'Entrar'}
-            </Button>
+    <Container component="main" maxWidth="xs">
+      <Box
+        sx={{
+          marginTop: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <Paper elevation={3} sx={{ padding: 4, width: '100%', mt: 4 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
+            <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+              <LockOutlinedIcon />
+            </Avatar>
+            <Typography component="h1" variant="h5">
+              Login
+            </Typography>
+            <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
+              {error && <Alert severity="error" sx={{ mt: 2, mb: 1, width: '100%'}}>{error}</Alert>}
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="email"
+                label="Endereço de E-mail"
+                name="email"
+                autoComplete="email"
+                autoFocus
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="password"
+                label="Senha"
+                type="password"
+                id="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                disabled={loading}
+                sx={{ mt: 3, mb: 2 }}
+              >
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'Entrar'}
+              </Button>
+              <Grid container justifyContent="flex-end">
+                <Grid item>
+                  <Link component={RouterLink} to="/cadastro" variant="body2">
+                    Não tem uma conta? Cadastre-se
+                  </Link>
+                </Grid>
+              </Grid>
+            </Box>
           </Box>
-        </CardContent>
-        <CardActions sx={{ justifyContent: 'center', bgcolor: 'grey.100' }}>
-          <Typography variant="body2">
-            Não tem uma conta? <RouterLink to="/cadastro">Cadastre-se</RouterLink>
-          </Typography>
-        </CardActions>
-      </Card>
+        </Paper>
+      </Box>
     </Container>
   );
 }
