@@ -136,28 +136,40 @@ function CommentModal({ postId, open, onClose }) {
         {error && <Alert severity="error">{error}</Alert>}
 
         {/* Formulário para novo comentário */}
-        <Box component="form" onSubmit={handleSubmitComment} sx={{ display: 'flex', gap: 1, mb: 2 }}>
-          <TextField
-            fullWidth
-            multiline
-            rows={2}
-            placeholder="Adicione um comentário..."
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            disabled={loading}
-            variant="outlined"
-            size="small"
-          />
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={loading || !commentText.trim()}
-            sx={{ alignSelf: 'flex-end' }}
-            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
-          >
-            Enviar
-          </Button>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+            Adicionar comentário
+          </Typography>
+          <Box component="form" onSubmit={handleSubmitComment} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              placeholder="O que você pensa sobre este post?"
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              disabled={loading}
+              variant="outlined"
+              size="small"
+              sx={{ bgcolor: 'white' }}
+            />
+            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={loading || !commentText.trim()}
+                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+              >
+                Enviar
+              </Button>
+            </Box>
+          </Box>
         </Box>
+
+        {/* Separador */}
+        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', my: 1 }}>
+          Comentários
+        </Typography>
 
         {/* Lista de comentários */}
         <Box sx={{ flex: 1, overflow: 'auto' }}>
