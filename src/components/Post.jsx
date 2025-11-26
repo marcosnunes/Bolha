@@ -147,7 +147,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
         />
 
         {mediaURL && (
-          <Box sx={{ bgcolor: 'black', display: 'flex', justifyContent: 'center' }}>
+          <Box sx={{ bgcolor: 'white', display: 'flex', justifyContent: 'center' }}>
             {mediaType === 'image' && (
               <Box component="img" src={getOptimizedUrl(mediaURL)} sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
             )}
