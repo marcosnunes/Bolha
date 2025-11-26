@@ -49,7 +49,13 @@ function Feed({ filterNSFW }) {
       setPosts(prev => prev.filter(p => p.id !== snapshot.key));
     });
 
-    return () => { unsubAdded(); unsubChanged(); unsubRemoved(); };
+    // Listener global para deletions de TODOS os posts (incluindo pré-carregados)
+    // Isso garante que deletions sejam síncronos em tempo real, independente de quando o post foi criado
+    const unsubDeletedAll = onChildRemoved(ref(rtdb, 'posts'), (snapshot) => {
+      setPosts(prev => prev.filter(p => p.id !== snapshot.key));
+    });
+
+    return () => { unsubAdded(); unsubChanged(); unsubRemoved(); unsubDeletedAll(); };
   }, [hiddenUsers]);
 
   // Busca posts paginados
