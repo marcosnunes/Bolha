@@ -15,6 +15,18 @@
           "$uid": {
             ".write": "auth != null && auth.uid === $uid"
           }
+        },
+        "comments": {
+          ".read": "auth != null",
+          "$commentId": {
+            ".write": "auth != null && ( (!data.exists() && newData.child('authorId').val() === auth.uid) || (data.exists() && data.child('authorId').val() === auth.uid) )",
+            ".validate": "newData.hasChildren(['authorId', 'authorNickname', 'textContent', 'createdAt'])",
+            "likes": {
+              "$uid": {
+                ".write": "auth != null && auth.uid === $uid"
+              }
+            }
+          }
         }
       }
     },

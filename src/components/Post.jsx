@@ -1,9 +1,10 @@
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
-import { ref, remove, set, onValue } from 'firebase/database';
+import { ref, remove, set, onValue, get } from 'firebase/database';
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import ConfirmDialog from './ConfirmDialog'; // Importa nosso componente reutilizável
+import CommentModal from './CommentModal.jsx'; // Importa modal de comentários
 
 // Componentes e Ícones do MUI
 import {
@@ -14,6 +15,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 
 function Post({ postData, onAuthorClick, onPostDelete }) {
   const { currentUser } = useAuth();
@@ -27,6 +29,8 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const [displayNickname, setDisplayNickname] = useState(authorNickname || '');
   const [anchorEl, setAnchorEl] = useState(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
   const openMenu = Boolean(anchorEl);
 
   useEffect(() => {
@@ -35,6 +39,33 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       setLikesData(snapshot.val() || {});
     });
     return () => unsubscribeLikes();
+  }, [id]);
+
+  // Carregar contador de comentários
+  useEffect(() => {
+    const loadCommentCount = async () => {
+      try {
+        const commentsRef = ref(rtdb, `posts/${id}/comments`);
+        const snapshot = await get(commentsRef);
+        if (snapshot.exists()) {
+          setCommentCount(Object.keys(snapshot.val()).length);
+        } else {
+          setCommentCount(0);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar comentários:", error);
+      }
+    };
+
+    loadCommentCount();
+
+    // Listener em tempo real para atualizar contador
+    const commentsRef = ref(rtdb, `posts/${id}/comments`);
+    const unsubscribe = onValue(commentsRef, (snapshot) => {
+      setCommentCount(snapshot.exists() ? Object.keys(snapshot.val()).length : 0);
+    });
+
+    return () => unsubscribe();
   }, [id]);
 
   // Listen for profile changes (nickname and photoURL) and prefer them over stored values
@@ -143,8 +174,23 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
           >
             {likesCount > 0 ? likesCount : 'Curtir'}
           </Button>
+
+          <Button
+            startIcon={<ChatBubbleOutlineIcon />}
+            onClick={() => setCommentModalOpen(true)}
+            color="inherit"
+          >
+            {commentCount > 0 ? commentCount : 'Comentar'}
+          </Button>
         </CardActions>
       </Card>
+
+      {/* Modal de comentários */}
+      <CommentModal
+        postId={id}
+        open={commentModalOpen}
+        onClose={() => setCommentModalOpen(false)}
+      />
 
       {/* Substituído pelo diálogo de confirmação reutilizável */}
       <ConfirmDialog
