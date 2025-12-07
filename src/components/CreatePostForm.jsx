@@ -117,28 +117,40 @@ function CreatePostForm({ onPostSuccess }) {
 
   // Função para processar arquivo antes do upload
   const processFile = async (file) => {
-    const maxSize = 100 * 1024 * 1024; // 100MB
+    const maxSize = 100 * 1024 * 1024; // 100MB - limite do Cloudinary free tier
     
-    // Se arquivo já está dentro do limite, retorna como está
-    if (file.size <= maxSize) {
+    // Se é imagem maior que 100MB, comprimir
+    if (file.type.startsWith('image/')) {
+      if (file.size > maxSize) {
+        setError(''); // Limpa erro anterior
+        try {
+          const compressed = await compressImage(file, 100);
+          console.log(`Imagem comprimida: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressed.size / 1024 / 1024).toFixed(2)}MB`);
+          return compressed;
+        } catch (err) {
+          throw new Error(`Erro ao comprimir imagem: ${err.message}`);
+        }
+      }
       return file;
     }
     
-    // Se é imagem, comprimir
-    if (file.type.startsWith('image/')) {
-      setError(''); // Limpa erro anterior
-      try {
-        const compressed = await compressImage(file, 100);
-        console.log(`Imagem comprimida: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressed.size / 1024 / 1024).toFixed(2)}MB`);
-        return compressed;
-      } catch (err) {
-        throw new Error(`Erro ao comprimir imagem: ${err.message}`);
-      }
-    }
-    
-    // Se é vídeo maior que 100MB, permitir (Cloudinary irá comprimir no servidor)
+    // Se é vídeo, verificar limite do Cloudinary (100MB no plano gratuito)
     if (file.type.startsWith('video/')) {
-      setInfo(`⏳ Vídeo grande detectado (${(file.size / 1024 / 1024).toFixed(2)}MB). Será otimizado automaticamente durante o upload.`);
+      const fileSizeMB = file.size / 1024 / 1024;
+      
+      if (file.size > maxSize) {
+        throw new Error(
+          `Vídeo muito grande (${fileSizeMB.toFixed(2)}MB). ` +
+          `O limite atual é 100MB. ` +
+          `Por favor, comprima o vídeo usando um editor antes de fazer upload. ` +
+          `Sugestão: Use HandBrake, VLC ou qualquer compressor de vídeo online.`
+        );
+      }
+      
+      if (fileSizeMB > 50) {
+        setInfo(`⏳ Vídeo detectado (${fileSizeMB.toFixed(2)}MB). Isso pode levar alguns minutos para fazer upload.`);
+      }
+      
       return file;
     }
     
