@@ -188,12 +188,8 @@ function CreatePostForm({ onPostSuccess }) {
       formData.append('file', file);
       formData.append('upload_preset', uploadPreset);
       
-      // Para vídeos, adicionar transformações eagerly (aplicadas no servidor após upload)
-      if (resourceType === 'video') {
-        // Transformações aplicadas automaticamente pelo Cloudinary
-        formData.append('eager', 'q_auto:low,vc_h264,ac_aac');
-        formData.append('eager_async', 'true'); // Processar em background
-      }
+      // Upload simples sem transformações - deixar Cloudinary processar naturalmente
+      // As transformações serão aplicadas via URL quando necessário
 
       xhr.open('POST', url, true);
       // Aumentar timeout para vídeos grandes (10 minutos)
