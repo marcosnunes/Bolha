@@ -29,11 +29,8 @@ import PeopleIcon from '@mui/icons-material/People';
 import CreatePostForm from '../components/CreatePostForm.jsx';
 import Feed from '../components/Feed.jsx';
 
-import { useUpload } from '../contexts/UploadContext';
-
 function HomePage() {
     const { currentUser, userProfile, logout } = useAuth();
-    const { addUpload, updateUploadProgress, updateUploadStatus } = useUpload();
     const navigate = useNavigate();
 
     // Estados do componente
@@ -367,27 +364,7 @@ function HomePage() {
             <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', mb: 2, gap: 2 }}>
                     <Typography variant="h4" component="h2">Posts Recentes</Typography>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <Button 
-                            size="small" 
-                            variant="outlined" 
-                            onClick={() => {
-                                const id = addUpload({ fileName: 'teste.mp4', status: 'processing', progress: 0 });
-                                let progress = 0;
-                                const interval = setInterval(() => {
-                                    progress += 10;
-                                    updateUploadProgress(id, progress);
-                                    if (progress >= 100) {
-                                        clearInterval(interval);
-                                        updateUploadStatus(id, 'completed');
-                                    }
-                                }, 500);
-                            }}
-                        >
-                            Testar Upload
-                        </Button>
-                        <FormControlLabel control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />} label="Mostrar conteúdo sensível" labelPlacement="start" />
-                    </Box>
+                    <FormControlLabel control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />} label="Mostrar conteúdo sensível" labelPlacement="start" />
                 </Box>
                 
                 <Feed filterNSFW={!showNSFW} refreshTrigger={refreshFeed} />

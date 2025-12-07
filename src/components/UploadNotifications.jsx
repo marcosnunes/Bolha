@@ -6,9 +6,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 function UploadNotifications() {
   const { uploads, removeUpload } = useUpload();
 
-  if (uploads.length === 0) {
-    return null;
-  }
+  if (uploads.length === 0) return null;
 
   // Pegar o upload mais recente em andamento
   const activeUpload = uploads.find(u => u.status !== 'completed' && u.status !== 'error') || uploads[0];

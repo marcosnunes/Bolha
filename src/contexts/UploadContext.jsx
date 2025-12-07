@@ -20,7 +20,6 @@ export function UploadProvider({ children }) {
   const addUpload = useCallback((uploadData) => {
     const id = Date.now().toString();
     const newUpload = { id, ...uploadData, status: uploadData.status || 'processing', progress: 0 };
-    console.log('UploadContext - addUpload:', newUpload);
     setUploads(prev => [...prev, newUpload]);
     return id;
   }, []);

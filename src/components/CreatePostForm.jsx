@@ -230,8 +230,6 @@ function CreatePostForm({ onPostSuccess }) {
         progress: 0
       });
 
-      console.log('Upload criado com ID:', uploadId);
-
       // 3. Limpar formulário
       setPostContent('');
       setFile(null);
