@@ -2,7 +2,6 @@ import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUpload } from '../contexts/UploadContext';
 import useToxicityModel from '../hooks/useToxicityModel';
-import useVideoCompressor from '../hooks/useVideoCompressor';
 
 // Componentes e Ícones do MUI
 import {
@@ -23,7 +22,6 @@ function CreatePostForm({ onPostSuccess }) {
   
   const { currentUser, userProfile } = useAuth();
   const { loadingModel, classifyText } = useToxicityModel();
-  const { compressVideo, loading: compressingVideo, progress: compressionProgress } = useVideoCompressor();
   const { addUpload, updateUploadStatus, updateUploadProgress, createPost } = useUpload();
 
   const fileInputRef = useRef(null);
@@ -117,80 +115,35 @@ function CreatePostForm({ onPostSuccess }) {
     });
   };
 
-  // Função para processar arquivo antes do upload
-  const processFile = async (file) => {
-    const maxSize = 100 * 1024 * 1024; // 100MB - limite do Cloudinary free tier
-    
-    // Se é imagem maior que 100MB, comprimir
-    if (file.type.startsWith('image/')) {
-      if (file.size > maxSize) {
-        setError(''); // Limpa erro anterior
-        try {
-          const compressed = await compressImage(file, 100);
-          console.log(`Imagem comprimida: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressed.size / 1024 / 1024).toFixed(2)}MB`);
-          return compressed;
-        } catch (err) {
-          throw new Error(`Erro ao comprimir imagem: ${err.message}`);
-        }
-      }
-      return file;
-    }
-    
-    // Se é vídeo, comprimir automaticamente se > 100MB
-    if (file.type.startsWith('video/')) {
-      const fileSizeMB = file.size / 1024 / 1024;
-      
-      if (file.size > maxSize) {
-        setInfo(`🎬 Comprimindo vídeo (${fileSizeMB.toFixed(2)}MB)... Isso pode levar alguns minutos.`);
-        try {
-          const compressed = await compressVideo(file, 95); // Comprimir para ~95MB
-          const compressedSizeMB = compressed.size / 1024 / 1024;
-          
-          console.log(`Vídeo comprimido: ${fileSizeMB.toFixed(2)}MB → ${compressedSizeMB.toFixed(2)}MB`);
-          setInfo(`✓ Vídeo comprimido com sucesso: ${fileSizeMB.toFixed(2)}MB → ${compressedSizeMB.toFixed(2)}MB`);
-          
-          return compressed;
-        } catch (err) {
-          throw new Error(`Erro ao comprimir vídeo: ${err.message}. Tente usar um vídeo menor.`);
-        }
-      }
-      
-      if (fileSizeMB > 50) {
-        setInfo(`⏳ Vídeo detectado (${fileSizeMB.toFixed(2)}MB). Isso pode levar alguns minutos para fazer upload.`);
-      }
-      
-      return file;
-    }
-    
-    return file;
-  };
-
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
     
     setError('');
     setInfo('');
-    setLoading(true);
     
-    try {
-      const processedFile = await processFile(selectedFile);
-      setFile(processedFile);
-      setFileName(selectedFile.name);
-      
-      // Mostrar mensagem se arquivo foi comprimido
-      if (processedFile.size < selectedFile.size) {
+    // Só comprimir imagens > 100MB na hora (síncrono)
+    if (selectedFile.type.startsWith('image/') && selectedFile.size > 100 * 1024 * 1024) {
+      setLoading(true);
+      try {
+        const compressed = await compressImage(selectedFile, 100);
+        setFile(compressed);
+        setFileName(selectedFile.name);
         const originalSizeMB = (selectedFile.size / 1024 / 1024).toFixed(2);
-        const newSizeMB = (processedFile.size / 1024 / 1024).toFixed(2);
-        setInfo(`✓ Imagem comprimida automaticamente: ${originalSizeMB}MB → ${newSizeMB}MB`);
+        const newSizeMB = (compressed.size / 1024 / 1024).toFixed(2);
+        setInfo(`✓ Imagem comprimida: ${originalSizeMB}MB → ${newSizeMB}MB`);
+      } catch (err) {
+        setError(err.message);
+        setFile(null);
+        setFileName('');
+        e.target.value = null;
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError(err.message);
-      setFile(null);
-      setFileName('');
-      e.target.value = null;
-    } finally {
-      setLoading(false);
+    } else {
+      // Vídeos e imagens pequenas: aceitar direto
+      setFile(selectedFile);
+      setFileName(selectedFile.name);
     }
   };
 
@@ -245,7 +198,7 @@ function CreatePostForm({ onPostSuccess }) {
         setTimeout(() => onPostSuccess(), 100);
       }
 
-      // 5. Processar em background
+      // 5. Processar em background (IMPORTAR compressVideo localmente para não bloquear UI)
       setTimeout(async () => {
         try {
           let finalFile = capturedFile;
@@ -254,14 +207,60 @@ function CreatePostForm({ onPostSuccess }) {
           if (capturedFile && capturedFile.type.startsWith('video/') && capturedFile.size > 100 * 1024 * 1024) {
             updateUploadStatus(uploadId, 'processing');
             
-            // Comprimir com callback de progresso
-            finalFile = await compressVideo(capturedFile, (progress) => {
+            // Importar FFmpeg dinamicamente para não bloquear UI
+            const { FFmpeg } = await import('@ffmpeg/ffmpeg');
+            const { fetchFile, toBlobURL } = await import('@ffmpeg/util');
+            
+            const ffmpeg = new FFmpeg();
+            
+            // Listener de progresso
+            ffmpeg.on('progress', ({ progress: p }) => {
+              const progressPercent = Math.round(p * 100);
               try {
-                updateUploadProgress(uploadId, progress);
+                updateUploadProgress(uploadId, progressPercent);
               } catch (err) {
                 console.error('Erro ao atualizar progresso:', err);
               }
             });
+            
+            // Carregar FFmpeg
+            const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+            await ffmpeg.load({
+              coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+              wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
+            });
+            
+            // Comprimir
+            const inputName = 'input.mp4';
+            const outputName = 'output.mp4';
+            
+            await ffmpeg.writeFile(inputName, await fetchFile(capturedFile));
+            
+            await ffmpeg.exec([
+              '-i', inputName,
+              '-c:v', 'libx264',
+              '-preset', 'fast',
+              '-crf', '28',
+              '-b:v', '1000k',
+              '-maxrate', '1000k',
+              '-bufsize', '2M',
+              '-vf', 'scale=1280:-2',
+              '-c:a', 'aac',
+              '-b:a', '128k',
+              '-movflags', '+faststart',
+              outputName
+            ]);
+            
+            const data = await ffmpeg.readFile(outputName);
+            const compressedBlob = new Blob([data.buffer], { type: 'video/mp4' });
+            finalFile = new File(
+              [compressedBlob],
+              capturedFile.name.replace(/\.[^/.]+$/, '') + '_compressed.mp4',
+              { type: 'video/mp4' }
+            );
+            
+            await ffmpeg.deleteFile(inputName);
+            await ffmpeg.deleteFile(outputName);
           }
           
           // Fazer upload e criar post
@@ -294,26 +293,13 @@ function CreatePostForm({ onPostSuccess }) {
         fullWidth multiline rows={4} variant="outlined" label="No que você está pensando?"
         value={postContent} onChange={(e) => setPostContent(e.target.value)}
         helperText="Dica: Use **negrito** ou *itálico* para estilizar. Pule uma linha para novo parágrafo."
-        disabled={compressingVideo}
       />
 
-      {compressingVideo && (
-        <Box sx={{ width: '100%' }}>
-           <LinearProgress variant="determinate" value={compressionProgress} />
-           <Typography variant="caption" color="text.secondary" align="center" display="block">
-             🎬 Comprimindo vídeo... {compressionProgress}%
-           </Typography>
-           <Typography variant="caption" color="text.secondary" align="center" display="block">
-             Isso pode levar alguns minutos. Não feche esta página.
-           </Typography>
-        </Box>
-      )}
-
-      {loading && file && !compressingVideo && (
+      {loading && file && (
         <Box sx={{ width: '100%' }}>
            <LinearProgress variant="determinate" value={uploadProgress} />
            <Typography variant="caption" color="text.secondary" align="center" display="block">
-             Enviando arquivo... {uploadProgress}%
+             Preparando arquivo... {uploadProgress}%
            </Typography>
         </Box>
       )}
@@ -327,10 +313,10 @@ function CreatePostForm({ onPostSuccess }) {
         </Box>
         
         <Button
-          variant="contained" type="submit" disabled={loading || loadingModel || compressingVideo}
-          startIcon={loading || compressingVideo ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+          variant="contained" type="submit" disabled={loading || loadingModel}
+          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
         >
-          {compressingVideo ? 'Comprimindo...' : loading ? 'Publicando...' : 'Publicar'}
+          {loading ? 'Publicando...' : 'Publicar'}
         </Button>
       </Box>
 
