@@ -221,14 +221,26 @@ function CreatePostForm({ onPostSuccess }) {
       const capturedFileName = fileName;
       const capturedIsNSFW = isPostNSFW;
 
-      // 2. Criar notificação ANTES de limpar formulário
+      // 2. Mostrar mensagem informativa para o usuário
+      const isLargeVideo = file && file.type.startsWith('video/') && file.size > 100 * 1024 * 1024;
+      
+      if (isLargeVideo) {
+        setInfo('🎬 Seu vídeo será processado em segundo plano. Você pode fechar este modal e continuar navegando!');
+      } else if (file) {
+        setInfo('📤 Seu post será enviado em segundo plano. Você pode fechar este modal!');
+      }
+
+      // Aguardar um momento para usuário ver a mensagem
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // 3. Criar notificação ANTES de limpar formulário
       const uploadId = addUpload({
         fileName: capturedFileName || 'Post',
-        status: file && file.type.startsWith('video/') && file.size > 100 * 1024 * 1024 ? 'processing' : 'uploading',
+        status: isLargeVideo ? 'processing' : 'uploading',
         progress: 0
       });
 
-      // 3. Limpar formulário IMEDIATAMENTE (usuário pode fechar modal)
+      // 4. Limpar formulário e fechar modal
       setPostContent('');
       setFile(null);
       setFileName('');
@@ -237,10 +249,10 @@ function CreatePostForm({ onPostSuccess }) {
       setError('');
       if (fileInputRef.current) fileInputRef.current.value = "";
       
-      // Fechar modal imediatamente
+      // Fechar modal
       if (onPostSuccess) onPostSuccess();
 
-      // 4. Processar em background
+      // 5. Processar em background
       setTimeout(async () => {
         try {
           let finalFile = capturedFile;
@@ -251,7 +263,11 @@ function CreatePostForm({ onPostSuccess }) {
             
             // Comprimir com callback de progresso
             finalFile = await compressVideo(capturedFile, (progress) => {
-              updateUploadProgress(uploadId, progress);
+              try {
+                updateUploadProgress(uploadId, progress);
+              } catch (err) {
+                console.error('Erro ao atualizar progresso:', err);
+              }
             });
           }
           
@@ -265,9 +281,9 @@ function CreatePostForm({ onPostSuccess }) {
           );
         } catch (err) {
           console.error("Erro no background:", err);
-          updateUploadStatus(uploadId, 'error', err.message);
+          updateUploadStatus(uploadId, 'error', err.message || 'Erro desconhecido');
         }
-      }, 100);
+      }, 500);
 
     } catch (err) {
       console.error("Erro no processo:", err);

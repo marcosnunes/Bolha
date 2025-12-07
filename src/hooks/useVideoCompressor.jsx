@@ -54,8 +54,12 @@ export default function useVideoCompressor() {
       progressHandler = ({ progress: p }) => {
         const progressPercent = Math.round(p * 100);
         setProgress(progressPercent);
-        if (onProgressCallback) {
-          onProgressCallback(progressPercent);
+        if (onProgressCallback && typeof onProgressCallback === 'function') {
+          try {
+            onProgressCallback(progressPercent);
+          } catch (err) {
+            console.error('Erro no callback de progresso:', err);
+          }
         }
       };
       

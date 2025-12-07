@@ -8,6 +8,8 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 function UploadNotifications() {
   const { uploads, removeUpload } = useUpload();
 
+  console.log('UploadNotifications - uploads:', uploads.length);
+
   if (uploads.length === 0) return null;
 
   return (
