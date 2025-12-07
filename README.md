@@ -41,8 +41,8 @@ Este projeto foi construído como um **Progressive Web App (PWA)** moderno, tota
 
 ### Feed de Mídia
 - Compartilhamento de posts com **texto, imagens e vídeos**
-- Upload de arquivos até **100MB** via Cloudinary
-- Otimização automática de imagens e vídeos
+- **Sem limite de tamanho**: compressão automática de imagens (cliente) e vídeos (servidor)
+- Otimização inteligente via Cloudinary
 - Paginação eficiente (5 posts por página)
 - Atualização em tempo real de novos posts
 
