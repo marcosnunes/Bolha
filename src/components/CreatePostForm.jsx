@@ -224,8 +224,15 @@ function CreatePostForm({ onPostSuccess }) {
         }
       };
 
-      xhr.onerror = () => reject(new Error('Erro de rede. Verifique sua conexão.'));
-      xhr.ontimeout = () => reject(new Error('O upload demorou muito e expirou.'));
+      xhr.onerror = () => {
+        // Detectar erro CORS específico
+        if (xhr.status === 0) {
+          reject(new Error('Erro de CORS: Verifique as configurações do upload preset no Cloudinary. O domínio atual precisa estar na lista de domínios permitidos.'));
+        } else {
+          reject(new Error('Erro de rede. Verifique sua conexão.'));
+        }
+      };
+      xhr.ontimeout = () => reject(new Error('O upload demorou muito e expirou. Tente um arquivo menor ou aguarde e tente novamente.'));
 
       xhr.send(formData);
     });
