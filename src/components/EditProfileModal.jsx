@@ -18,14 +18,91 @@ function EditProfileModal({ open, onClose, currentNickname, currentPhotoURL }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [info, setInfo] = useState('');
 
   const fileInputRef = useRef();
 
-  const handleFileChange = (e) => {
+  // Função para comprimir imagem
+  const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Para fotos de perfil, vamos manter uma resolução razoável (max 1024x1024)
+          const maxDimension = 1024;
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.floor((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.floor((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Tentar comprimir com qualidade 0.9
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Falha ao comprimir imagem'));
+                return;
+              }
+              
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            },
+            'image/jpeg',
+            0.9
+          );
+        };
+        
+        img.onerror = () => reject(new Error('Falha ao carregar imagem'));
+      };
+      
+      reader.onerror = () => reject(new Error('Falha ao ler arquivo'));
+    });
+  };
+
+  const handleFileChange = async (e) => {
     const selected = e.target.files[0];
-    if (selected) {
-      setFile(selected);
-      setPreview(URL.createObjectURL(selected));
+    if (!selected) return;
+    
+    setError('');
+    setInfo('');
+    
+    // Comprimir imagem antes de definir
+    try {
+      const originalSize = selected.size;
+      const compressed = await compressImage(selected);
+      
+      setFile(compressed);
+      setPreview(URL.createObjectURL(compressed));
+      
+      if (compressed.size < originalSize) {
+        const originalSizeMB = (originalSize / 1024 / 1024).toFixed(2);
+        const newSizeMB = (compressed.size / 1024 / 1024).toFixed(2);
+        setInfo(`✓ Imagem otimizada: ${originalSizeMB}MB → ${newSizeMB}MB`);
+      }
+    } catch (err) {
+      setError(`Erro ao processar imagem: ${err.message}`);
     }
   };
 
@@ -33,6 +110,7 @@ function EditProfileModal({ open, onClose, currentNickname, currentPhotoURL }) {
     setLoading(true);
     setError('');
     setSuccess('');
+    setInfo('');
 
     try {
       let newPhotoURL = currentPhotoURL;
@@ -111,6 +189,7 @@ function EditProfileModal({ open, onClose, currentNickname, currentPhotoURL }) {
           
           {error && <Alert severity="error" sx={{ width: '100%' }}>{error}</Alert>}
           {success && <Alert severity="success" sx={{ width: '100%' }}>{success}</Alert>}
+          {info && <Alert severity="info" sx={{ width: '100%' }}>{info}</Alert>}
 
           <Box sx={{ position: 'relative' }}>
             <Avatar 

@@ -82,9 +82,8 @@ export function AuthProvider({ children }) {
         setLoading(false);
       });
       return () => unsubscribeProfile();
-    } else {
-      setLoading(false);
     }
+    // Se não há usuário, o loading já foi setado no primeiro useEffect
   }, [currentUser]);
 
   useEffect(() => {
@@ -94,9 +93,8 @@ export function AuthProvider({ children }) {
         setHiddenUsers(snapshot.val() ? Object.keys(snapshot.val()) : []);
       });
       return () => unsubscribeHidden();
-    } else {
-      setHiddenUsers([]);
     }
+    // hiddenUsers já foi inicializado como [] no useState
   }, [currentUser]);
 
   const value = {

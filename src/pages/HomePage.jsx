@@ -70,13 +70,77 @@ function HomePage() {
         return () => unsubscribe();
     }, []);
 
+    // Função para comprimir imagem de perfil
+    const compressProfileImage = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const maxDimension = 1024;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > maxDimension || height > maxDimension) {
+                        if (width > height) {
+                            height = Math.floor((height * maxDimension) / width);
+                            width = maxDimension;
+                        } else {
+                            width = Math.floor((width * maxDimension) / height);
+                            height = maxDimension;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    canvas.toBlob(
+                        (blob) => {
+                            if (!blob) {
+                                reject(new Error('Falha ao comprimir imagem'));
+                                return;
+                            }
+                            const compressedFile = new File([blob], file.name, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now(),
+                            });
+                            resolve(compressedFile);
+                        },
+                        'image/jpeg',
+                        0.9
+                    );
+                };
+                
+                img.onerror = () => reject(new Error('Falha ao carregar imagem'));
+            };
+            
+            reader.onerror = () => reject(new Error('Falha ao ler arquivo'));
+        });
+    };
+
     const handleProfilePicChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         console.log("Iniciando upload da nova foto de perfil...");
         try {
+            // Comprimir imagem antes do upload
+            const originalSize = file.size;
+            const compressedFile = await compressProfileImage(file);
+            
+            if (compressedFile.size < originalSize) {
+                console.log(`Imagem comprimida: ${(originalSize / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+            }
+            
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('file', compressedFile);
             formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
             const response = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`, {
                 method: 'POST',

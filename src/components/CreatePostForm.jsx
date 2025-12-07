@@ -19,6 +19,7 @@ function CreatePostForm({ onPostSuccess }) {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   
   const { currentUser, userProfile } = useAuth();
   const { loadingModel, classifyText } = useToxicityModel();
@@ -46,20 +47,130 @@ function CreatePostForm({ onPostSuccess }) {
     });
   };
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      const maxSize = 100 * 1024 * 1024;
-      if (selectedFile.size > maxSize) {
-         setError("O arquivo excede o limite máximo de 100MB.");
-         setFile(null);
-         setFileName("");
-         e.target.value = null; 
-         return;
+  // Função para comprimir imagem usando Canvas API
+  const compressImage = (file, maxSizeMB = 100) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Reduzir dimensões progressivamente até arquivo ficar < 100MB
+          let quality = 0.9;
+          const maxSizeBytes = maxSizeMB * 1024 * 1024;
+          
+          // Calcular redução proporcional baseada no tamanho do arquivo
+          const scaleFactor = Math.sqrt(maxSizeBytes / file.size);
+          
+          if (scaleFactor < 1) {
+            width = Math.floor(width * scaleFactor);
+            height = Math.floor(height * scaleFactor);
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Tentar comprimir com diferentes qualidades
+          const attemptCompress = (q) => {
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  reject(new Error('Falha ao comprimir imagem'));
+                  return;
+                }
+                
+                // Se ainda está grande e podemos reduzir qualidade
+                if (blob.size > maxSizeBytes && q > 0.3) {
+                  attemptCompress(q - 0.1);
+                } else {
+                  const compressedFile = new File([blob], file.name, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now(),
+                  });
+                  resolve(compressedFile);
+                }
+              },
+              'image/jpeg',
+              q
+            );
+          };
+          
+          attemptCompress(quality);
+        };
+        
+        img.onerror = () => reject(new Error('Falha ao carregar imagem'));
+      };
+      
+      reader.onerror = () => reject(new Error('Falha ao ler arquivo'));
+    });
+  };
+
+  // Função para processar arquivo antes do upload
+  const processFile = async (file) => {
+    const maxSize = 100 * 1024 * 1024; // 100MB
+    
+    // Se arquivo já está dentro do limite, retorna como está
+    if (file.size <= maxSize) {
+      return file;
+    }
+    
+    // Se é imagem, comprimir
+    if (file.type.startsWith('image/')) {
+      setError(''); // Limpa erro anterior
+      try {
+        const compressed = await compressImage(file, 100);
+        console.log(`Imagem comprimida: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressed.size / 1024 / 1024).toFixed(2)}MB`);
+        return compressed;
+      } catch (err) {
+        throw new Error(`Erro ao comprimir imagem: ${err.message}`);
       }
-      setFile(selectedFile);
+    }
+    
+    // Se é vídeo maior que 100MB, permitir (Cloudinary irá comprimir no servidor)
+    if (file.type.startsWith('video/')) {
+      setInfo(`⏳ Vídeo grande detectado (${(file.size / 1024 / 1024).toFixed(2)}MB). Será otimizado automaticamente durante o upload.`);
+      return file;
+    }
+    
+    return file;
+  };
+
+  const handleFileChange = async (e) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+    
+    setError('');
+    setInfo('');
+    setLoading(true);
+    
+    try {
+      const processedFile = await processFile(selectedFile);
+      setFile(processedFile);
       setFileName(selectedFile.name);
-      setError('');
+      
+      // Mostrar mensagem se arquivo foi comprimido
+      if (processedFile.size < selectedFile.size) {
+        const originalSizeMB = (selectedFile.size / 1024 / 1024).toFixed(2);
+        const newSizeMB = (processedFile.size / 1024 / 1024).toFixed(2);
+        setInfo(`✓ Imagem comprimida automaticamente: ${originalSizeMB}MB → ${newSizeMB}MB`);
+      }
+    } catch (err) {
+      setError(err.message);
+      setFile(null);
+      setFileName('');
+      e.target.value = null;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -76,9 +187,21 @@ function CreatePostForm({ onPostSuccess }) {
       
       formData.append('file', file);
       formData.append('upload_preset', uploadPreset);
+      
+      // Para vídeos, adicionar parâmetros de compressão
+      if (resourceType === 'video') {
+        // Compressão automática de vídeo
+        formData.append('quality', 'auto:low'); // Qualidade otimizada automaticamente
+        formData.append('fetch_format', 'auto'); // Melhor formato baseado no browser
+        
+        // Limitar bitrate para reduzir tamanho (1.5Mbps é bom para web)
+        formData.append('video_codec', 'h264'); // Codec mais compatível
+        formData.append('audio_codec', 'aac'); // Codec de áudio eficiente
+      }
 
       xhr.open('POST', url, true);
-      xhr.timeout = 300000; 
+      // Aumentar timeout para vídeos grandes (10 minutos)
+      xhr.timeout = resourceType === 'video' ? 600000 : 300000; 
 
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
@@ -111,6 +234,7 @@ function CreatePostForm({ onPostSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setInfo('');
 
     if (containsLink(postContent)) return setError("Posts contendo links não são permitidos.");
     if (!postContent.trim() && !file) return setError("O post precisa ter texto ou uma imagem/vídeo.");
@@ -168,6 +292,7 @@ function CreatePostForm({ onPostSuccess }) {
       setFile(null);
       setFileName('');
       setUploadProgress(0);
+      setInfo('');
       if (fileInputRef.current) fileInputRef.current.value = "";
       if (onPostSuccess) onPostSuccess();
 
@@ -183,6 +308,7 @@ function CreatePostForm({ onPostSuccess }) {
     <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
       {loadingModel && <Typography variant="caption">Verificando segurança...</Typography>}
       {error && <Alert severity="error">{error}</Alert>}
+      {info && <Alert severity="info">{info}</Alert>}
 
       <TextField
         fullWidth multiline rows={4} variant="outlined" label="No que você está pensando?"
@@ -224,7 +350,7 @@ function CreatePostForm({ onPostSuccess }) {
           <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
             <InfoIcon sx={{ fontSize: 16, mr: 0.5 }} />
             <Typography variant="caption">
-              Limite máximo: 100MB por arquivo (Vídeo/Foto)
+              Imagens e vídeos grandes são comprimidos/otimizados automaticamente durante o upload.
             </Typography>
           </Box>
       </Box>

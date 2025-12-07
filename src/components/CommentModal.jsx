@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
-import { ref, push, set, get, onValue, onChildAdded, onChildChanged, onChildRemoved, serverTimestamp } from 'firebase/database';
+import { ref, push, set, get, onChildAdded, onChildChanged, onChildRemoved, serverTimestamp } from 'firebase/database';
 import CommentItem from './CommentItem.jsx';
 
 import {

@@ -25,11 +25,79 @@ function CadastroPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
+  // Função para comprimir imagem
+  const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDimension = 1024;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.floor((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.floor((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Falha ao comprimir imagem'));
+                return;
+              }
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            },
+            'image/jpeg',
+            0.9
+          );
+        };
+        
+        img.onerror = () => reject(new Error('Falha ao carregar imagem'));
+      };
+      
+      reader.onerror = () => reject(new Error('Falha ao ler arquivo'));
+    });
+  };
+
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setProfilePic(file);
-      setProfilePicPreview(URL.createObjectURL(file));
+      try {
+        const compressed = await compressImage(file);
+        setProfilePic(compressed);
+        setProfilePicPreview(URL.createObjectURL(compressed));
+        
+        if (compressed.size < file.size) {
+          console.log(`Foto comprimida: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressed.size / 1024 / 1024).toFixed(2)}MB`);
+        }
+      } catch (err) {
+        console.error('Erro ao comprimir imagem:', err);
+        // Em caso de erro, usa a imagem original
+        setProfilePic(file);
+        setProfilePicPreview(URL.createObjectURL(file));
+      }
     }
   };
 
