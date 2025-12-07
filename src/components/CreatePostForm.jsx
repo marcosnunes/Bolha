@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { rtdb } from '../firebase/config';
-import { ref, push, serverTimestamp, update } from 'firebase/database';
+import { useUpload } from '../contexts/UploadContext';
 import useToxicityModel from '../hooks/useToxicityModel';
 import useVideoCompressor from '../hooks/useVideoCompressor';
 
@@ -25,6 +24,7 @@ function CreatePostForm({ onPostSuccess }) {
   const { currentUser, userProfile } = useAuth();
   const { loadingModel, classifyText } = useToxicityModel();
   const { compressVideo, loading: compressingVideo, progress: compressionProgress } = useVideoCompressor();
+  const { addUpload, updateUploadStatus, createPost } = useUpload();
 
   const fileInputRef = useRef(null);
 
@@ -194,62 +194,6 @@ function CreatePostForm({ onPostSuccess }) {
     }
   };
 
-  const uploadToCloudinary = (file) => {
-    return new Promise((resolve, reject) => {
-      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-      const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-      
-      const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
-      const url = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
-
-      const xhr = new XMLHttpRequest();
-      const formData = new FormData();
-      
-      formData.append('file', file);
-      formData.append('upload_preset', uploadPreset);
-      
-      // Upload simples sem transformações - deixar Cloudinary processar naturalmente
-      // As transformações serão aplicadas via URL quando necessário
-
-      xhr.open('POST', url, true);
-      // Aumentar timeout para vídeos grandes (10 minutos)
-      xhr.timeout = resourceType === 'video' ? 600000 : 300000; 
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percent = Math.round((event.loaded / event.total) * 100);
-          setUploadProgress(percent);
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          const data = JSON.parse(xhr.responseText);
-          resolve({ secure_url: data.secure_url, resource_type: data.resource_type });
-        } else {
-          try {
-             const errorResp = JSON.parse(xhr.responseText);
-             reject(new Error(errorResp.error?.message || 'Erro no Cloudinary'));
-          } catch {
-             reject(new Error('Erro desconhecido no upload.'));
-          }
-        }
-      };
-
-      xhr.onerror = () => {
-        // Detectar erro CORS específico
-        if (xhr.status === 0) {
-          reject(new Error('Erro de CORS: Verifique as configurações do upload preset no Cloudinary. O domínio atual precisa estar na lista de domínios permitidos.'));
-        } else {
-          reject(new Error('Erro de rede. Verifique sua conexão.'));
-        }
-      };
-      xhr.ontimeout = () => reject(new Error('O upload demorou muito e expirou. Tente um arquivo menor ou aguarde e tente novamente.'));
-
-      xhr.send(formData);
-    });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -259,12 +203,7 @@ function CreatePostForm({ onPostSuccess }) {
     if (!postContent.trim() && !file) return setError("O post precisa ter texto ou uma imagem/vídeo.");
     if (!currentUser || !userProfile) return setError("Você precisa estar logado para postar.");
 
-    setLoading(true);
-    setUploadProgress(0);
-
     try {
-      let mediaURL = null;
-      let mediaType = null;
       let isPostNSFW = false;
 
       // 1. Classificar o texto ANTES de qualquer outra coisa
@@ -276,50 +215,95 @@ function CreatePostForm({ onPostSuccess }) {
         }
       }
 
-      // 2. Fazer o upload do arquivo, se existir
-      if (file) {
-        try {
-          const uploadData = await uploadToCloudinary(file);
-          mediaURL = uploadData.secure_url;
-          mediaType = uploadData.resource_type;
-        } catch (uploadErr) {
-          console.error("Upload error:", uploadErr);
-          throw new Error(`Falha no upload: ${uploadErr.message}`);
-        }
+      // 2. Se tem arquivo com vídeo grande, processar em background
+      if (file && file.type.startsWith('video/') && file.size > 100 * 1024 * 1024) {
+        // Criar notificação de upload em background
+        const uploadId = addUpload({
+          fileName: fileName,
+          status: 'processing',
+          progress: 0
+        });
+
+        setInfo('✓ Seu vídeo será processado em segundo plano. Você pode continuar navegando!');
+        
+        // Limpar formulário imediatamente
+        const capturedPost = postContent;
+        const capturedFile = file;
+        const capturedIsNSFW = isPostNSFW;
+        
+        setPostContent('');
+        setFile(null);
+        setFileName('');
+        if (fileInputRef.current) fileInputRef.current.value = "";
+
+        // Processar em background
+        setTimeout(async () => {
+          try {
+            updateUploadStatus(uploadId, 'processing');
+            const compressed = await compressVideo(capturedFile, 95);
+            
+            await createPost(
+              { textContent: capturedPost, isNSFW: capturedIsNSFW },
+              compressed,
+              uploadId,
+              currentUser,
+              userProfile
+            );
+            
+            if (onPostSuccess) onPostSuccess();
+          } catch (err) {
+            console.error("Erro no background:", err);
+            updateUploadStatus(uploadId, 'error', err.message);
+          }
+        }, 100);
+        
+        return;
       }
 
-      // 3. Criar o post no DB com todos os dados corretos em UMA operação
-      const postsListRef = ref(rtdb, 'posts');
-      const newPostRef = push(postsListRef);
+      // 3. Para posts sem vídeo grande, processar normalmente (sem bloquear UI)
+      setLoading(true);
+      setUploadProgress(0);
+
+      const uploadId = addUpload({
+        fileName: fileName || 'Post',
+        status: 'uploading',
+        progress: 0
+      });
+
+      // Limpar formulário imediatamente
+      const capturedPost = postContent;
+      const capturedFile = file;
+      const capturedIsNSFW = isPostNSFW;
       
-      const newPostData = {
-        textContent: postContent,
-        authorId: currentUser.uid,
-        authorNickname: userProfile.nickname,
-        authorPhotoURL: userProfile.photoURL || null,
-        createdAt: serverTimestamp(),
-        isNSFW: isPostNSFW, // Usar o valor já classificado
-        moderationStatus: 'completed', // O status já está definido
-        mediaURL: mediaURL || null,
-        mediaType: mediaType || null
-      };
-
-      await update(newPostRef, newPostData);
-
-      // 4. Limpar o formulário e dar feedback de sucesso
       setPostContent('');
       setFile(null);
       setFileName('');
       setUploadProgress(0);
       setInfo('');
       if (fileInputRef.current) fileInputRef.current.value = "";
-      if (onPostSuccess) onPostSuccess();
+      setLoading(false);
+
+      // Upload em background
+      setTimeout(async () => {
+        try {
+          await createPost(
+            { textContent: capturedPost, isNSFW: capturedIsNSFW },
+            capturedFile,
+            uploadId,
+            currentUser,
+            userProfile
+          );
+          
+          if (onPostSuccess) onPostSuccess();
+        } catch (err) {
+          console.error("Erro no upload:", err);
+          updateUploadStatus(uploadId, 'error', err.message);
+        }
+      }, 100);
 
     } catch (err) {
       console.error("Erro no processo:", err);
       setError(err.message || "Erro ao publicar post.");
-    } finally {
-      setLoading(false);
     }
   };
 
