@@ -28,7 +28,6 @@ import PeopleIcon from '@mui/icons-material/People';
 // Nossos componentes
 import CreatePostForm from '../components/CreatePostForm.jsx';
 import Feed from '../components/Feed.jsx';
-import UploadNotifications from '../components/UploadNotifications.jsx';
 
 function HomePage() {
     const { currentUser, userProfile, logout } = useAuth();
@@ -297,9 +296,6 @@ function HomePage() {
                     <IconButton color="inherit" aria-label="open drawer" edge="end" onClick={handleDrawerToggle}><MenuIcon /></IconButton>
                 </Toolbar>
             </AppBar>
-            
-            {/* Notificações de Upload */}
-            <UploadNotifications />
             
             <Drawer variant="temporary" open={mobileOpen} onClose={handleDrawerToggle} anchor="right" ModalProps={{ keepMounted: true }} sx={{ '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 } }}>{drawer}</Drawer>
 

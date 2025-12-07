@@ -15,6 +15,7 @@ import ConvitePage from './pages/ConvitePage.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { UploadProvider } from './contexts/UploadContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import UploadNotifications from './components/UploadNotifications.jsx';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage.jsx';
 import ReportAbusePage from './pages/ReportAbusePage.jsx';
 
@@ -68,6 +69,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <AuthProvider>
       <UploadProvider>
         <RouterProvider router={router} />
+        <UploadNotifications />
       </UploadProvider>
     </AuthProvider>
   </React.StrictMode>
