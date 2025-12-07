@@ -221,26 +221,18 @@ function CreatePostForm({ onPostSuccess }) {
       const capturedFileName = fileName;
       const capturedIsNSFW = isPostNSFW;
 
-      // 2. Mostrar mensagem informativa para o usuário
+      // 2. Criar notificação IMEDIATAMENTE
       const isLargeVideo = file && file.type.startsWith('video/') && file.size > 100 * 1024 * 1024;
       
-      if (isLargeVideo) {
-        setInfo('🎬 Seu vídeo será processado em segundo plano. Você pode fechar este modal e continuar navegando!');
-      } else if (file) {
-        setInfo('📤 Seu post será enviado em segundo plano. Você pode fechar este modal!');
-      }
-
-      // Aguardar um momento para usuário ver a mensagem
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // 3. Criar notificação ANTES de limpar formulário
       const uploadId = addUpload({
-        fileName: capturedFileName || 'Post',
+        fileName: capturedFileName || 'Novo post',
         status: isLargeVideo ? 'processing' : 'uploading',
         progress: 0
       });
 
-      // 4. Limpar formulário e fechar modal
+      console.log('Upload criado com ID:', uploadId);
+
+      // 3. Limpar formulário
       setPostContent('');
       setFile(null);
       setFileName('');
@@ -249,8 +241,11 @@ function CreatePostForm({ onPostSuccess }) {
       setError('');
       if (fileInputRef.current) fileInputRef.current.value = "";
       
-      // Fechar modal
-      if (onPostSuccess) onPostSuccess();
+      // 4. Fechar modal DEPOIS de criar notificação
+      if (onPostSuccess) {
+        // Pequeno delay para garantir que o estado foi atualizado
+        setTimeout(() => onPostSuccess(), 100);
+      }
 
       // 5. Processar em background
       setTimeout(async () => {

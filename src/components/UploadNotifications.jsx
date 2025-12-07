@@ -8,9 +8,14 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 function UploadNotifications() {
   const { uploads, removeUpload } = useUpload();
 
-  console.log('UploadNotifications - uploads:', uploads.length);
+  console.log('UploadNotifications renderizou - uploads:', uploads);
 
-  if (uploads.length === 0) return null;
+  if (uploads.length === 0) {
+    console.log('Nenhum upload ativo, não renderizando notificações');
+    return null;
+  }
+
+  console.log('Renderizando notificações para', uploads.length, 'uploads');
 
   return (
     <Box
@@ -19,11 +24,12 @@ function UploadNotifications() {
         bottom: { xs: 80, sm: 16 },
         right: { xs: 8, sm: 16 },
         left: { xs: 8, sm: 'auto' },
-        zIndex: 1300,
+        zIndex: 9999,
         display: 'flex',
         flexDirection: 'column',
         gap: 1,
-        maxWidth: { xs: '100%', sm: 400 }
+        maxWidth: { xs: '100%', sm: 400 },
+        pointerEvents: 'auto'
       }}
     >
       {uploads.map((upload) => (

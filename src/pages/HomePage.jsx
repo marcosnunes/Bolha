@@ -11,7 +11,8 @@ import {
     AppBar, Toolbar, Typography, Button, IconButton, Drawer, List, ListItem,
     ListItemButton, ListItemIcon, ListItemText, Box, Container, Divider,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
-    Tooltip, Switch, Avatar, Fab, FormControlLabel, TextField, Chip, ListItemAvatar
+    Tooltip, Switch, Avatar, Fab, FormControlLabel, TextField, Chip, ListItemAvatar,
+    Alert
 } from '@mui/material';
 
 // Ícones do MUI
@@ -336,8 +337,12 @@ function HomePage() {
             </Dialog>
 
             <Dialog open={openPostDialog} onClose={() => setOpenPostDialog(false)} fullWidth maxWidth="sm">
-                <DialogTitle>Crie um novo post</DialogTitle>
+                <DialogTitle>Criar Post</DialogTitle>
                 <DialogContent>
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                        💡 <strong>Dica:</strong> Ao enviar vídeos grandes, você pode fechar este modal! 
+                        O processamento continuará em segundo plano e você verá uma notificação no canto da tela.
+                    </Alert>
                     <CreatePostForm onPostSuccess={handlePostSuccess} />
                 </DialogContent>
             </Dialog>
