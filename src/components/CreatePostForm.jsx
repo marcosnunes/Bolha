@@ -24,7 +24,7 @@ function CreatePostForm({ onPostSuccess }) {
   const { currentUser, userProfile } = useAuth();
   const { loadingModel, classifyText } = useToxicityModel();
   const { compressVideo, loading: compressingVideo, progress: compressionProgress } = useVideoCompressor();
-  const { addUpload, updateUploadStatus, createPost } = useUpload();
+  const { addUpload, updateUploadStatus, updateUploadProgress, createPost } = useUpload();
 
   const fileInputRef = useRef(null);
 
@@ -215,88 +215,56 @@ function CreatePostForm({ onPostSuccess }) {
         }
       }
 
-      // 2. Se tem arquivo com vídeo grande, processar em background
-      if (file && file.type.startsWith('video/') && file.size > 100 * 1024 * 1024) {
-        // Criar notificação de upload em background
-        const uploadId = addUpload({
-          fileName: fileName,
-          status: 'processing',
-          progress: 0
-        });
+      // Capturar dados antes de processar
+      const capturedPost = postContent;
+      const capturedFile = file;
+      const capturedFileName = fileName;
+      const capturedIsNSFW = isPostNSFW;
 
-        setInfo('✓ Seu vídeo será processado em segundo plano. Você pode continuar navegando!');
-        
-        // Limpar formulário imediatamente
-        const capturedPost = postContent;
-        const capturedFile = file;
-        const capturedIsNSFW = isPostNSFW;
-        
-        setPostContent('');
-        setFile(null);
-        setFileName('');
-        if (fileInputRef.current) fileInputRef.current.value = "";
-
-        // Processar em background
-        setTimeout(async () => {
-          try {
-            updateUploadStatus(uploadId, 'processing');
-            const compressed = await compressVideo(capturedFile, 95);
-            
-            await createPost(
-              { textContent: capturedPost, isNSFW: capturedIsNSFW },
-              compressed,
-              uploadId,
-              currentUser,
-              userProfile
-            );
-            
-            if (onPostSuccess) onPostSuccess();
-          } catch (err) {
-            console.error("Erro no background:", err);
-            updateUploadStatus(uploadId, 'error', err.message);
-          }
-        }, 100);
-        
-        return;
-      }
-
-      // 3. Para posts sem vídeo grande, processar normalmente (sem bloquear UI)
-      setLoading(true);
-      setUploadProgress(0);
-
+      // 2. Criar notificação ANTES de limpar formulário
       const uploadId = addUpload({
-        fileName: fileName || 'Post',
-        status: 'uploading',
+        fileName: capturedFileName || 'Post',
+        status: file && file.type.startsWith('video/') && file.size > 100 * 1024 * 1024 ? 'processing' : 'uploading',
         progress: 0
       });
 
-      // Limpar formulário imediatamente
-      const capturedPost = postContent;
-      const capturedFile = file;
-      const capturedIsNSFW = isPostNSFW;
-      
+      // 3. Limpar formulário IMEDIATAMENTE (usuário pode fechar modal)
       setPostContent('');
       setFile(null);
       setFileName('');
       setUploadProgress(0);
       setInfo('');
+      setError('');
       if (fileInputRef.current) fileInputRef.current.value = "";
-      setLoading(false);
+      
+      // Fechar modal imediatamente
+      if (onPostSuccess) onPostSuccess();
 
-      // Upload em background
+      // 4. Processar em background
       setTimeout(async () => {
         try {
+          let finalFile = capturedFile;
+          
+          // Se é vídeo grande, comprimir primeiro
+          if (capturedFile && capturedFile.type.startsWith('video/') && capturedFile.size > 100 * 1024 * 1024) {
+            updateUploadStatus(uploadId, 'processing');
+            
+            // Comprimir com callback de progresso
+            finalFile = await compressVideo(capturedFile, (progress) => {
+              updateUploadProgress(uploadId, progress);
+            });
+          }
+          
+          // Fazer upload e criar post
           await createPost(
             { textContent: capturedPost, isNSFW: capturedIsNSFW },
-            capturedFile,
+            finalFile,
             uploadId,
             currentUser,
             userProfile
           );
-          
-          if (onPostSuccess) onPostSuccess();
         } catch (err) {
-          console.error("Erro no upload:", err);
+          console.error("Erro no background:", err);
           updateUploadStatus(uploadId, 'error', err.message);
         }
       }, 100);

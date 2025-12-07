@@ -15,11 +15,6 @@ export default function useVideoCompressor() {
     const ffmpeg = new FFmpeg();
     ffmpegRef.current = ffmpeg;
 
-    // Monitorar progresso
-    ffmpeg.on('progress', ({ progress: p }) => {
-      setProgress(Math.round(p * 100));
-    });
-
     ffmpeg.on('log', ({ message }) => {
       console.log('FFmpeg:', message);
     });
@@ -38,9 +33,12 @@ export default function useVideoCompressor() {
   }, []);
 
   // Comprimir vídeo
-  const compressVideo = useCallback(async (file) => {
+  const compressVideo = useCallback(async (file, onProgressCallback = null) => {
     setLoading(true);
     setProgress(0);
+
+    // Definir handler fora do try para ser acessível no catch
+    let progressHandler = null;
 
     try {
       // Carregar FFmpeg se ainda não estiver carregado
@@ -51,6 +49,17 @@ export default function useVideoCompressor() {
       const ffmpeg = ffmpegRef.current;
       const inputName = 'input.mp4';
       const outputName = 'output.mp4';
+
+      // Adicionar listener de progresso temporário
+      progressHandler = ({ progress: p }) => {
+        const progressPercent = Math.round(p * 100);
+        setProgress(progressPercent);
+        if (onProgressCallback) {
+          onProgressCallback(progressPercent);
+        }
+      };
+      
+      ffmpeg.on('progress', progressHandler);
 
       // Escrever arquivo no sistema virtual do FFmpeg
       await ffmpeg.writeFile(inputName, await fetchFile(file));
@@ -101,12 +110,20 @@ export default function useVideoCompressor() {
       await ffmpeg.deleteFile(inputName);
       await ffmpeg.deleteFile(outputName);
 
+      // Remover listener de progresso
+      ffmpeg.off('progress', progressHandler);
+
       setLoading(false);
       setProgress(0);
 
       return compressedFile;
 
     } catch (error) {
+      // Remover listener em caso de erro também
+      if (ffmpegRef.current && progressHandler) {
+        ffmpegRef.current.off('progress', progressHandler);
+      }
+      
       setLoading(false);
       setProgress(0);
       console.error('Erro na compressão:', error);
