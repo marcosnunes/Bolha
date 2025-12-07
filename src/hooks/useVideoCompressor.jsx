@@ -38,7 +38,7 @@ export default function useVideoCompressor() {
   }, []);
 
   // Comprimir vídeo
-  const compressVideo = useCallback(async (file, targetSizeMB = 95) => {
+  const compressVideo = useCallback(async (file) => {
     setLoading(true);
     setProgress(0);
 
