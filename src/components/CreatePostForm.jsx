@@ -188,15 +188,11 @@ function CreatePostForm({ onPostSuccess }) {
       formData.append('file', file);
       formData.append('upload_preset', uploadPreset);
       
-      // Para vídeos, adicionar parâmetros de compressão
+      // Para vídeos, adicionar transformações eagerly (aplicadas no servidor após upload)
       if (resourceType === 'video') {
-        // Compressão automática de vídeo
-        formData.append('quality', 'auto:low'); // Qualidade otimizada automaticamente
-        formData.append('fetch_format', 'auto'); // Melhor formato baseado no browser
-        
-        // Limitar bitrate para reduzir tamanho (1.5Mbps é bom para web)
-        formData.append('video_codec', 'h264'); // Codec mais compatível
-        formData.append('audio_codec', 'aac'); // Codec de áudio eficiente
+        // Transformações aplicadas automaticamente pelo Cloudinary
+        formData.append('eager', 'q_auto:low,vc_h264,ac_aac');
+        formData.append('eager_async', 'true'); // Processar em background
       }
 
       xhr.open('POST', url, true);
