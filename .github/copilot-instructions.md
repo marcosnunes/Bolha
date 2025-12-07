@@ -8,12 +8,13 @@
 - **Link-free content** (all links blocked at post creation)
 - **Client-side moderation** (TensorFlow.js toxicity detection + banned word list)
 - **Full data deletion** (users can completely purge their account and all posts)
+- **Nested comments** (comments on posts with likes support)
 
 **Tech Stack:**
 - Frontend: React 19 + Vite + Material-UI (MUI 7)
-- Backend: Firebase (Auth, Realtime Database, Cloud Functions)
+- Backend: Firebase (Auth, Realtime Database, Cloud Functions v2)
 - Media: Cloudinary (image/video optimization)
-- Deploy: Vercel (frontend) + Firebase (backend)
+- Deploy: Vercel (frontend) + Firebase (backend, us-central1)
 
 ---
 
@@ -26,7 +27,11 @@
   - authorId, authorNickname, authorPhotoURL
   - textContent, mediaURL, mediaType, isNSFW
   - createdAt (timestamp - critical for pagination)
-  - likes/{uid}: true (likes count via Object.keys())
+  - likes/{uid}: true
+  - dislikes/{uid}: true
+  - comments/{commentId}
+    - authorId, authorNickname, textContent, createdAt
+    - likes/{uid}: true
 
 /profiles/{uid}
   - nickname, photoURL
@@ -42,16 +47,19 @@
 ### Key Data Flows
 
 1. **User Registration**: Signup → Invite token validation → Create profile + consume invite → Redirect to home
-2. **Post Creation**: Text/media → Toxicity classification + link detection → Cloudinary upload (if media) → RTDB commit
-3. **Feed Loading**: Initial query (5 most recent posts via `limitToLast(5)`) → Real-time listener for new posts → Pagination via `endAt(cursorTimestamp - 1)`
-4. **Hidden Users**: `hideUser(uid)` creates `/users/{currentUser.uid}/hiddenUsers/{targetUid}` → Feed auto-filters hidden authors
+2. **Post Creation**: Text/media → Toxicity classification + link detection → Cloudinary upload (if media) → RTDB commit with `update()`
+3. **Feed Loading**: Initial `get()` with `limitToLast(5)` → Reverse array → Real-time `onChildAdded` for new posts → Pagination via `endAt(cursorTimestamp - 1)`
+4. **Hidden Users**: `hideUser(uid)` creates `/users/{currentUser.uid}/hiddenUsers/{targetUid}` → Feed filters in-memory
+5. **Comments**: Modal loads initial via `get()`, then `onChildAdded` with `startAt(mountTimeRef.current)` for real-time updates
 
-### Real-time Patterns
+### Real-time Patterns (Critical)
 
-- **Feed real-time updates**: `onChildAdded` with `startAt(mountTimeRef.current)` catches new posts after component mounts
-- **Profile data**: `onValue` on `/profiles/{uid}` triggers re-renders on nickname/photo changes
-- **Likes**: `onValue` on `/posts/{postId}/likes` updates like counts live
-- Use **server timestamps** (`serverTimestamp()`) for all createdAt fields to avoid clock skew
+- **Feed initialization**: Uses `get()` for initial load, then separate `onChildAdded` listener with `startAt(mountTimeRef.current + 1)` to catch only NEW posts
+- **Global deletion listener**: `onChildRemoved` on `/posts` (no filters) ensures deletions sync even for pre-loaded posts
+- **Profile data**: `onValue` on `/profiles/{uid}` in `Post.jsx` overrides cached authorPhotoURL/authorNickname with live data
+- **Likes**: `onValue` on `/posts/{postId}/likes` updates counts live
+- **Comments**: Similar pattern to Feed - initial `get()`, then `onChildAdded/Changed/Removed` listeners for real-time sync
+- **ALWAYS** use `serverTimestamp()` for `createdAt` fields to avoid clock skew in pagination
 
 ---
 
@@ -154,6 +162,8 @@ src/
 │   ├── ConfirmDialog.jsx      # Reusable confirmation dialog
 │   ├── HiddenUsersManager.jsx # List of hidden users
 │   ├── HiddenUserItem.jsx     # Individual hidden user row
+│   ├── CommentModal.jsx       # Comments dialog with real-time sync
+│   ├── CommentItem.jsx        # Individual comment with likes
 │   └── ProtectedRoute.jsx     # Auth guard wrapper
 ├── contexts/
 │   └── AuthContext.jsx        # Global auth state + hidden users list
