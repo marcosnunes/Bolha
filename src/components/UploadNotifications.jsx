@@ -14,14 +14,14 @@ function UploadNotifications() {
     <Box
       sx={{
         position: 'fixed',
-        bottom: 16,
-        right: 16,
-        zIndex: 9999,
+        bottom: { xs: 80, sm: 16 },
+        right: { xs: 8, sm: 16 },
+        left: { xs: 8, sm: 'auto' },
+        zIndex: 1300,
         display: 'flex',
         flexDirection: 'column',
         gap: 1,
-        maxWidth: 400,
-        width: '100%'
+        maxWidth: { xs: '100%', sm: 400 }
       }}
     >
       {uploads.map((upload) => (
