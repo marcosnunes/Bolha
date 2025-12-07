@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, push, serverTimestamp, update } from 'firebase/database';
 import useToxicityModel from '../hooks/useToxicityModel';
+import useVideoCompressor from '../hooks/useVideoCompressor';
 
 // Componentes e Ícones do MUI
 import {
@@ -23,6 +24,7 @@ function CreatePostForm({ onPostSuccess }) {
   
   const { currentUser, userProfile } = useAuth();
   const { loadingModel, classifyText } = useToxicityModel();
+  const { compressVideo, loading: compressingVideo, progress: compressionProgress } = useVideoCompressor();
 
   const fileInputRef = useRef(null);
 
@@ -134,17 +136,23 @@ function CreatePostForm({ onPostSuccess }) {
       return file;
     }
     
-    // Se é vídeo, verificar limite do Cloudinary (100MB no plano gratuito)
+    // Se é vídeo, comprimir automaticamente se > 100MB
     if (file.type.startsWith('video/')) {
       const fileSizeMB = file.size / 1024 / 1024;
       
       if (file.size > maxSize) {
-        throw new Error(
-          `Vídeo muito grande (${fileSizeMB.toFixed(2)}MB). ` +
-          `O limite atual é 100MB. ` +
-          `Por favor, comprima o vídeo usando um editor antes de fazer upload. ` +
-          `Sugestão: Use HandBrake, VLC ou qualquer compressor de vídeo online.`
-        );
+        setInfo(`🎬 Comprimindo vídeo (${fileSizeMB.toFixed(2)}MB)... Isso pode levar alguns minutos.`);
+        try {
+          const compressed = await compressVideo(file, 95); // Comprimir para ~95MB
+          const compressedSizeMB = compressed.size / 1024 / 1024;
+          
+          console.log(`Vídeo comprimido: ${fileSizeMB.toFixed(2)}MB → ${compressedSizeMB.toFixed(2)}MB`);
+          setInfo(`✓ Vídeo comprimido com sucesso: ${fileSizeMB.toFixed(2)}MB → ${compressedSizeMB.toFixed(2)}MB`);
+          
+          return compressed;
+        } catch (err) {
+          throw new Error(`Erro ao comprimir vídeo: ${err.message}. Tente usar um vídeo menor.`);
+        }
       }
       
       if (fileSizeMB > 50) {
@@ -325,9 +333,22 @@ function CreatePostForm({ onPostSuccess }) {
         fullWidth multiline rows={4} variant="outlined" label="No que você está pensando?"
         value={postContent} onChange={(e) => setPostContent(e.target.value)}
         helperText="Dica: Use **negrito** ou *itálico* para estilizar. Pule uma linha para novo parágrafo."
+        disabled={compressingVideo}
       />
 
-      {loading && file && (
+      {compressingVideo && (
+        <Box sx={{ width: '100%' }}>
+           <LinearProgress variant="determinate" value={compressionProgress} />
+           <Typography variant="caption" color="text.secondary" align="center" display="block">
+             🎬 Comprimindo vídeo... {compressionProgress}%
+           </Typography>
+           <Typography variant="caption" color="text.secondary" align="center" display="block">
+             Isso pode levar alguns minutos. Não feche esta página.
+           </Typography>
+        </Box>
+      )}
+
+      {loading && file && !compressingVideo && (
         <Box sx={{ width: '100%' }}>
            <LinearProgress variant="determinate" value={uploadProgress} />
            <Typography variant="caption" color="text.secondary" align="center" display="block">
@@ -345,10 +366,10 @@ function CreatePostForm({ onPostSuccess }) {
         </Box>
         
         <Button
-          variant="contained" type="submit" disabled={loading || loadingModel}
-          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+          variant="contained" type="submit" disabled={loading || loadingModel || compressingVideo}
+          startIcon={loading || compressingVideo ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
         >
-          {loading ? 'Publicando...' : 'Publicar'}
+          {compressingVideo ? 'Comprimindo...' : loading ? 'Publicando...' : 'Publicar'}
         </Button>
       </Box>
 
