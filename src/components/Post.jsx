@@ -238,32 +238,41 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
 
         <Divider />
         <CardActions sx={{ justifyContent: 'flex-start', p: 1 }}>
-          <Tooltip title={likesCount > 0 ? getLikesTooltipText() : ''} arrow>
-            <Box sx={{ display: 'inline-flex' }}>
-              <Button 
-                startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />}
-                onClick={handleLike}
-                color={hasLiked ? 'primary' : 'inherit'}
+          <Button 
+            startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />}
+            onClick={handleLike}
+            color={hasLiked ? 'primary' : 'inherit'}
+          >
+            Curtir
+          </Button>
+
+          {likesCount > 0 && (
+            <Tooltip title={getLikesTooltipText()} arrow>
+              <Box 
+                onClick={handleOpenLikesModal}
+                sx={{ 
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  px: 2,
+                  py: 1,
+                  ml: 1,
+                  borderRadius: 1,
+                  '&:hover': { 
+                    backgroundColor: 'action.hover',
+                    textDecoration: 'underline'
+                  },
+                  minWidth: '44px',
+                  minHeight: '44px',
+                  justifyContent: 'center'
+                }}
               >
-                {likesCount > 0 ? (
-                  <Box 
-                    component="span" 
-                    onClick={(e) => { e.stopPropagation(); handleOpenLikesModal(); }}
-                    sx={{ 
-                      cursor: 'pointer', 
-                      '&:hover': { textDecoration: 'underline' },
-                      px: 1.5,
-                      py: 1.5,
-                      ml: -1.5,
-                      borderRadius: 1
-                    }}
-                  >
-                    {likesCount}
-                  </Box>
-                ) : 'Curtir'}
-              </Button>
-            </Box>
-          </Tooltip>
+                <Typography variant="body2" color="text.secondary">
+                  {likesCount}
+                </Typography>
+              </Box>
+            </Tooltip>
+          )}
 
           <Button
             startIcon={<ChatBubbleOutlineIcon />}

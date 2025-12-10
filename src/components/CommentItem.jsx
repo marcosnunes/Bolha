@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
-import { ref, remove, set, onValue } from 'firebase/database';
+import { ref, remove, set, onValue, get } from 'firebase/database';
 
 import {
-  Box, Avatar, Typography, Button, IconButton, Tooltip
+  Box, Avatar, Typography, Button, IconButton, Tooltip, Dialog,
+  DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemAvatar, ListItemText
 } from '@mui/material';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
@@ -18,6 +19,9 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   const isOwner = currentUser && currentUser.uid === authorId;
 
   const [likesData, setLikesData] = useState(commentData.likes || {});
+  const [likesModalOpen, setLikesModalOpen] = useState(false);
+  const [likesUsers, setLikesUsers] = useState([]);
+  const [loadingLikes, setLoadingLikes] = useState(false);
 
   useEffect(() => {
     const likesRef = ref(rtdb, `posts/${postId}/comments/${commentId}/likes`);
@@ -54,6 +58,73 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
     }
   };
 
+  const handleOpenLikesModal = async () => {
+    if (likesCount === 0) return;
+    setLikesModalOpen(true);
+    setLoadingLikes(true);
+    
+    try {
+      const userIds = Object.keys(likesData);
+      const usersData = await Promise.all(
+        userIds.map(async (uid) => {
+          const profileRef = ref(rtdb, `profiles/${uid}`);
+          const snapshot = await get(profileRef);
+          const profile = snapshot.val() || {};
+          return {
+            uid,
+            nickname: profile.nickname || 'Usuário',
+            photoURL: profile.photoURL || null
+          };
+        })
+      );
+      setLikesUsers(usersData);
+    } catch (error) {
+      console.error("Erro ao carregar usuários:", error);
+    } finally {
+      setLoadingLikes(false);
+    }
+  };
+
+  const getLikesTooltipText = () => {
+    const userIds = Object.keys(likesData);
+    if (userIds.length === 0) return '';
+    if (userIds.length <= 3) {
+      return likesUsers.map(u => u.nickname).join(', ');
+    }
+    return `${likesUsers.slice(0, 3).map(u => u.nickname).join(', ')} e mais ${userIds.length - 3}`;
+  };
+
+  // Carregar nicknames para tooltip quando houver curtidas
+  useEffect(() => {
+    const loadNicknamesForTooltip = async () => {
+      const userIds = Object.keys(likesData);
+      if (userIds.length === 0) {
+        setLikesUsers([]);
+        return;
+      }
+      
+      try {
+        const usersData = await Promise.all(
+          userIds.slice(0, 3).map(async (uid) => {
+            const profileRef = ref(rtdb, `profiles/${uid}`);
+            const snapshot = await get(profileRef);
+            const profile = snapshot.val() || {};
+            return {
+              uid,
+              nickname: profile.nickname || 'Usuário',
+              photoURL: profile.photoURL || null
+            };
+          })
+        );
+        setLikesUsers(usersData);
+      } catch (error) {
+        console.error("Erro ao carregar nomes:", error);
+      }
+    };
+
+    loadNicknamesForTooltip();
+  }, [likesData]);
+
   return (
     <Box sx={{ display: 'flex', gap: 2, pb: 2, borderBottom: '1px solid #e0e0e0' }}>
       <Avatar
@@ -85,8 +156,35 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
             color={hasLiked ? 'primary' : 'inherit'}
             sx={{ fontSize: '0.75rem' }}
           >
-            {likesCount > 0 ? likesCount : 'Curtir'}
+            Curtir
           </Button>
+
+          {likesCount > 0 && (
+            <Tooltip title={getLikesTooltipText()} arrow>
+              <Box 
+                onClick={handleOpenLikesModal}
+                sx={{ 
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: 1,
+                  '&:hover': { 
+                    backgroundColor: 'action.hover',
+                    textDecoration: 'underline'
+                  },
+                  minWidth: '36px',
+                  minHeight: '36px',
+                  justifyContent: 'center'
+                }}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  {likesCount}
+                </Typography>
+              </Box>
+            </Tooltip>
+          )}
 
           {isOwner && (
             <Tooltip title="Apagar comentário">
@@ -102,6 +200,38 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
         </Box>
       </Box>
     </Box>
+
+    {/* Modal de curtidas */}
+    <Dialog 
+      open={likesModalOpen} 
+      onClose={() => setLikesModalOpen(false)} 
+      fullWidth 
+      maxWidth="sm"
+    >
+      <DialogTitle>Curtidas ({likesCount})</DialogTitle>
+      <DialogContent dividers>
+        {loadingLikes ? (
+          <Typography align="center" sx={{ py: 2 }}>Carregando...</Typography>
+        ) : (
+          <List>
+            {likesUsers.map((user) => (
+              <ListItem key={user.uid}>
+                <ListItemAvatar>
+                  <Avatar src={user.photoURL} alt={user.nickname}>
+                    {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText primary={user.nickname} />
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setLikesModalOpen(false)}>Fechar</Button>
+      </DialogActions>
+    </Dialog>
+  </>
   );
 }
 
