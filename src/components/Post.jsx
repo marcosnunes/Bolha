@@ -253,7 +253,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
                       cursor: 'pointer', 
                       '&:hover': { textDecoration: 'underline' },
                       px: 1.5,
-                      py: 0.5,
+                      py: 1.5,
                       ml: -1.5,
                       borderRadius: 1
                     }}
