@@ -126,112 +126,113 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   }, [likesData]);
 
   return (
-    <Box sx={{ display: 'flex', gap: 2, pb: 2, borderBottom: '1px solid #e0e0e0' }}>
-      <Avatar
-        src={authorPhotoURL}
-        sx={{ width: 40, height: 40 }}
-      >
-        {!authorPhotoURL && authorNickname?.charAt(0).toUpperCase()}
-      </Avatar>
+    <>
+      <Box sx={{ display: 'flex', gap: 2, pb: 2, borderBottom: '1px solid #e0e0e0' }}>
+        <Avatar
+          src={authorPhotoURL}
+          sx={{ width: 40, height: 40 }}
+        >
+          {!authorPhotoURL && authorNickname?.charAt(0).toUpperCase()}
+        </Avatar>
 
-      <Box sx={{ flex: 1 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-            {authorNickname}
+        <Box sx={{ flex: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+              {authorNickname}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {formattedDate}
+            </Typography>
+          </Box>
+
+          <Typography variant="body2" sx={{ mb: 1, wordBreak: 'break-word' }}>
+            {textContent}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {formattedDate}
-          </Typography>
-        </Box>
 
-        <Typography variant="body2" sx={{ mb: 1, wordBreak: 'break-word' }}>
-          {textContent}
-        </Typography>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Button
+              size="small"
+              startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />}
+              onClick={handleLike}
+              color={hasLiked ? 'primary' : 'inherit'}
+              sx={{ fontSize: '0.75rem' }}
+            >
+              Curtir
+            </Button>
 
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <Button
-            size="small"
-            startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />}
-            onClick={handleLike}
-            color={hasLiked ? 'primary' : 'inherit'}
-            sx={{ fontSize: '0.75rem' }}
-          >
-            Curtir
-          </Button>
+            {likesCount > 0 && (
+              <Tooltip title={getLikesTooltipText()} arrow>
+                <Box 
+                  onClick={handleOpenLikesModal}
+                  sx={{ 
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: 1,
+                    '&:hover': { 
+                      backgroundColor: 'action.hover',
+                      textDecoration: 'underline'
+                    },
+                    minWidth: '36px',
+                    minHeight: '36px',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    {likesCount}
+                  </Typography>
+                </Box>
+              </Tooltip>
+            )}
 
-          {likesCount > 0 && (
-            <Tooltip title={getLikesTooltipText()} arrow>
-              <Box 
-                onClick={handleOpenLikesModal}
-                sx={{ 
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  px: 1.5,
-                  py: 0.5,
-                  borderRadius: 1,
-                  '&:hover': { 
-                    backgroundColor: 'action.hover',
-                    textDecoration: 'underline'
-                  },
-                  minWidth: '36px',
-                  minHeight: '36px',
-                  justifyContent: 'center'
-                }}
-              >
-                <Typography variant="caption" color="text.secondary">
-                  {likesCount}
-                </Typography>
-              </Box>
-            </Tooltip>
-          )}
-
-          {isOwner && (
-            <Tooltip title="Apagar comentário">
-              <IconButton
-                size="small"
-                onClick={handleDelete}
-                sx={{ color: 'error.main' }}
-              >
-                <DeleteIcon sx={{ fontSize: '1rem' }} />
-              </IconButton>
-            </Tooltip>
-          )}
+            {isOwner && (
+              <Tooltip title="Apagar comentário">
+                <IconButton
+                  size="small"
+                  onClick={handleDelete}
+                  sx={{ color: 'error.main' }}
+                >
+                  <DeleteIcon sx={{ fontSize: '1rem' }} />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
         </Box>
       </Box>
-    </Box>
 
-    {/* Modal de curtidas */}
-    <Dialog 
-      open={likesModalOpen} 
-      onClose={() => setLikesModalOpen(false)} 
-      fullWidth 
-      maxWidth="sm"
-    >
-      <DialogTitle>Curtidas ({likesCount})</DialogTitle>
-      <DialogContent dividers>
-        {loadingLikes ? (
-          <Typography align="center" sx={{ py: 2 }}>Carregando...</Typography>
-        ) : (
-          <List>
-            {likesUsers.map((user) => (
-              <ListItem key={user.uid}>
-                <ListItemAvatar>
-                  <Avatar src={user.photoURL} alt={user.nickname}>
-                    {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText primary={user.nickname} />
-              </ListItem>
-            ))}
-          </List>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setLikesModalOpen(false)}>Fechar</Button>
-      </DialogActions>
-    </Dialog>
-  </>
+      {/* Modal de curtidas */}
+      <Dialog 
+        open={likesModalOpen} 
+        onClose={() => setLikesModalOpen(false)} 
+        fullWidth 
+        maxWidth="sm"
+      >
+        <DialogTitle>Curtidas ({likesCount})</DialogTitle>
+        <DialogContent dividers>
+          {loadingLikes ? (
+            <Typography align="center" sx={{ py: 2 }}>Carregando...</Typography>
+          ) : (
+            <List>
+              {likesUsers.map((user) => (
+                <ListItem key={user.uid}>
+                  <ListItemAvatar>
+                    <Avatar src={user.photoURL} alt={user.nickname}>
+                      {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText primary={user.nickname} />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLikesModalOpen(false)}>Fechar</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
 
