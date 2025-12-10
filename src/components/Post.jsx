@@ -9,7 +9,8 @@ import CommentModal from './CommentModal.jsx'; // Importa modal de comentários
 // Componentes e Ícones do MUI
 import {
   Card, CardHeader, CardContent, CardActions, IconButton, Typography,
-  Box, Menu, MenuItem, Avatar, Tooltip, Divider, Button
+  Box, Menu, MenuItem, Avatar, Tooltip, Divider, Button, Dialog,
+  DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemAvatar, ListItemText
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -31,6 +32,9 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [commentModalOpen, setCommentModalOpen] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
+  const [likesModalOpen, setLikesModalOpen] = useState(false);
+  const [likesUsers, setLikesUsers] = useState([]);
+  const [loadingLikes, setLoadingLikes] = useState(false);
   const openMenu = Boolean(anchorEl);
 
   useEffect(() => {
@@ -128,6 +132,73 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     }
   };
 
+  const handleOpenLikesModal = async () => {
+    if (likesCount === 0) return;
+    setLikesModalOpen(true);
+    setLoadingLikes(true);
+    
+    try {
+      const userIds = Object.keys(likesData);
+      const usersData = await Promise.all(
+        userIds.map(async (uid) => {
+          const profileRef = ref(rtdb, `profiles/${uid}`);
+          const snapshot = await get(profileRef);
+          const profile = snapshot.val() || {};
+          return {
+            uid,
+            nickname: profile.nickname || 'Usuário',
+            photoURL: profile.photoURL || null
+          };
+        })
+      );
+      setLikesUsers(usersData);
+    } catch (error) {
+      console.error("Erro ao carregar usuários:", error);
+    } finally {
+      setLoadingLikes(false);
+    }
+  };
+
+  const getLikesTooltipText = () => {
+    const userIds = Object.keys(likesData);
+    if (userIds.length === 0) return '';
+    if (userIds.length <= 3) {
+      return likesUsers.map(u => u.nickname).join(', ');
+    }
+    return `${likesUsers.slice(0, 3).map(u => u.nickname).join(', ')} e mais ${userIds.length - 3}`;
+  };
+
+  // Carregar nicknames para tooltip quando houver curtidas
+  useEffect(() => {
+    const loadNicknamesForTooltip = async () => {
+      const userIds = Object.keys(likesData);
+      if (userIds.length === 0) {
+        setLikesUsers([]);
+        return;
+      }
+      
+      try {
+        const usersData = await Promise.all(
+          userIds.slice(0, 3).map(async (uid) => {
+            const profileRef = ref(rtdb, `profiles/${uid}`);
+            const snapshot = await get(profileRef);
+            const profile = snapshot.val() || {};
+            return {
+              uid,
+              nickname: profile.nickname || 'Usuário',
+              photoURL: profile.photoURL || null
+            };
+          })
+        );
+        setLikesUsers(usersData);
+      } catch (error) {
+        console.error("Erro ao carregar nomes:", error);
+      }
+    };
+
+    loadNicknamesForTooltip();
+  }, [likesData]);
+
   return (
     <>
       <Card sx={{ mb: 3 }}>
@@ -167,13 +238,25 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
 
         <Divider />
         <CardActions sx={{ justifyContent: 'flex-start', p: 1 }}>
-          <Button 
-            startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />}
-            onClick={handleLike}
-            color={hasLiked ? 'primary' : 'inherit'}
-          >
-            {likesCount > 0 ? likesCount : 'Curtir'}
-          </Button>
+          <Tooltip title={likesCount > 0 ? getLikesTooltipText() : ''} arrow>
+            <Box sx={{ display: 'inline-flex' }}>
+              <Button 
+                startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />}
+                onClick={handleLike}
+                color={hasLiked ? 'primary' : 'inherit'}
+              >
+                {likesCount > 0 ? (
+                  <Box 
+                    component="span" 
+                    onClick={(e) => { e.stopPropagation(); handleOpenLikesModal(); }}
+                    sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                  >
+                    {likesCount}
+                  </Box>
+                ) : 'Curtir'}
+              </Button>
+            </Box>
+          </Tooltip>
 
           <Button
             startIcon={<ChatBubbleOutlineIcon />}
@@ -191,6 +274,37 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
         open={commentModalOpen}
         onClose={() => setCommentModalOpen(false)}
       />
+
+      {/* Modal de curtidas */}
+      <Dialog 
+        open={likesModalOpen} 
+        onClose={() => setLikesModalOpen(false)} 
+        fullWidth 
+        maxWidth="sm"
+      >
+        <DialogTitle>Curtidas ({likesCount})</DialogTitle>
+        <DialogContent dividers>
+          {loadingLikes ? (
+            <Typography align="center" sx={{ py: 2 }}>Carregando...</Typography>
+          ) : (
+            <List>
+              {likesUsers.map((user) => (
+                <ListItem key={user.uid}>
+                  <ListItemAvatar>
+                    <Avatar src={user.photoURL} alt={user.nickname}>
+                      {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText primary={user.nickname} />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLikesModalOpen(false)}>Fechar</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Substituído pelo diálogo de confirmação reutilizável */}
       <ConfirmDialog
