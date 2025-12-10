@@ -46,6 +46,7 @@ function HomePage() {
     const [userCount, setUserCount] = useState(0);
     const [allUsers, setAllUsers] = useState([]); // Lista de objetos de usuários
     const [openUserListDialog, setOpenUserListDialog] = useState(false); // Controle do modal da lista
+    const [userSearchFilter, setUserSearchFilter] = useState(''); // Filtro de busca
 
     const [refreshFeed, setRefreshFeed] = useState(0);
     const profilePicInputRef = useRef(null);
@@ -299,24 +300,38 @@ function HomePage() {
             
             <Drawer variant="temporary" open={mobileOpen} onClose={handleDrawerToggle} anchor="right" ModalProps={{ keepMounted: true }} sx={{ '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 } }}>{drawer}</Drawer>
 
-            <Dialog open={openUserListDialog} onClose={() => setOpenUserListDialog(false)} fullWidth maxWidth="sm">
+            <Dialog open={openUserListDialog} onClose={() => { setOpenUserListDialog(false); setUserSearchFilter(''); }} fullWidth maxWidth="sm">
                 <DialogTitle>Membros da Bolha ({userCount})</DialogTitle>
                 <DialogContent dividers>
+                    <TextField
+                        fullWidth
+                        variant="outlined"
+                        placeholder="Buscar membro..."
+                        value={userSearchFilter}
+                        onChange={(e) => setUserSearchFilter(e.target.value)}
+                        sx={{ mb: 2 }}
+                        autoFocus
+                    />
                     <List>
-                        {allUsers.map((user) => (
-                            <ListItem key={user.uid}>
-                                <ListItemAvatar>
-                                    <Avatar src={user.photoURL} alt={user.nickname}>
-                                        {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
-                                    </Avatar>
-                                </ListItemAvatar>
-                                <ListItemText primary={user.nickname} />
-                            </ListItem>
-                        ))}
+                        {allUsers
+                            .filter(user => 
+                                user.nickname && 
+                                user.nickname.toLowerCase().includes(userSearchFilter.toLowerCase())
+                            )
+                            .map((user) => (
+                                <ListItem key={user.uid}>
+                                    <ListItemAvatar>
+                                        <Avatar src={user.photoURL} alt={user.nickname}>
+                                            {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
+                                        </Avatar>
+                                    </ListItemAvatar>
+                                    <ListItemText primary={user.nickname} />
+                                </ListItem>
+                            ))}
                     </List>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenUserListDialog(false)}>Fechar</Button>
+                    <Button onClick={() => { setOpenUserListDialog(false); setUserSearchFilter(''); }}>Fechar</Button>
                 </DialogActions>
             </Dialog>
 
