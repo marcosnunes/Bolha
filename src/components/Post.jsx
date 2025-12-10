@@ -249,7 +249,14 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
                   <Box 
                     component="span" 
                     onClick={(e) => { e.stopPropagation(); handleOpenLikesModal(); }}
-                    sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                    sx={{ 
+                      cursor: 'pointer', 
+                      '&:hover': { textDecoration: 'underline' },
+                      px: 1.5,
+                      py: 0.5,
+                      ml: -1.5,
+                      borderRadius: 1
+                    }}
                   >
                     {likesCount}
                   </Box>
