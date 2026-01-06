@@ -143,10 +143,7 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
     <>
       <Box sx={{ display: 'flex', gap: 2, pb: 2, borderBottom: '1px solid #e0e0e0' }}>
         <Box sx={{ position: 'relative', display: 'inline-block' }}>
-          <Avatar
-            src={authorPhotoURL}
-            sx={{ width: 40, height: 40 }}
-          >
+          <Avatar src={authorPhotoURL}>
             {!authorPhotoURL && authorNickname?.charAt(0).toUpperCase()}
           </Avatar>
           <VerificationBadge isVerified={isVerified} size="small" />
