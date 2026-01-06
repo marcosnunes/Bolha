@@ -109,9 +109,29 @@ exports.sendVerificationEmail = onRequest({ region: "us-central1" }, async (req,
     const idToken = authHeader.split("Bearer ")[1];
 
     try {
-      // Debug: Log variáveis de ambiente
-      logger.info(`EMAIL_USER: ${EMAIL_USER ? 'configurado' : 'NÃO configurado'}`);
-      logger.info(`EMAIL_PASSWORD: ${EMAIL_PASSWORD ? 'configurado' : 'NÃO configurado'}`);
+      // Debug detalhado: Log variáveis de ambiente
+      logger.info(`=== DEBUG EMAIL CONFIG ===`);
+      logger.info(`EMAIL_USER: "${EMAIL_USER}"`);
+      logger.info(`EMAIL_USER length: ${EMAIL_USER ? EMAIL_USER.length : 0}`);
+      logger.info(`EMAIL_PASSWORD: "${EMAIL_PASSWORD ? EMAIL_PASSWORD.substring(0, 4) + '...' : 'NÃO CONFIGURADO'}"`);
+      logger.info(`EMAIL_PASSWORD length: ${EMAIL_PASSWORD ? EMAIL_PASSWORD.length : 0}`);
+      
+      // Verificar se estão vazios ou undefined
+      if (!EMAIL_USER) {
+        logger.error('❌ EMAIL_USER não está configurado!');
+        return res.status(500).json({
+          error: "Configuração de email não encontrada. EMAIL_USER não definido."
+        });
+      }
+      
+      if (!EMAIL_PASSWORD) {
+        logger.error('❌ EMAIL_PASSWORD não está configurado!');
+        return res.status(500).json({
+          error: "Configuração de email não encontrada. EMAIL_PASSWORD não definido."
+        });
+      }
+      
+      logger.info(`✅ Credenciais carregadas com sucesso`);
       
       // Verificar token
       const decodedToken = await admin.auth().verifyIdToken(idToken);
@@ -155,7 +175,7 @@ exports.sendVerificationEmail = onRequest({ region: "us-central1" }, async (req,
 
       // Enviar email
       const mailOptions = {
-        from: process.env.EMAIL_USER,
+        from: EMAIL_USER,  // Use a variável carregada, não process.env.EMAIL_USER
         to: email,
         subject: "Verifique sua conta no Bolha",
         html: `
@@ -169,15 +189,16 @@ exports.sendVerificationEmail = onRequest({ region: "us-central1" }, async (req,
         `,
       };
 
+      logger.info(`Tentando enviar email de ${mailOptions.from} para ${email}`);
       await transporter.sendMail(mailOptions);
-      logger.info(`Email de verificação enviado para o UID: ${uid}`);
+      logger.info(`✅ Email de verificação enviado para o UID: ${uid}`);
 
       return res.status(200).json({
         success: true,
         message: "Email de verificação enviado com sucesso"
       });
     } catch (error) {
-      logger.error("Erro ao enviar email de verificação:", error);
+      logger.error("❌ Erro ao enviar email de verificação:", error);
       
       if (error.code === "auth/argument-error") {
         return res.status(401).json({ error: "Token inválido" });
