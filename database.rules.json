@@ -48,11 +48,7 @@
     },
     "verificationTokens": {
       ".read": false,
-      ".write": false,
-      "$uid": {
-        ".read": false,
-        ".write": false
-      }
+      ".write": false
     }
   }
 }
