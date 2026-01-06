@@ -62,18 +62,6 @@ export function AuthProvider({ children }) {
     return remove(hiddenUserRef);
   };
 
-  const sendVerificationEmail = async () => {
-    const sendVerificationEmailFunc = httpsCallable(functions, 'sendVerificationEmail');
-    try {
-      const result = await sendVerificationEmailFunc();
-      console.log('Email de verificação enviado:', result);
-      return result;
-    } catch (error) {
-      console.error('Erro ao enviar email de verificação:', error);
-      throw error;
-    }
-  };
-
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, user => {
       setCurrentUser(user);
@@ -119,7 +107,6 @@ export function AuthProvider({ children }) {
     login,
     logout,
     deleteAccount,
-    sendVerificationEmail,
   };
 
   return (

@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '/src/firebase/config.js';
+import { getAuth } from 'firebase/auth';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
   Alert, CircularProgress, Typography, Box
@@ -23,8 +22,35 @@ function VerificationDialog({ open, onClose, hasPhoto, userEmail, onSuccess }) {
     setError('');
 
     try {
-      const sendVerificationEmail = httpsCallable(functions, 'sendVerificationEmail');
-      const result = await sendVerificationEmail();
+      const auth = getAuth();
+      const user = auth.currentUser;
+      
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      // Obter token de ID
+      const idToken = await user.getIdToken();
+
+      // Chamar a Cloud Function via HTTP fetch
+      const response = await fetch(
+        'https://us-central1-bolha-app-social-media.cloudfunctions.net/sendVerificationEmail',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({})
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao enviar email de verificação');
+      }
+
+      const result = await response.json();
       console.log('Email de verificação enviado:', result);
       setSent(true);
       if (onSuccess) onSuccess();

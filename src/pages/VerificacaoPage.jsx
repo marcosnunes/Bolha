@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '/src/firebase/config.js';
 import {
   Container, Box, Typography, CircularProgress, Alert, Button
 } from '@mui/material';
@@ -18,8 +16,23 @@ function VerificacaoPage() {
   useEffect(() => {
     const verifyEmail = async () => {
       try {
-        const verifyEmailToken = httpsCallable(functions, 'verifyEmailToken');
-        const result = await verifyEmailToken({ uid, token });
+        // Chamar a Cloud Function via HTTP fetch
+        const response = await fetch(
+          `https://us-central1-bolha-app-social-media.cloudfunctions.net/verifyEmailToken?uid=${uid}&token=${token}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Erro ao verificar email');
+        }
+
+        const result = await response.json();
         console.log('Email verificado com sucesso:', result);
         setSuccess(true);
         setLoading(false);
