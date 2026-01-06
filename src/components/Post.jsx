@@ -320,7 +320,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
                       <Avatar src={user.photoURL} alt={user.nickname}>
                         {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
                       </Avatar>
-                      <VerificationBadge isVerified={user.isVerified} avatarSize={40} customSx={{ top: '-5px', right: '-5px' }} />
+                      <VerificationBadge isVerified={user.isVerified} avatarSize={40} />
                     </Box>
                   </ListItemAvatar>
                   <ListItemText primary={user.nickname} />

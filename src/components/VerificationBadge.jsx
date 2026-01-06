@@ -18,6 +18,7 @@ function VerificationBadge({ isVerified, avatarSize = 48, customSx = {} }) {
   );
 
   // Se customSx define posição, não usar os padrões de offset
+  // Senão, usa o offset calculado
   const sx = hasCustomPosition
     ? {
         position: 'absolute',
