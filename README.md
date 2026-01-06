@@ -246,55 +246,56 @@ bolha/
 
 ```javascript
 {
-  "posts": {
-    "{postId}": {
-      "authorId": "uid",
-      "authorNickname": "string",
-      "authorPhotoURL": "url",
-      "textContent": "string",
-      "mediaURL": "url | null",
-      "mediaType": "image | video | null",
-      "isNSFW": "boolean",
-      "createdAt": "timestamp",
-      "likes": {
-        "{uid}": true
-      },
-      "dislikes": {
-        "{uid}": true
-      },
-      "comments": {
-        "{commentId}": {
-          "authorId": "uid",
-          "authorNickname": "string",
-          "authorPhotoURL": "url",
-          "textContent": "string",
-          "createdAt": "timestamp",
-          "likes": {
-            "{uid}": true
+  "rules": {
+    "posts": {
+      ".read": "auth != null",
+      ".indexOn": ["createdAt"], 
+      "$postId": {
+        ".write": "auth != null && ( (!data.exists() && newData.child('authorId').val() === auth.uid) || (data.exists() && data.child('authorId').val() === auth.uid) )",
+        ".validate": "newData.hasChildren(['authorId', 'authorNickname', 'createdAt']) && (!data.exists() || newData.child('authorId').val() === data.child('authorId').val())",
+        "likes": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        },
+        "dislikes": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        },
+        "comments": {
+          ".read": "auth != null",
+          "$commentId": {
+            ".write": "auth != null && ( (!data.exists() && newData.child('authorId').val() === auth.uid) || (data.exists() && data.child('authorId').val() === auth.uid) )",
+            ".validate": "newData.hasChildren(['authorId', 'authorNickname', 'textContent', 'createdAt'])",
+            "likes": {
+              "$uid": {
+                ".write": "auth != null && auth.uid === $uid"
+              }
+            }
           }
         }
       }
-    }
-  },
-  "profiles": {
-    "{uid}": {
-      "nickname": "string",
-      "photoURL": "url | null"
-    }
-  },
-  "users": {
-    "{uid}": {
-      "hiddenUsers": {
-        "{targetUid}": true
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
       }
-    }
-  },
-  "invites": {
-    "{token}": {
-      "invitedBy": "uid",
-      "status": "pending | completed",
-      "usedBy": "uid | null",
-      "usedAt": "timestamp | null"
+    },
+    "profiles": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "invites": {
+      ".read": "true",
+      ".write": "auth != null"
+    },
+    "verificationTokens": {
+      ".read": false,
+      ".write": false
     }
   }
 }
