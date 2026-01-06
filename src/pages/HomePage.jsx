@@ -325,9 +325,12 @@ function HomePage() {
                             .map((user) => (
                                 <ListItem key={user.uid}>
                                     <ListItemAvatar>
-                                        <Avatar src={user.photoURL} alt={user.nickname}>
-                                            {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
-                                        </Avatar>
+                                        <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                                            <Avatar src={user.photoURL} alt={user.nickname}>
+                                                {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
+                                            </Avatar>
+                                            <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} />
+                                        </Box>
                                     </ListItemAvatar>
                                     <ListItemText primary={user.nickname} />
                                 </ListItem>
