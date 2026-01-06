@@ -239,7 +239,7 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
                       <Avatar src={user.photoURL} alt={user.nickname}>
                         {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
                       </Avatar>
-                      {user.isVerified && <VerificationBadge isVerified={true} avatarSize={40} customSx={{ bottom: '45px', right: '0px' }} />}
+                      <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} customSx={{ bottom: '45px', right: '0px' }} />
                     </Box>
                   </ListItemAvatar>
                   <ListItemText primary={user.nickname} />
