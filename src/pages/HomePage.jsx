@@ -253,7 +253,7 @@ function HomePage() {
                                             {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
                                         </Avatar>
                                     </IconButton>
-                                    <VerificationBadge isVerified={userProfile?.isVerified || false} size="medium" />
+                                    <VerificationBadge isVerified={userProfile?.isVerified || false} size="small" />
                                 </Box>
                             </Tooltip>
                             <ListItemText
