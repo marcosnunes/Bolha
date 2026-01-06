@@ -12,9 +12,22 @@ function VerificationBadge({ isVerified, avatarSize = 48, customSx = {} }) {
   // Usa valores positivos pequenos para ficar dentro da borda
   const offset = -Math.floor(iconSize / 3);
 
-  return (
-    <Box
-      sx={{
+  // Verifica se customSx define propriedades de posição (top/bottom/left/right)
+  const hasCustomPosition = Object.keys(customSx).some(key => 
+    ['top', 'bottom', 'left', 'right'].includes(key)
+  );
+
+  // Se customSx define posição, não usar os padrões de offset
+  const sx = hasCustomPosition
+    ? {
+        position: 'absolute',
+        zIndex: 10,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...customSx,
+      }
+    : {
         position: 'absolute',
         right: offset,
         bottom: offset,
@@ -23,8 +36,10 @@ function VerificationBadge({ isVerified, avatarSize = 48, customSx = {} }) {
         alignItems: 'center',
         justifyContent: 'center',
         ...customSx,
-      }}
-    >
+      };
+
+  return (
+    <Box sx={sx}>
       <VerifiedIcon
         sx={{
           fontSize: iconSize,
