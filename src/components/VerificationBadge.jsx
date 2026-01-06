@@ -22,6 +22,7 @@ function VerificationBadge({ isVerified, avatarSize = 48, customSx = {} }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        // customSx vem por último para permitir sobrescrita de qualquer propriedade
         ...customSx,
       }}
     >
