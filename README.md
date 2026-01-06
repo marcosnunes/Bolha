@@ -143,6 +143,7 @@ cd ..
 Crie um arquivo `.env.local` na raiz do projeto:
 
 ```env
+# Firebase Configuration
 VITE_API_KEY=sua_firebase_api_key
 VITE_AUTH_DOMAIN=seu_projeto.firebaseapp.com
 VITE_PROJECT_ID=seu_projeto_id
@@ -150,34 +151,53 @@ VITE_STORAGE_BUCKET=seu_projeto.appspot.com
 VITE_MESSAGING_SENDER_ID=seu_sender_id
 VITE_APP_ID=seu_app_id
 
+# Cloudinary (unsigned uploads)
 VITE_CLOUDINARY_CLOUD_NAME=seu_cloudinary_cloud_name
-VITE_CLOUDINARY_UPLOAD_PRESET=seu_upload_preset
+VITE_CLOUDINARY_UPLOAD_PRESET=seu_upload_preset_unsigned
 ```
 
-> **Dica**: Se estiver usando Vercel, use `vercel env pull .env.local` para baixar as variáveis automaticamente.
+**Para Cloud Functions** (`functions/.env`):
+```env
+EMAIL_USER=seu_email@gmail.com
+EMAIL_PASSWORD=sua_app_password
+```
+
+> **Dica Vercel**: Use `vercel env pull .env.local` para sincronizar variáveis automaticamente.
 
 5. **Configure o Firebase Realtime Database**
 
-Aplique as regras de segurança do banco de dados:
+Aplique as regras de segurança:
 
 ```powershell
 firebase deploy --only database
 ```
 
-6. **Deploy das Cloud Functions**
+6. **Deploy das Cloud Functions** (opcional em desenvolvimento)
 
 ```powershell
 cd functions
-npm run deploy
+firebase deploy --only functions
 ```
 
 ### Desenvolvimento Local
 
+**Com emuladores do Firebase** (recomendado):
+```powershell
+firebase emulators:start
+```
+Em outro terminal:
 ```powershell
 npm run dev
 ```
 
-Acesse: http://localhost:5173
+Acesse:
+- Frontend: http://localhost:5173
+- Firebase Emulator UI: http://localhost:4000
+
+**Sem emuladores** (conecta a Firebase produção):
+```powershell
+npm run dev
+```
 
 ### Build de Produção
 
@@ -185,7 +205,10 @@ Acesse: http://localhost:5173
 npm run build
 ```
 
-Os arquivos otimizados estarão em `dist/` (console.logs removidos automaticamente).
+Os arquivos otimizados estarão em `dist/`:
+- ✅ Minificado com Terser
+- ✅ Console.logs removidos automaticamente
+- ✅ Ready para Vercel ou Firebase Hosting
 
 ---
 
@@ -213,31 +236,39 @@ bolha/
 │   │   ├── HiddenUsersManager.jsx # Gerenciador de usuários ocultos
 │   │   ├── Post.jsx               # Card de post individual
 │   │   ├── ProfileModal.jsx       # Modal de perfil de usuário
-│   │   └── ProtectedRoute.jsx     # Guard de autenticação
+│   │   ├── ProtectedRoute.jsx     # Guard de autenticação
+│   │   ├── UploadNotifications.jsx# Notificações de upload em tempo real
+│   │   └── VerificationBadge.jsx  # Badge de verificação de usuário
 │   ├── contexts/
-│   │   └── AuthContext.jsx        # Context global de autenticação
+│   │   ├── AuthContext.jsx        # Context global de autenticação + usuários ocultos
+│   │   └── UploadContext.jsx      # Context de rastreamento de uploads
 │   ├── firebase/
 │   │   └── config.js              # Configuração e exports do Firebase
 │   ├── hooks/
-│   │   └── useToxicityModel.jsx   # Hook para modelo TensorFlow.js
+│   │   ├── useToxicityModel.jsx   # Hook para modelo TensorFlow.js toxicity
+│   │   └── useVideoCompressor.jsx # Hook para compressão de vídeos via FFmpeg.wasm
 │   ├── pages/
-│   │   ├── CadastroPage.jsx       # Página de registro
-│   │   ├── ConvitePage.jsx        # Validação de token de convite
-│   │   ├── HomePage.jsx           # Página principal com feed
+│   │   ├── CadastroPage.jsx       # Página de registro com validação de token
+│   │   ├── ConvitePage.jsx        # Criação de conta via link de convite
+│   │   ├── HomePage.jsx           # Página principal com feed + geração de convites
 │   │   ├── LoginPage.jsx          # Página de login
-│   │   ├── PagamentoPage.jsx      # Página de pagamento (futura)
+│   │   ├── PagamentoPage.jsx      # Página de pagamento (Stripe integration)
 │   │   ├── PrivacyPolicyPage.jsx  # Política de privacidade
-│   │   ├── ReportAbusePage.jsx    # Página de denúncia de abuso
-│   │   └── SettingsPage.jsx       # Configurações e conta
-│   ├── index.css                  # Estilos globais
-│   └── main.jsx                   # Entry point + React Router
+│   │   ├── ReportAbusePage.jsx    # Página de denúncia de abuso de conteúdo
+│   │   ├── SettingsPage.jsx       # Configurações, perfil, usuários ocultos, exclusão de conta
+│   │   └── VerificacaoPage.jsx    # Página de verificação de email/2FA (opcional)
+│   ├── index.css                  # Estilos globais com Tailwind via MUI
+│   └── main.jsx                   # Entry point + React Router 7 setup
 ├── .env.local                     # Variáveis de ambiente (não versionado)
-├── database.rules.json            # Regras de segurança do RTDB
-├── firebase.json                  # Configuração do Firebase
-├── index.html                     # HTML base
-├── package.json                   # Dependências e scripts
-├── vercel.json                    # Configuração de deploy Vercel
-└── vite.config.js                 # Configuração do Vite
+├── .eslintrc.json                 # Configuração do ESLint com React Hooks
+├── backup-rules.json              # Backup das regras de RTDB
+├── database.rules.json            # Regras de segurança do RTDB (JSON)
+├── firebase.json                  # Configuração do Firebase Emulator e deploy
+├── firestore.rules                # Regras do Firestore (não usado atualmente)
+├── index.html                     # HTML base com script do TensorFlow.js
+├── package.json                   # Dependências e scripts do frontend
+├── vercel.json                    # Configuração de deploy Vercel (SPA routing)
+└── vite.config.js                 # Configuração do Vite (minificação + Terser)
 ```
 
 ---
@@ -338,27 +369,26 @@ firebase deploy --only database
 
 ## 🎯 Padrões e Convenções
 
-### Real-time Sync Pattern
+### Real-time Subscriptions com `onValue()`
 
-O projeto usa um padrão consistente para sincronização em tempo real:
+O projeto usa `onValue()` para manter listeners ativos e sincronizados:
 
-1. **Carregamento inicial**: `get()` com query apropriada
-2. **Novos items**: `onChildAdded` com `startAt(mountTime + 1)`
-3. **Updates**: `onChildChanged`
-4. **Deletions**: `onChildRemoved`
-
-**Exemplo** (`Feed.jsx`):
 ```javascript
-// Busca inicial
-const snapshot = await get(query(postsRef, orderByChild('createdAt'), limitToLast(5)));
+import { ref, onValue } from 'firebase/database';
 
-// Listener para novos posts
-const mountTimeRef = useRef(Date.now());
-onChildAdded(
-  query(postsRef, orderByChild('createdAt'), startAt(mountTimeRef.current + 1)),
-  (snapshot) => { /* adiciona ao estado */ }
-);
+useEffect(() => {
+  const profileRef = ref(rtdb, `profiles/${userId}`);
+  const unsubscribe = onValue(profileRef, (snapshot) => {
+    if (snapshot.exists()) {
+      setProfile(snapshot.val());
+    }
+  });
+  
+  return unsubscribe; // Cleanup essencial
+}, [userId]);
 ```
+
+**Importante**: Sempre fazer unsubscribe no cleanup para evitar memory leaks.
 
 ### Server Timestamps
 
@@ -367,24 +397,34 @@ onChildAdded(
 ```javascript
 import { serverTimestamp } from 'firebase/database';
 
-await update(ref(rtdb, `posts/${postId}`), {
+await set(ref(rtdb, `posts/${postId}`), {
   textContent: "...",
-  createdAt: serverTimestamp()
+  createdAt: serverTimestamp(),
+  authorId: userId
 });
 ```
 
-Isso evita problemas de clock skew em paginação.
+Isso garante sincronização consistente entre clientes e evita problemas de clock skew.
 
-### Atomic Updates
+### Atomic Multi-Path Updates
 
-Prefira `update()` em vez de `set()` para atualizações atômicas:
+Para atualizar dados relacionados atomicamente:
 
 ```javascript
 const updates = {};
-updates[`/posts/${postId}/authorPhotoURL`] = newPhotoURL;
 updates[`/profiles/${uid}/photoURL`] = newPhotoURL;
+updates[`/posts/${postId}/authorPhotoURL`] = newPhotoURL;
 await update(ref(rtdb), updates);
 ```
+
+Essencial para manter sincronização entre posts e perfis.
+
+### Context & Hooks
+
+- **`useAuth()`**: Acesso a `currentUser`, `userProfile`, `hiddenUsers`
+- **`useUpload()`**: Rastreamento de uploads com `uploads[]` array
+- **`useToxicityModel()`**: Carregamento lazy do modelo TensorFlow.js
+- **`useVideoCompressor()`**: Compressão de vídeos via FFmpeg.wasm
 
 ---
 
@@ -392,20 +432,24 @@ await update(ref(rtdb), updates);
 
 ```powershell
 # Desenvolvimento
-npm run dev              # Inicia servidor de desenvolvimento (porta 5173)
+npm run dev              # Inicia Vite dev server (porta 5173)
 
 # Build
-npm run build           # Build de produção (minificado, sem console.logs)
-npm run preview         # Preview do build de produção
+npm run build           # Build otimizado para produção
+npm run preview         # Preview do build localmente (porta 4173)
 
 # Qualidade de Código
-npm run lint            # Executa ESLint
+npm run lint            # ESLint com flat config
 
-# Firebase Functions
+# Firebase
+firebase emulators:start             # Inicia emuladores locais (Auth, RTDB, Functions)
+firebase deploy --only database      # Deploy das regras RTDB
+firebase deploy --only functions     # Deploy das Cloud Functions
+
+# Cloud Functions (em functions/)
 cd functions
-npm run deploy          # Deploy das Cloud Functions
-npm run logs            # Stream de logs das functions
-npm run serve           # Emulador local de functions
+npm run deploy                       # Deploy via Firebase CLI
+npm run logs                         # Stream de logs em tempo real
 ```
 
 ---
@@ -447,10 +491,13 @@ Este projeto é privado e de propriedade de Marcos Nunes.
 
 ## 🤖 Para AI Coding Agents
 
-Este projeto possui documentação detalhada para agentes de IA em `.github/copilot-instructions.md`, incluindo:
-- Arquitetura completa e fluxos de dados
-- Padrões específicos do projeto
-- Workflows de desenvolvimento
-- Convenções e melhores práticas
+Este projeto possui documentação detalhada em `.github/copilot-instructions.md`, incluindo:
+- ✅ Arquitetura completa e fluxos de dados
+- ✅ Padrões específicos do projeto
+- ✅ Workflows de desenvolvimento
+- ✅ Convenções de state management
+- ✅ Integração Firebase RTDB
+- ✅ Pipeline de moderação de conteúdo
+- ✅ Estratégia de upload e compressão de mídia
 
-Consulte este arquivo para entender os padrões de código, arquitetura de tempo real e decisões de design do projeto.
+Use esta documentação para context rápido ao implementar features ou debugar issues.
