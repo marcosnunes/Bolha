@@ -146,7 +146,7 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
           <Avatar src={authorPhotoURL}>
             {!authorPhotoURL && authorNickname?.charAt(0).toUpperCase()}
           </Avatar>
-          <VerificationBadge isVerified={isVerified} avatarSize={48} offsetModifier={0.4} />
+          <VerificationBadge isVerified={isVerified} avatarSize={48} />
         </Box>
 
         <Box sx={{ flex: 1 }}>
@@ -236,7 +236,7 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
                       <Avatar src={user.photoURL} alt={user.nickname}>
                         {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
                       </Avatar>
-                      <VerificationBadge isVerified={user.isVerified} avatarSize={40} />
+                      <VerificationBadge isVerified={user.isVerified} avatarSize={40} customSx={{ bottom: 45 }} />
                     </Box>
                   </ListItemAvatar>
                   <ListItemText primary={user.nickname} />
