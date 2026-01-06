@@ -24,6 +24,7 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   const [likesUsers, setLikesUsers] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [profilePhotoURL, setProfilePhotoURL] = useState(authorPhotoURL || null);
 
   useEffect(() => {
     const likesRef = ref(rtdb, `posts/${postId}/comments/${commentId}/likes`);
@@ -40,6 +41,8 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
     const unsubscribe = onValue(profileRef, (snapshot) => {
       const profile = snapshot.val() || {};
       setIsVerified(profile.isVerified || false);
+      // Também atualiza a foto de perfil em tempo real
+      setProfilePhotoURL(profile.photoURL || null);
     });
     return () => unsubscribe();
   }, [authorId]);
@@ -143,8 +146,8 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
     <>
       <Box sx={{ display: 'flex', gap: 2, pb: 2, borderBottom: '1px solid #e0e0e0' }}>
         <Box sx={{ position: 'relative', display: 'inline-block' }}>
-          <Avatar src={authorPhotoURL}>
-            {!authorPhotoURL && authorNickname?.charAt(0).toUpperCase()}
+          <Avatar src={profilePhotoURL}>
+            {!profilePhotoURL && authorNickname?.charAt(0).toUpperCase()}
           </Avatar>
           <VerificationBadge isVerified={isVerified} avatarSize={48} customSx={{ bottom: '45px', right: '0px' }} />
         </Box>
