@@ -8,9 +8,9 @@ function VerificationBadge({ isVerified, avatarSize = 48 }) {
   // Proporção: ícone = avatar * 0.35 a 0.4
   const iconSize = Math.max(16, Math.floor(avatarSize * 0.35));
   
-  // Calcula o offset do badge para ficar no canto inferior direito
-  // Offset = -(iconSize / 2 + 2px padding)
-  const offset = -(Math.floor(iconSize / 2) + 2);
+  // Posiciona o badge no canto inferior direito, DENTRO do avatar
+  // Usa valores positivos pequenos para ficar dentro da borda
+  const offset = -Math.floor(iconSize / 3);
 
   return (
     <Box
