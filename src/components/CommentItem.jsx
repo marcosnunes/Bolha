@@ -146,7 +146,7 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
           <Avatar src={authorPhotoURL}>
             {!authorPhotoURL && authorNickname?.charAt(0).toUpperCase()}
           </Avatar>
-          <VerificationBadge isVerified={isVerified} avatarSize={48} />
+          <VerificationBadge isVerified={isVerified} avatarSize={48} offsetModifier={0.4} />
         </Box>
 
         <Box sx={{ flex: 1 }}>
