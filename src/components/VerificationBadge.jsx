@@ -5,9 +5,9 @@ function VerificationBadge({ isVerified, size = 'small' }) {
   if (!isVerified) return null;
 
   const sizeMap = {
-    small: { iconSize: 20, right: 0, bottom: 0 },
-    medium: { iconSize: 28, right: 2, bottom: 2 },
-    large: { iconSize: 36, right: 4, bottom: 4 },
+    small: { iconSize: 18, right: -6, bottom: -6 },
+    medium: { iconSize: 24, right: -8, bottom: -8 },
+    large: { iconSize: 32, right: -10, bottom: -10 },
   };
 
   const config = sizeMap[size] || sizeMap.small;
@@ -22,17 +22,14 @@ function VerificationBadge({ isVerified, size = 'small' }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: 'white',
-        borderRadius: '50%',
-        width: config.iconSize + 4,
-        height: config.iconSize + 4,
-        padding: '2px',
       }}
     >
       <VerifiedIcon
         sx={{
           fontSize: config.iconSize,
           color: '#1976d2',
+          backgroundColor: 'white',
+          borderRadius: '50%',
         }}
       />
     </Box>
