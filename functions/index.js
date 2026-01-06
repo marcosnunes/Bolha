@@ -11,13 +11,14 @@ admin.initializeApp();
 // Middleware CORS
 const corsMiddleware = cors({ origin: true });
 
-// Configurar transporte de email (usando Gmail ou sua preferência)
-// Para usar em produção, configure as variáveis de ambiente
+// Carregar variáveis de .env.local localmente
+require('dotenv').config({ path: '.env.local' });
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER || "seu-email@gmail.com",
-    pass: process.env.EMAIL_PASSWORD || "sua-senha-app",
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
   },
 });
 
