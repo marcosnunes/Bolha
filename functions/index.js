@@ -1,4 +1,15 @@
 /* eslint-disable no-undef */
+
+// Carregar .env APENAS se as variáveis não estão configuradas
+// (para compatibilidade com desenvolvimento local)
+if (!process.env.EMAIL_USER) {
+  try {
+    require("dotenv").config({ path: __dirname + "/.env" });
+  } catch (e) {
+    // .env não existe em produção, é ok
+  }
+}
+
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
 const admin = require("firebase-admin");
@@ -11,18 +22,15 @@ admin.initializeApp();
 // Middleware CORS
 const corsMiddleware = cors({ origin: true });
 
-// Carregar variáveis de .env.local localmente (development)
-try {
-  require('dotenv').config({ path: '.env.local' });
-} catch (e) {
-  // Em produção, vai usar process.env diretamente
-}
-
 // Obter credenciais de email
-// Em desenvolvimento: .env.local
-// Em produção: Firebase CLI transforma email.user em email_user
-const EMAIL_USER = process.env.EMAIL_USER || process.env.email_user;
-const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD || process.env.email_password;
+// Prioridade:
+// 1. firebase functions:config:set (process.env.EMAIL_USER)
+// 2. .env arquivo (desenvolvimento local)
+const EMAIL_USER = process.env.EMAIL_USER;
+const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
+
+// Log da configuração
+logger.info(`✓ Email configurado: ${EMAIL_USER ? EMAIL_USER.substring(0, EMAIL_USER.indexOf("@")) + "@..." : "NÃO ENCONTRADO"}`);
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
