@@ -61,7 +61,7 @@ function SettingsPage() {
             Verificação de Conta
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Verifique sua conta para receber um distintivo azul no seu avatar em todo o app.
+            Verifique sua conta para receber um distintivo azul no seu avatar.
           </Typography>
           <Button 
             variant="contained" 
