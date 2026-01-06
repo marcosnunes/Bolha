@@ -232,11 +232,11 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
               {likesUsers.map((user) => (
                 <ListItem key={user.uid}>
                   <ListItemAvatar>
-                    <Box sx={{ position: 'absolute', display: 'flex' }}>
+                    <Box sx={{ position: 'relative', display: 'inline-block' }}>
                       <Avatar src={user.photoURL} alt={user.nickname}>
                         {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
                       </Avatar>
-                      <VerificationBadge isVerified={user.isVerified} avatarSize={40} customSx={{ bottom: '65px', right: '0px' }} />
+                      <VerificationBadge isVerified={user.isVerified} avatarSize={40} customSx={{ top: '-5px', right: '-5px' }} />
                     </Box>
                   </ListItemAvatar>
                   <ListItemText primary={user.nickname} />
