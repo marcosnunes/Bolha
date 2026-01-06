@@ -11,14 +11,22 @@ admin.initializeApp();
 // Middleware CORS
 const corsMiddleware = cors({ origin: true });
 
-// Carregar variáveis de .env.local localmente
-require('dotenv').config({ path: '.env.local' });
+// Carregar variáveis de .env.local localmente (development)
+try {
+  require('dotenv').config({ path: '.env.local' });
+} catch (e) {
+  // Em produção, vai usar process.env direto
+}
+
+// Usar variáveis de ambiente (suporta tanto .env.local quanto Firebase config)
+const EMAIL_USER = process.env.EMAIL_USER || process.env.email?.user;
+const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD || process.env.email?.password;
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
+    user: EMAIL_USER,
+    pass: EMAIL_PASSWORD,
   },
 });
 
@@ -88,6 +96,10 @@ exports.sendVerificationEmail = onRequest({ region: "us-central1" }, async (req,
     const idToken = authHeader.split("Bearer ")[1];
 
     try {
+      // Debug: Log variáveis de ambiente
+      logger.info(`EMAIL_USER: ${EMAIL_USER ? 'configurado' : 'NÃO configurado'}`);
+      logger.info(`EMAIL_PASSWORD: ${EMAIL_PASSWORD ? 'configurado' : 'NÃO configurado'}`);
+      
       // Verificar token
       const decodedToken = await admin.auth().verifyIdToken(idToken);
       const uid = decodedToken.uid;
