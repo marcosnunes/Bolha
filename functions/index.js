@@ -1,7 +1,6 @@
 /* eslint-disable no-undef */
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
-const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
@@ -16,24 +15,14 @@ const corsMiddleware = cors({ origin: true });
 try {
   require('dotenv').config({ path: '.env.local' });
 } catch (e) {
-  // Em produção, vai usar firebase functions:config:set
+  // Em produção, vai usar process.env diretamente
 }
 
-// Usar variáveis de ambiente (suporta tanto .env.local quanto Firebase config)
-// Estratégia: tentar .env.local primeiro, depois firebase config
-let EMAIL_USER = process.env.EMAIL_USER;
-let EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
-
-// Se não encontrar em .env.local, tenta firebase config
-if (!EMAIL_USER || !EMAIL_PASSWORD) {
-  try {
-    const config = functions.config();
-    EMAIL_USER = EMAIL_USER || config.email?.user;
-    EMAIL_PASSWORD = EMAIL_PASSWORD || config.email?.password;
-  } catch (e) {
-    logger.warn('Não foi possível carregar config do Firebase');
-  }
-}
+// Obter credenciais de email
+// Em desenvolvimento: .env.local
+// Em produção: Firebase CLI transforma email.user em email_user
+const EMAIL_USER = process.env.EMAIL_USER || process.env.email_user;
+const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD || process.env.email_password;
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -42,6 +31,7 @@ const transporter = nodemailer.createTransport({
     pass: EMAIL_PASSWORD,
   },
 });
+
 
 // A definição da função agora é mais direta
 exports.deleteUserAccount = onCall({ region: "us-central1" }, async (request) => {
