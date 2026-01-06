@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import ConfirmDialog from './ConfirmDialog'; // Importa nosso componente reutilizável
 import CommentModal from './CommentModal.jsx'; // Importa modal de comentários
+import VerificationBadge from './VerificationBadge.jsx'; // Importa badge de verificação
 
 // Componentes e Ícones do MUI
 import {
@@ -28,6 +29,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const [likesData, setLikesData] = useState(postData.likes || {});
   const [profilePhotoURL, setProfilePhotoURL] = useState(authorPhotoURL || null);
   const [displayNickname, setDisplayNickname] = useState(authorNickname || '');
+  const [isVerified, setIsVerified] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [commentModalOpen, setCommentModalOpen] = useState(false);
@@ -80,6 +82,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       const val = snapshot.val() || {};
       setProfilePhotoURL(val.photoURL || authorPhotoURL || null);
       setDisplayNickname(val.nickname || authorNickname || '');
+      setIsVerified(val.isVerified || false);
     });
 
     return () => unsubscribeProfile();
@@ -147,7 +150,8 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
           return {
             uid,
             nickname: profile.nickname || 'Usuário',
-            photoURL: profile.photoURL || null
+            photoURL: profile.photoURL || null,
+            isVerified: profile.isVerified || false
           };
         })
       );
@@ -203,7 +207,12 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     <>
       <Card sx={{ mb: 3 }}>
           <CardHeader
-          avatar={<Avatar src={profilePhotoURL}>{!profilePhotoURL && (displayNickname || authorNickname).charAt(0).toUpperCase()}</Avatar>}
+          avatar={
+            <Box sx={{ position: 'relative', display: 'inline-block' }}>
+              <Avatar src={profilePhotoURL}>{!profilePhotoURL && (displayNickname || authorNickname).charAt(0).toUpperCase()}</Avatar>
+              <VerificationBadge isVerified={isVerified} size="small" />
+            </Box>
+          }
           action={
             <>
               <Tooltip title="Ver opções"><IconButton onClick={handleMenuClick}><MoreVertIcon /></IconButton></Tooltip>
@@ -307,9 +316,12 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
               {likesUsers.map((user) => (
                 <ListItem key={user.uid}>
                   <ListItemAvatar>
-                    <Avatar src={user.photoURL} alt={user.nickname}>
-                      {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
-                    </Avatar>
+                    <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                      <Avatar src={user.photoURL} alt={user.nickname}>
+                        {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
+                      </Avatar>
+                      <VerificationBadge isVerified={user.isVerified} size="small" />
+                    </Box>
                   </ListItemAvatar>
                   <ListItemText primary={user.nickname} />
                 </ListItem>

@@ -45,6 +45,14 @@
     "invites": {
       ".read": "true",
       ".write": "auth != null"
+    },
+    "verificationTokens": {
+      ".read": false,
+      ".write": false,
+      "$uid": {
+        ".read": false,
+        ".write": false
+      }
     }
   }
 }

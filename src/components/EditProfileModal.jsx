@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 
 function EditProfileModal({ open, onClose, currentNickname, currentPhotoURL }) {
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const [nickname, setNickname] = useState(currentNickname || '');
   const [password, setPassword] = useState('');
   const [file, setFile] = useState(null);
@@ -194,12 +194,34 @@ function EditProfileModal({ open, onClose, currentNickname, currentPhotoURL }) {
           <Box sx={{ position: 'relative' }}>
             <Avatar 
               src={preview} 
-              sx={{ width: 100, height: 100, cursor: 'pointer', border: '2px solid #1976d2' }}
-              onClick={() => fileInputRef.current.click()}
+              sx={{ width: 100, height: 100, cursor: userProfile?.isVerified ? 'not-allowed' : 'pointer', border: '2px solid #1976d2', opacity: userProfile?.isVerified ? 0.6 : 1 }}
+              onClick={() => {
+                if (!userProfile?.isVerified) {
+                  fileInputRef.current.click();
+                }
+              }}
             />
           </Box>
-          <Button size="small" onClick={() => fileInputRef.current.click()}>Alterar Foto</Button>
-          <input type="file" hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*" />
+          <Button 
+            size="small" 
+            onClick={() => fileInputRef.current.click()}
+            disabled={userProfile?.isVerified}
+          >
+            {userProfile?.isVerified ? 'Conta Verificada - Foto Bloqueada' : 'Alterar Foto'}
+          </Button>
+          {userProfile?.isVerified && (
+            <Typography variant="caption" color="warning.main" sx={{ textAlign: 'center' }}>
+              Sua foto está protegida porque sua conta está verificada
+            </Typography>
+          )}
+          <input 
+            type="file" 
+            hidden 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            accept="image/*"
+            disabled={userProfile?.isVerified}
+          />
 
           <TextField
             label="Apelido"

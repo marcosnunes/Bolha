@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { CssBaseline } from '@mui/material';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import SettingsPage from './pages/SettingsPage.jsx';
+import VerificacaoPage from './pages/VerificacaoPage.jsx';
 
 import './index.css';
 
@@ -60,6 +61,10 @@ const router = createBrowserRouter([
   {
     path: '/denuncia',
     element: <ReportAbusePage />,
+  },
+  {
+    path: '/verificacao/:uid/:token',
+    element: <VerificacaoPage />,
   },
 ]);
 

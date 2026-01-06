@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, remove, set, onValue, get } from 'firebase/database';
+import VerificationBadge from './VerificationBadge.jsx'; // Importa badge de verificação
 
 import {
   Box, Avatar, Typography, Button, IconButton, Tooltip, Dialog,
@@ -22,6 +23,7 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   const [likesModalOpen, setLikesModalOpen] = useState(false);
   const [likesUsers, setLikesUsers] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
     const likesRef = ref(rtdb, `posts/${postId}/comments/${commentId}/likes`);
@@ -30,6 +32,17 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
     });
     return () => unsubscribeLikes();
   }, [postId, commentId]);
+
+  // Carregar dados de verificação do autor
+  useEffect(() => {
+    if (!authorId) return;
+    const profileRef = ref(rtdb, `profiles/${authorId}`);
+    const unsubscribe = onValue(profileRef, (snapshot) => {
+      const profile = snapshot.val() || {};
+      setIsVerified(profile.isVerified || false);
+    });
+    return () => unsubscribe();
+  }, [authorId]);
 
   const likesCount = Object.keys(likesData).length;
   const hasLiked = currentUser && likesData[currentUser.uid];
@@ -73,7 +86,8 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
           return {
             uid,
             nickname: profile.nickname || 'Usuário',
-            photoURL: profile.photoURL || null
+            photoURL: profile.photoURL || null,
+            isVerified: profile.isVerified || false
           };
         })
       );
@@ -128,12 +142,15 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   return (
     <>
       <Box sx={{ display: 'flex', gap: 2, pb: 2, borderBottom: '1px solid #e0e0e0' }}>
-        <Avatar
-          src={authorPhotoURL}
-          sx={{ width: 40, height: 40 }}
-        >
-          {!authorPhotoURL && authorNickname?.charAt(0).toUpperCase()}
-        </Avatar>
+        <Box sx={{ position: 'relative', display: 'inline-block' }}>
+          <Avatar
+            src={authorPhotoURL}
+            sx={{ width: 40, height: 40 }}
+          >
+            {!authorPhotoURL && authorNickname?.charAt(0).toUpperCase()}
+          </Avatar>
+          <VerificationBadge isVerified={isVerified} size="small" />
+        </Box>
 
         <Box sx={{ flex: 1 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
@@ -218,9 +235,12 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
               {likesUsers.map((user) => (
                 <ListItem key={user.uid}>
                   <ListItemAvatar>
-                    <Avatar src={user.photoURL} alt={user.nickname}>
-                      {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
-                    </Avatar>
+                    <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                      <Avatar src={user.photoURL} alt={user.nickname}>
+                        {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
+                      </Avatar>
+                      <VerificationBadge isVerified={user.isVerified} size="small" />
+                    </Box>
                   </ListItemAvatar>
                   <ListItemText primary={user.nickname} />
                 </ListItem>

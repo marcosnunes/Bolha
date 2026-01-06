@@ -6,20 +6,17 @@ import { useNavigate } from 'react-router-dom';
 import { AppBar, Toolbar, IconButton, Typography, Container, Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, CircularProgress } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
-// Nosso componente de gerenciamento
+// Nossos componentes
 import HiddenUsersManager from '../components/HiddenUsersManager.jsx';
+import VerificationDialog from '../components/VerificationDialog.jsx';
 
 function SettingsPage() {
-  const { hiddenUsers, showUser, deleteAccount } = useAuth();
+  const { hiddenUsers, showUser, deleteAccount, userProfile, currentUser } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const handleClickOpen = () => {
-    setError(''); // Limpa erros anteriores
-    setOpen(true);
-  };
+  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
 
   const handleClose = () => {
     setOpen(false);
@@ -61,12 +58,29 @@ function SettingsPage() {
         
         <Box sx={{ mt: 4, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
           <Typography variant="h6" gutterBottom>
+            Verificação de Conta
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Verifique sua conta para receber um distintivo azul no seu avatar em todo o app.
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={() => setVerificationDialogOpen(true)}
+            disabled={userProfile?.isVerified}
+          >
+            {userProfile?.isVerified ? 'Conta Verificada ✓' : 'Verificar Conta'}
+          </Button>
+        </Box>
+        
+        <Box sx={{ mt: 4, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+          <Typography variant="h6" gutterBottom>
             Gerenciamento da Conta
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             A exclusão da sua conta é uma ação permanente e irreversível. Todos os seus dados, incluindo perfil, postagens e interações, serão removidos e não poderão ser recuperados.
           </Typography>
-          <Button variant="contained" color="error" onClick={handleClickOpen} disabled={loading}>
+          <Button variant="contained" color="error" onClick={() => setOpen(true)} disabled={loading}>
             Apagar Minha Conta
           </Button>
         </Box>
@@ -91,6 +105,12 @@ function SettingsPage() {
           </DialogActions>
         </Dialog>
 
+        <VerificationDialog
+          open={verificationDialogOpen}
+          onClose={() => setVerificationDialogOpen(false)}
+          hasPhoto={!!userProfile?.photoURL}
+          userEmail={currentUser?.email || ''}
+        />
       </Container>
     </Box>
   );

@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
 import ConfirmDialog from './ConfirmDialog'; // Importe o novo componente
+import VerificationBadge from './VerificationBadge.jsx'; // Importe badge de verificação
 
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
@@ -60,12 +61,15 @@ function ProfileModal({ userToDisplay, onClose, onHideUser, onShowUser, onEditPr
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, p: 2 }}>
             {userProfile ? (
-              <Avatar 
-                src={userProfile.photoURL} 
-                sx={{ width: 100, height: 100, bgcolor: 'primary.main', fontSize: '2.5rem' }}
-              >
-                {!userProfile.photoURL && userProfile.nickname.charAt(0).toUpperCase()}
-              </Avatar>
+              <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                <Avatar 
+                  src={userProfile.photoURL} 
+                  sx={{ width: 100, height: 100, bgcolor: 'primary.main', fontSize: '2.5rem' }}
+                >
+                  {!userProfile.photoURL && userProfile.nickname.charAt(0).toUpperCase()}
+                </Avatar>
+                <VerificationBadge isVerified={userProfile.isVerified} size="medium" />
+              </Box>
             ) : (
               <Skeleton variant="circular" width={100} height={100} />
             )}
