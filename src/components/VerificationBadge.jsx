@@ -1,23 +1,23 @@
 import { Box } from '@mui/material';
 import VerifiedIcon from '@mui/icons-material/Verified';
 
-function VerificationBadge({ isVerified, size = 'small' }) {
+function VerificationBadge({ isVerified, avatarSize = 48 }) {
   if (!isVerified) return null;
 
-  const sizeMap = {
-    small: { iconSize: 18, right: -6, bottom: -6 },
-    medium: { iconSize: 24, right: -8, bottom: -8 },
-    large: { iconSize: 32, right: -10, bottom: -10 },
-  };
-
-  const config = sizeMap[size] || sizeMap.small;
+  // Calcula o tamanho do ícone baseado no tamanho do avatar
+  // Proporção: ícone = avatar * 0.35 a 0.4
+  const iconSize = Math.max(16, Math.floor(avatarSize * 0.35));
+  
+  // Calcula o offset do badge para ficar no canto inferior direito
+  // Offset = -(iconSize / 2 + 2px padding)
+  const offset = -(Math.floor(iconSize / 2) + 2);
 
   return (
     <Box
       sx={{
         position: 'absolute',
-        right: config.right,
-        bottom: config.bottom,
+        right: offset,
+        bottom: offset,
         zIndex: 10,
         display: 'flex',
         alignItems: 'center',
@@ -26,7 +26,7 @@ function VerificationBadge({ isVerified, size = 'small' }) {
     >
       <VerifiedIcon
         sx={{
-          fontSize: config.iconSize,
+          fontSize: iconSize,
           color: '#1976d2',
           backgroundColor: 'white',
           borderRadius: '50%',

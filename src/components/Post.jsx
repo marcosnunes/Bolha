@@ -210,7 +210,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
           avatar={
             <Box sx={{ position: 'relative', display: 'inline-block' }}>
               <Avatar src={profilePhotoURL}>{!profilePhotoURL && (displayNickname || authorNickname).charAt(0).toUpperCase()}</Avatar>
-              <VerificationBadge isVerified={isVerified} size="small" />
+              <VerificationBadge isVerified={isVerified} avatarSize={48} />
             </Box>
           }
           action={
@@ -320,7 +320,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
                       <Avatar src={user.photoURL} alt={user.nickname}>
                         {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
                       </Avatar>
-                      <VerificationBadge isVerified={user.isVerified} size="small" />
+                      <VerificationBadge isVerified={user.isVerified} avatarSize={40} />
                     </Box>
                   </ListItemAvatar>
                   <ListItemText primary={user.nickname} />
