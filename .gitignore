@@ -27,6 +27,10 @@ dist-ssr
 .env*.local
 .env
 
+# Credenciais e dados sensíveis
+functions/.env
+functions/.env.local
+
 VERIFICACAO_SETUP.md
 TESTE_LOCAL.md
 TESTE_EMULADORES.md
