@@ -25,6 +25,7 @@ dist-ssr
 *.sw?
 .vercel
 .env*.local
+.env
 
 VERIFICACAO_SETUP.md
 TESTE_LOCAL.md

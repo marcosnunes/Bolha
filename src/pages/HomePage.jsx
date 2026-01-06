@@ -28,6 +28,7 @@ import PeopleIcon from '@mui/icons-material/People';
 // Nossos componentes
 import CreatePostForm from '../components/CreatePostForm.jsx';
 import Feed from '../components/Feed.jsx';
+import VerificationBadge from '../components/VerificationBadge.jsx';
 
 function HomePage() {
     const { currentUser, userProfile, logout } = useAuth();
@@ -246,11 +247,14 @@ function HomePage() {
                     <>
                         <ListItem sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2, textAlign: 'center' }}>
                             <Tooltip title="Clique para alterar sua foto">
-                                <IconButton onClick={() => profilePicInputRef.current.click()} sx={{ p: 0, mb: 1 }}>
-                                    <Avatar src={userProfile ? userProfile.photoURL : ''} sx={{ width: 80, height: 80 }}>
-                                        {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
-                                    </Avatar>
-                                </IconButton>
+                                <Box sx={{ position: 'relative', display: 'inline-block', mb: 1 }}>
+                                    <IconButton onClick={() => profilePicInputRef.current.click()} sx={{ p: 0 }}>
+                                        <Avatar src={userProfile ? userProfile.photoURL : ''} sx={{ width: 80, height: 80 }}>
+                                            {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
+                                        </Avatar>
+                                    </IconButton>
+                                    <VerificationBadge isVerified={userProfile?.isVerified || false} size="medium" />
+                                </Box>
                             </Tooltip>
                             <ListItemText
                                 primary={userProfile ? userProfile.nickname : ''}
