@@ -94,6 +94,20 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
         console.log('✅ Curtida removida com sucesso');
       } else {
         console.log('👍 Adicionando curtida');
+        
+        // Se for a primeira curtida, garante que o objeto 'likes' existe
+        const likesParentRef = ref(rtdb, `posts/${postId}/comments/${commentId}/likes`);
+        try {
+          const likesSnapshot = await get(likesParentRef);
+          if (!likesSnapshot.exists()) {
+            // Cria o objeto likes vazio primeiro
+            await set(likesParentRef, {});
+          }
+        } catch (e) {
+          console.log('⚠️  Aviso ao verificar likes:', e.message);
+        }
+        
+        // Agora adiciona a curtida
         await set(commentLikesRef, true);
         console.log('✅ Curtida adicionada com sucesso');
       }
