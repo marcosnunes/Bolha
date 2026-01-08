@@ -22,7 +22,8 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
     commentId,
     authorId,
     currentUserId: currentUser?.uid,
-    temLikes: !!commentData.likes
+    temLikes: !!commentData.likes,
+    likesData: commentData.likes
   });
   
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
