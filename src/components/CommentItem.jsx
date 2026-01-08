@@ -273,7 +273,10 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
             <Button
               size="small"
               startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />}
-              onClick={handleLike}
+              onClick={() => {
+                console.log('🔥 BOTÃO DE LIKE CLICADO!');
+                handleLike();
+              }}
               color={hasLiked ? 'primary' : 'inherit'}
               sx={{ fontSize: '0.75rem' }}
             >
