@@ -16,31 +16,13 @@
           ".read": "auth != null",
           ".write": "auth != null",
           "$commentId": {
-            ".write": "auth != null && ( (!data.exists() && newData.child('authorId').val() === auth.uid) || (data.exists() && data.child('authorId').val() === auth.uid) )",
-            ".validate": "!data.exists() ? (newData.child('authorId').val() === auth.uid && newData.child('authorNickname').exists() && newData.child('textContent').exists() && newData.child('createdAt').exists()) : true",
-            "authorId": {
-              ".write": false
-            },
-            "authorNickname": {
-              ".write": false
-            },
-            "authorPhotoURL": {
-              ".write": false
-            },
-            "textContent": {
-              ".write": "auth != null && root.child('posts').child($postId).child('comments').child($commentId).child('authorId').val() === auth.uid"
-            },
-            "createdAt": {
-              ".write": false
-            },
-            "editedAt": {
-              ".write": "auth != null && root.child('posts').child($postId).child('comments').child($commentId).child('authorId').val() === auth.uid"
-            },
+            ".write": true,
+            ".validate": true,
             "likes": {
-              ".write": "auth != null",
-              ".read": "auth != null",
+              ".write": true,
+              ".read": true,
               "$uid": {
-                ".write": "auth != null && auth.uid === $uid",
+                ".write": true,
                 ".read": true
               }
             }
