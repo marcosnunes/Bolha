@@ -37,6 +37,8 @@
               ".write": "auth != null && root.child('posts').child($postId).child('comments').child($commentId).child('authorId').val() === auth.uid"
             },
             "likes": {
+              ".write": "auth != null",
+              ".read": "auth != null",
               "$uid": {
                 ".write": "auth != null && auth.uid === $uid",
                 ".read": "auth != null"
