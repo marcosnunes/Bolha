@@ -11,11 +11,6 @@
             ".write": "auth != null && auth.uid === $uid"
           }
         },
-        "dislikes": {
-          "$uid": {
-            ".write": "auth != null && auth.uid === $uid"
-          }
-        },
         "comments": {
           ".read": "auth != null",
           "$commentId": {
