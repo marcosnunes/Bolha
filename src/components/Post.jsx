@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import ConfirmDialog from './ConfirmDialog'; // Importa nosso componente reutilizável
 import CommentModal from './CommentModal.jsx'; // Importa modal de comentários
+import EditPostModal from './EditPostModal.jsx'; // Importa modal de edição de posts
 import VerificationBadge from './VerificationBadge.jsx'; // Importa badge de verificação
 
 // Componentes e Ícones do MUI
@@ -15,6 +16,7 @@ import {
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
@@ -32,12 +34,26 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const [isVerified, setIsVerified] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [commentModalOpen, setCommentModalOpen] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const [likesModalOpen, setLikesModalOpen] = useState(false);
   const [likesUsers, setLikesUsers] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(false);
+  const [displayContent, setDisplayContent] = useState(textContent);
   const openMenu = Boolean(anchorEl);
+
+  // Monitorar mudanças no conteúdo do post (incluindo edições)
+  useEffect(() => {
+    const postRef = ref(rtdb, `posts/${id}`);
+    const unsubscribePost = onValue(postRef, (snapshot) => {
+      const postUpdated = snapshot.val();
+      if (postUpdated && postUpdated.textContent) {
+        setDisplayContent(postUpdated.textContent);
+      }
+    });
+    return () => unsubscribePost();
+  }, [id]);
 
   useEffect(() => {
     const likesRef = ref(rtdb, `posts/${id}/likes`);
@@ -218,6 +234,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
               <Tooltip title="Ver opções"><IconButton onClick={handleMenuClick}><MoreVertIcon /></IconButton></Tooltip>
               <Menu anchorEl={anchorEl} open={openMenu} onClose={handleMenuClose}>
                 <MenuItem onClick={handleAuthorClick}>Ver Perfil</MenuItem>
+                {isOwner && <MenuItem onClick={() => { handleMenuClose(); setEditModalOpen(true); }}><EditIcon sx={{ mr: 1 }} /> Editar Post</MenuItem>}
                 {isOwner && <MenuItem onClick={() => { handleMenuClose(); setConfirmDialogOpen(true); }} sx={{ color: 'error.main' }}><DeleteIcon sx={{ mr: 1 }} /> Apagar Post</MenuItem>}
               </Menu>
             </>
@@ -237,10 +254,10 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
           </Box>
         )}
 
-        {textContent && (
+        {displayContent && (
           <CardContent>
             <Box sx={{ wordBreak: 'break-word' }}>
-              <ReactMarkdown>{textContent}</ReactMarkdown>
+              <ReactMarkdown>{displayContent}</ReactMarkdown>
             </Box>
           </CardContent>
         )}
@@ -333,6 +350,15 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
           <Button onClick={() => setLikesModalOpen(false)}>Fechar</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Modal de edição de post */}
+      <EditPostModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        postId={id}
+        currentContent={displayContent}
+        onEditSuccess={() => {}}
+      />
 
       {/* Substituído pelo diálogo de confirmação reutilizável */}
       <ConfirmDialog

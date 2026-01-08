@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { auth, rtdb, functions } from '/src/firebase/config.js';
 import { ref, onValue, set, remove } from 'firebase/database';
@@ -48,6 +48,10 @@ export function AuthProvider({ children }) {
       // Propaga o erro para ser tratado na UI (SettingsPage).
       throw error;
     }
+  }
+
+  function resetPassword(email) {
+    return sendPasswordResetEmail(auth, email);
   }
 
   const hideUser = (userIdToHide) => {
@@ -107,6 +111,7 @@ export function AuthProvider({ children }) {
     login,
     logout,
     deleteAccount,
+    resetPassword,
   };
 
   return (

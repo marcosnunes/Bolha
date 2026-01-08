@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import ForgotPasswordDialog from '../components/ForgotPasswordDialog';
 
 // Componentes e Ícones do MUI
 import { 
@@ -14,6 +15,7 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const { login, currentUser } = useAuth();
   const navigate = useNavigate();
 
@@ -96,8 +98,21 @@ function LoginPage() {
               >
                 {loading ? <CircularProgress size={24} color="inherit" /> : 'Entrar'}
               </Button>
-              <Grid container justifyContent="flex-end">
-                <Grid item>
+              <Grid container spacing={1}>
+                <Grid item xs={12} sm>
+                  <Link
+                    component="button"
+                    type="button"
+                    variant="body2"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setForgotPasswordOpen(true);
+                    }}
+                  >
+                    Esqueci minha senha
+                  </Link>
+                </Grid>
+                <Grid item xs={12} sm textAlign={{ sm: 'right' }}>
                   <Link component={RouterLink} to="/cadastro" variant="body2">
                     Não tem uma conta? Cadastre-se
                   </Link>
@@ -107,6 +122,10 @@ function LoginPage() {
           </Box>
         </Paper>
       </Box>
+      <ForgotPasswordDialog 
+        open={forgotPasswordOpen} 
+        onClose={() => setForgotPasswordOpen(false)} 
+      />
     </Container>
   );
 }

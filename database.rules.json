@@ -5,7 +5,7 @@
       ".indexOn": ["createdAt"], 
       "$postId": {
         ".write": "auth != null && ( (!data.exists() && newData.child('authorId').val() === auth.uid) || (data.exists() && data.child('authorId').val() === auth.uid) )",
-        ".validate": "newData.hasChildren(['authorId', 'authorNickname', 'createdAt']) && (!data.exists() || newData.child('authorId').val() === data.child('authorId').val())",
+        ".validate": "!data.exists() ? newData.hasChildren(['authorId', 'authorNickname', 'createdAt']) && newData.child('authorId').val() === auth.uid : data.child('authorId').val() === auth.uid",
         "likes": {
           "$uid": {
             ".write": "auth != null && auth.uid === $uid"
@@ -19,9 +19,28 @@
         "comments": {
           ".read": "auth != null",
           "$commentId": {
-            ".write": "auth != null && ( (!data.exists() && newData.child('authorId').val() === auth.uid) || (data.exists() && data.child('authorId').val() === auth.uid) )",
-            ".validate": "newData.hasChildren(['authorId', 'authorNickname', 'textContent', 'createdAt'])",
+            ".write": false,
+            ".validate": "!data.exists() ? (newData.child('authorId').val() === auth.uid && newData.child('authorNickname').exists() && newData.child('textContent').exists() && newData.child('createdAt').exists()) : data.child('authorId').val() === auth.uid",
+            "authorId": {
+              ".write": false
+            },
+            "authorNickname": {
+              ".write": false
+            },
+            "authorPhotoURL": {
+              ".write": false
+            },
+            "textContent": {
+              ".write": "auth != null && root.child('posts').child($postId).child('comments').child($commentId).child('authorId').val() === auth.uid"
+            },
+            "createdAt": {
+              ".write": false
+            },
+            "editedAt": {
+              ".write": "auth != null && root.child('posts').child($postId).child('comments').child($commentId).child('authorId').val() === auth.uid"
+            },
             "likes": {
+              ".write": "auth != null",
               "$uid": {
                 ".write": "auth != null && auth.uid === $uid"
               }

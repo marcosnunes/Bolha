@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, remove, set, onValue, get } from 'firebase/database';
+import EditCommentModal from './EditCommentModal.jsx'; // Importa modal de edição
 import VerificationBadge from './VerificationBadge.jsx'; // Importa badge de verificação
 
 import {
@@ -11,6 +12,7 @@ import {
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 
 function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   const { currentUser } = useAuth();
@@ -25,6 +27,20 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   const [loadingLikes, setLoadingLikes] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [profilePhotoURL, setProfilePhotoURL] = useState(authorPhotoURL || null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [displayContent, setDisplayContent] = useState(textContent);
+
+  // Monitorar mudanças no conteúdo do comentário (incluindo edições)
+  useEffect(() => {
+    const commentRef = ref(rtdb, `posts/${postId}/comments/${commentId}`);
+    const unsubscribeComment = onValue(commentRef, (snapshot) => {
+      const commentUpdated = snapshot.val();
+      if (commentUpdated && commentUpdated.textContent) {
+        setDisplayContent(commentUpdated.textContent);
+      }
+    });
+    return () => unsubscribeComment();
+  }, [postId, commentId]);
 
   useEffect(() => {
     const likesRef = ref(rtdb, `posts/${postId}/comments/${commentId}/likes`);
@@ -163,7 +179,7 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
           </Box>
 
           <Typography variant="body2" sx={{ mb: 1, wordBreak: 'break-word' }}>
-            {textContent}
+            {displayContent}
           </Typography>
 
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -201,6 +217,18 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
                     {likesCount}
                   </Typography>
                 </Box>
+              </Tooltip>
+            )}
+
+            {isOwner && (
+              <Tooltip title="Editar comentário">
+                <IconButton
+                  size="small"
+                  onClick={() => setEditModalOpen(true)}
+                  sx={{ color: 'primary.main' }}
+                >
+                  <EditIcon sx={{ fontSize: '1rem' }} />
+                </IconButton>
               </Tooltip>
             )}
 
@@ -252,6 +280,16 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
           <Button onClick={() => setLikesModalOpen(false)}>Fechar</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Modal de edição de comentário */}
+      <EditCommentModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        postId={postId}
+        commentId={commentId}
+        currentContent={displayContent}
+        onEditSuccess={() => {}}
+      />
     </>
   );
 }
