@@ -89,10 +89,7 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   const handleLike = async () => {
     console.log('=== HANDLELIKE INICIADO ===');
     console.log('currentUser:', currentUser?.uid);
-    console.log('postId:', postId);
-    console.log('commentId:', commentId);
     console.log('hasLiked:', hasLiked);
-    console.log('likesData:', likesData);
     
     if (!currentUser) {
       console.log('Abortando: usuário não autenticado');
@@ -101,10 +98,7 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
     }
     
     try {
-      const likesParentPath = `posts/${postId}/comments/${commentId}/likes`;
-      const userLikePath = `${likesParentPath}/${currentUser.uid}`;
-      
-      console.log('Paths:', { likesParentPath, userLikePath });
+      const userLikePath = `posts/${postId}/comments/${commentId}/likes/${currentUser.uid}`;
       
       if (hasLiked) {
         console.log('Removendo like...');
@@ -113,30 +107,13 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
         console.log('✅ Like removido');
       } else {
         console.log('Adicionando like...');
-        
-        // Garante que o objeto likes existe
-        const likesParentRef = ref(rtdb, likesParentPath);
-        try {
-          const snapshot = await get(likesParentRef);
-          if (!snapshot.exists()) {
-            console.log('Nó likes não existe, criando...');
-            await set(likesParentRef, {});
-          }
-        } catch (e) {
-          console.warn('Aviso ao verificar likes:', e.message);
-        }
-        
-        // Agora adiciona o like do usuário
         const userLikeRef = ref(rtdb, userLikePath);
         await set(userLikeRef, true);
         console.log('✅ Like adicionado');
       }
       
-      alert('✅ Operação concluída!');
     } catch (error) {
       console.error('❌ ERRO:', error);
-      console.error('Code:', error.code);
-      console.error('Message:', error.message);
       alert('❌ Erro: ' + error.message);
     }
     console.log('=== HANDLELIKE FINALIZADO ===');
