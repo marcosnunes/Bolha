@@ -7,6 +7,7 @@
         ".write": "auth != null && ( (!data.exists() && newData.child('authorId').val() === auth.uid) || (data.exists() && data.child('authorId').val() === auth.uid) )",
         ".validate": "!data.exists() ? newData.hasChildren(['authorId', 'authorNickname', 'createdAt']) && newData.child('authorId').val() === auth.uid : data.child('authorId').val() === auth.uid",
         "likes": {
+          ".write": "auth != null",
           "$uid": {
             ".write": "auth != null && auth.uid === $uid"
           }
@@ -15,8 +16,8 @@
           ".read": "auth != null",
           ".write": "auth != null",
           "$commentId": {
-            ".write": false,
-            ".validate": "!data.exists() ? (newData.child('authorId').val() === auth.uid && newData.child('authorNickname').exists() && newData.child('textContent').exists() && newData.child('createdAt').exists()) : data.child('authorId').val() === auth.uid",
+            ".write": "auth != null && ( (!data.exists() && newData.child('authorId').val() === auth.uid) || (data.exists() && data.child('authorId').val() === auth.uid) )",
+            ".validate": "!data.exists() ? (newData.child('authorId').val() === auth.uid && newData.child('authorNickname').exists() && newData.child('textContent').exists() && newData.child('createdAt').exists()) : true",
             "authorId": {
               ".write": false
             },
