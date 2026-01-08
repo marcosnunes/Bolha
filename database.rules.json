@@ -16,6 +16,17 @@
           ".read": "auth != null",
           ".write": "auth != null",
           "$commentId": {
+            ".write": "auth != null",
+            "authorId": { ".write": false },
+            "authorNickname": { ".write": false },
+            "authorPhotoURL": { ".write": false },
+            "textContent": {
+              ".write": "auth != null && root.child('posts').child($postId).child('comments').child($commentId).child('authorId').val() === auth.uid"
+            },
+            "createdAt": { ".write": false },
+            "editedAt": {
+              ".write": "auth != null && root.child('posts').child($postId).child('comments').child($commentId).child('authorId').val() === auth.uid"
+            },
             "likes": {
               ".write": true,
               ".read": true,
