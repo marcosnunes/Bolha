@@ -2,62 +2,40 @@
   "rules": {
     "posts": {
       ".read": "auth != null",
-      ".indexOn": ["createdAt"],
+      ".indexOn": ["createdAt"], 
       "$postId": {
         ".write": "auth != null && ( (!data.exists() && newData.child('authorId').val() === auth.uid) || (data.exists() && data.child('authorId').val() === auth.uid) )",
-        ".validate": "!data.exists() ? newData.hasChildren(['authorId', 'authorNickname', 'createdAt']) && newData.child('authorId').val() === auth.uid : true",
-        "authorId": { ".write": false },
-        "authorNickname": { ".write": false },
-        "authorPhotoURL": { ".write": false },
-        "createdAt": { ".write": false },
-        "isNSFW": { ".write": false },
-        "mediaURL": { ".write": false },
-        "mediaType": { ".write": false },
+        ".validate": "newData.hasChildren(['authorId', 'authorNickname', 'createdAt']) && (!data.exists() || newData.child('authorId').val() === data.child('authorId').val())",
         "textContent": {
-          ".write": "auth != null && root.child('posts').child($postId).child('authorId').val() === auth.uid",
-          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 10000"
+          ".write": "auth != null && root.child('posts').child($postId).child('authorId').val() === auth.uid"
         },
         "editedAt": {
           ".write": "auth != null && root.child('posts').child($postId).child('authorId').val() === auth.uid"
         },
         "likes": {
-          ".read": "auth != null",
-          ".write": "auth != null",
           "$uid": {
-            ".write": "auth != null && auth.uid === $uid",
-            ".validate": "newData.isBoolean() || !newData.exists()"
+            ".write": "auth != null && auth.uid === $uid"
           }
         },
         "dislikes": {
-          ".read": "auth != null",
-          ".write": "auth != null",
           "$uid": {
-            ".write": "auth != null && auth.uid === $uid",
-            ".validate": "newData.isBoolean() || !newData.exists()"
+            ".write": "auth != null && auth.uid === $uid"
           }
         },
         "comments": {
           ".read": "auth != null",
-          ".write": "auth != null",
           "$commentId": {
-            ".write": "auth != null && (!data.exists() || root.child('posts').child($postId).child('comments').child($commentId).child('authorId').val() === auth.uid)",
-            "authorId": { ".write": false },
-            "authorNickname": { ".write": false },
-            "authorPhotoURL": { ".write": false },
-            "createdAt": { ".write": false },
+            ".write": "auth != null && ( (!data.exists() && newData.child('authorId').val() === auth.uid) || (data.exists() && data.child('authorId').val() === auth.uid) )",
+            ".validate": "newData.hasChildren(['authorId', 'authorNickname', 'textContent', 'createdAt'])",
             "textContent": {
-              ".write": "auth != null && root.child('posts').child($postId).child('comments').child($commentId).child('authorId').val() === auth.uid",
-              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 5000"
+              ".write": "auth != null && root.child('posts').child($postId).child('comments').child($commentId).child('authorId').val() === auth.uid"
             },
             "editedAt": {
               ".write": "auth != null && root.child('posts').child($postId).child('comments').child($commentId).child('authorId').val() === auth.uid"
             },
             "likes": {
-              ".read": "auth != null",
-              ".write": "auth != null",
               "$uid": {
-                ".write": "auth != null && auth.uid === $uid",
-                ".validate": "newData.isBoolean() || !newData.exists()"
+                ".write": "auth != null && auth.uid === $uid"
               }
             }
           }
@@ -67,43 +45,18 @@
     "users": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid",
-        "hiddenUsers": {
-          ".read": "auth != null && auth.uid === $uid",
-          ".write": "auth != null && auth.uid === $uid",
-          "$targetUid": {
-            ".validate": "newData.isBoolean() || !newData.exists()",
-            ".write": "auth != null && auth.uid === $uid"
-          }
-        }
+        ".write": "auth != null && auth.uid === $uid"
       }
     },
     "profiles": {
       ".read": "auth != null",
-      ".indexOn": ["createdAt"],
       "$uid": {
-        ".write": "auth != null && auth.uid === $uid",
-        "nickname": {
-          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 50"
-        },
-        "photoURL": {
-          ".validate": "newData.isString() || !newData.exists()"
-        },
-        "isVerified": { 
-          ".write": false 
-        },
-        "createdAt": { 
-          ".write": false 
-        }
+        ".write": "auth != null && auth.uid === $uid"
       }
     },
     "invites": {
-      ".read": "auth != null",
-      ".write": "auth != null",
-      "$token": {
-        ".validate": "newData.hasChildren(['invitedBy', 'status', 'createdAt']) && (newData.child('status').val() === 'pending' || newData.child('status').val() === 'completed')",
-        ".write": "auth != null"
-      }
+      ".read": "true",
+      ".write": "auth != null"
     },
     "verificationTokens": {
       ".read": false,
