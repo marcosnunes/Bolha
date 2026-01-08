@@ -279,3 +279,61 @@ exports.verifyEmailToken = onRequest({ region: "us-central1" }, async (req, res)
     }
   });
 });
+
+/**
+ * Função de administrador para migração de comentários
+ * CHAMAR UMA ÚNICA VEZ via Firebase CLI
+ * firebase functions:shell
+ * > migrateCommentLikesAdmin()
+ */
+exports.migrateCommentLikesAdmin = onRequest({ region: "us-central1" }, async (req, res) => {
+  // Verificação simples: só aceita POST
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Método não permitido" });
+  }
+
+  try {
+    logger.info("🔄 Iniciando migração de comentários...");
+
+    const db = admin.database();
+    const postsRef = db.ref("posts");
+
+    const snapshot = await postsRef.once("value");
+    const posts = snapshot.val() || {};
+
+    let updatedCount = 0;
+    let totalComments = 0;
+    let skippedCount = 0;
+
+    for (const [postId, postData] of Object.entries(posts)) {
+      if (!postData.comments) continue;
+
+      for (const [commentId, commentData] of Object.entries(postData.comments)) {
+        totalComments++;
+
+        if (!commentData.likes) {
+          await db.ref(`posts/${postId}/comments/${commentId}/likes`).set({});
+          updatedCount++;
+        } else {
+          skippedCount++;
+        }
+      }
+    }
+
+    const result = {
+      success: true,
+      totalComments,
+      updatedCount,
+      skippedCount,
+      message: `✨ Migração concluída! ${updatedCount} comentários atualizados.`
+    };
+
+    logger.info(`✨ Migração finalizada: ${JSON.stringify(result)}`);
+    return res.status(200).json(result);
+  } catch (error) {
+    logger.error("❌ Erro na migração:", error);
+    return res.status(500).json({
+      error: `Erro na migração: ${error.message}`
+    });
+  }
+});
