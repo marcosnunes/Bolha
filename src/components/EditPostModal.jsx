@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { rtdb } from '../firebase/config';
-import { ref, set, serverTimestamp } from 'firebase/database';
+import { ref, update, serverTimestamp } from 'firebase/database';
 import {
   Dialog,
   DialogTitle,
@@ -64,13 +64,13 @@ function EditPostModal({ open, onClose, postId, currentContent, onEditSuccess })
 
       // Atualizar post no Firebase
       const postRef = ref(rtdb, `posts/${postId}`);
-      await set(postRef, {
+      await update(postRef, {
         textContent: content,
         editedAt: serverTimestamp(),
-      }, { merge: true });
+      });
 
       setLoading(false);
-      setContent(currentContent);
+      setContent('');
       if (onEditSuccess) onEditSuccess();
       onClose();
     } catch (err) {

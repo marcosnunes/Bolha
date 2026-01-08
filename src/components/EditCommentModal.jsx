@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { rtdb } from '../firebase/config';
-import { ref, set, serverTimestamp } from 'firebase/database';
+import { ref, update, serverTimestamp } from 'firebase/database';
 import {
   Dialog,
   DialogTitle,
@@ -64,13 +64,13 @@ function EditCommentModal({ open, onClose, postId, commentId, currentContent, on
 
       // Atualizar comentário no Firebase
       const commentRef = ref(rtdb, `posts/${postId}/comments/${commentId}`);
-      await set(commentRef, {
+      await update(commentRef, {
         textContent: content,
         editedAt: serverTimestamp(),
-      }, { merge: true });
+      });
 
       setLoading(false);
-      setContent(currentContent);
+      setContent('');
       if (onEditSuccess) onEditSuccess();
       onClose();
     } catch (err) {
