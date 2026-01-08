@@ -18,6 +18,13 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   const { currentUser } = useAuth();
   const { authorNickname, textContent, createdAt, authorId, authorPhotoURL } = commentData;
   
+  console.log('🔄 CommentItem renderizando:', {
+    commentId,
+    authorId,
+    currentUserId: currentUser?.uid,
+    temLikes: !!commentData.likes
+  });
+  
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
 
@@ -74,50 +81,90 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   const hasLiked = currentUser && likesData[currentUser.uid];
 
   const handleLike = async () => {
+    console.log('=== INICIANDO HANDLELIKE ===');
+    
     if (!currentUser) {
       console.log('❌ Usuário não autenticado');
       return;
     }
     
-    console.log('📍 Iniciando curtida:', {
+    console.log('✅ Usuário autenticado:', {
+      uid: currentUser.uid,
+      email: currentUser.email
+    });
+    
+    console.log('📍 Dados da curtida:', {
       postId,
       commentId,
       userId: currentUser.uid,
-      path: `posts/${postId}/comments/${commentId}/likes/${currentUser.uid}`
+      hasLiked,
+      likesAtualmente: likesData
     });
     
-    const commentLikesRef = ref(rtdb, `posts/${postId}/comments/${commentId}/likes/${currentUser.uid}`);
+    const likesRefPath = `posts/${postId}/comments/${commentId}/likes/${currentUser.uid}`;
+    const commentLikesRef = ref(rtdb, likesRefPath);
+    
+    console.log('🔗 Caminho da referência:', likesRefPath);
+    
     try {
       if (hasLiked) {
-        console.log('👍 Removendo curtida');
+        console.log('👍 REMOVENDO CURTIDA - Chamando remove()...');
         await remove(commentLikesRef);
-        console.log('✅ Curtida removida com sucesso');
+        console.log('✅ SUCESSO: Curtida removida');
       } else {
-        console.log('👍 Adicionando curtida');
+        console.log('👎 ADICIONANDO CURTIDA');
         
-        // Se for a primeira curtida, garante que o objeto 'likes' existe
-        const likesParentRef = ref(rtdb, `posts/${postId}/comments/${commentId}/likes`);
+        // Passo 1: Verifica se o objeto 'likes' existe
+        const likesParentPath = `posts/${postId}/comments/${commentId}/likes`;
+        const likesParentRef = ref(rtdb, likesParentPath);
+        
+        console.log('📌 Passo 1: Verificando se nó likes existe...');
+        console.log('   Caminho:', likesParentPath);
+        
         try {
           const likesSnapshot = await get(likesParentRef);
+          console.log('   Resultado get():', {
+            exists: likesSnapshot.exists(),
+            valor: likesSnapshot.val()
+          });
+          
           if (!likesSnapshot.exists()) {
-            // Cria o objeto likes vazio primeiro
+            console.log('   ⚠️  Nó likes não existe! Criando...');
             await set(likesParentRef, {});
+            console.log('   ✅ Nó likes criado com sucesso');
           }
-        } catch (e) {
-          console.log('⚠️  Aviso ao verificar likes:', e.message);
+        } catch (getError) {
+          console.error('❌ Erro ao verificar nó likes:', getError);
+          console.error('   Code:', getError.code);
+          console.error('   Message:', getError.message);
         }
         
-        // Agora adiciona a curtida
+        // Passo 2: Adiciona a curtida
+        console.log('📌 Passo 2: Adicionando a curtida...');
+        console.log('   Caminho:', likesRefPath);
+        console.log('   Valor a escrever: true');
+        
         await set(commentLikesRef, true);
-        console.log('✅ Curtida adicionada com sucesso');
+        console.log('✅ SUCESSO: Curtida adicionada');
       }
     } catch (error) {
-      console.error("❌ Erro ao curtir comentário:", error);
-      console.error("Detalhes do erro:", {
-        code: error.code,
-        message: error.message
+      console.error("❌ ===== ERRO AO CURTIR COMENTÁRIO =====");
+      console.error("Tipo de erro:", error.constructor.name);
+      console.error("Code:", error.code);
+      console.error("Message:", error.message);
+      console.error("Stack:", error.stack);
+      console.error("Detalhes completos:", error);
+      console.error("Contexto:", {
+        postId,
+        commentId,
+        userId: currentUser.uid,
+        paths: {
+          likes: `posts/${postId}/comments/${commentId}/likes`,
+          userLike: `posts/${postId}/comments/${commentId}/likes/${currentUser.uid}`
+        }
       });
     }
+    console.log('=== FIM HANDLELIKE ===');
   };
 
   const handleDelete = async () => {
