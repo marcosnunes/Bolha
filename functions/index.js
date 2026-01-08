@@ -5,7 +5,7 @@
 if (!process.env.EMAIL_USER) {
   try {
     require("dotenv").config({ path: __dirname + "/.env" });
-  } catch (e) {
+  } catch {
     // .env não existe em produção, é ok
   }
 }
