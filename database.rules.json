@@ -13,6 +13,7 @@
         },
         "comments": {
           ".read": "auth != null",
+          ".write": "auth != null",
           "$commentId": {
             ".write": false,
             ".validate": "!data.exists() ? (newData.child('authorId').val() === auth.uid && newData.child('authorNickname').exists() && newData.child('textContent').exists() && newData.child('createdAt').exists()) : data.child('authorId').val() === auth.uid",
