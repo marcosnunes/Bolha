@@ -43,8 +43,15 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   }, [postId, commentId]);
 
   useEffect(() => {
+    console.log('📍 Configurando listener de likes:', {
+      postId,
+      commentId,
+      path: `posts/${postId}/comments/${commentId}/likes`
+    });
+    
     const likesRef = ref(rtdb, `posts/${postId}/comments/${commentId}/likes`);
     const unsubscribeLikes = onValue(likesRef, (snapshot) => {
+      console.log('📊 Dados de likes atualizados:', snapshot.val());
       setLikesData(snapshot.val() || {});
     });
     return () => unsubscribeLikes();
@@ -67,16 +74,35 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   const hasLiked = currentUser && likesData[currentUser.uid];
 
   const handleLike = async () => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      console.log('❌ Usuário não autenticado');
+      return;
+    }
+    
+    console.log('📍 Iniciando curtida:', {
+      postId,
+      commentId,
+      userId: currentUser.uid,
+      path: `posts/${postId}/comments/${commentId}/likes/${currentUser.uid}`
+    });
+    
     const commentLikesRef = ref(rtdb, `posts/${postId}/comments/${commentId}/likes/${currentUser.uid}`);
     try {
       if (hasLiked) {
+        console.log('👍 Removendo curtida');
         await remove(commentLikesRef);
+        console.log('✅ Curtida removida com sucesso');
       } else {
+        console.log('👍 Adicionando curtida');
         await set(commentLikesRef, true);
+        console.log('✅ Curtida adicionada com sucesso');
       }
     } catch (error) {
-      console.error("Erro ao curtir comentário:", error);
+      console.error("❌ Erro ao curtir comentário:", error);
+      console.error("Detalhes do erro:", {
+        code: error.code,
+        message: error.message
+      });
     }
   };
 
