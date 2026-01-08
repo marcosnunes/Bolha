@@ -54,16 +54,21 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
     console.log('📍 Configurando listener de likes:', {
       postId,
       commentId,
-      path: `posts/${postId}/comments/${commentId}/likes`
+      path: `posts/${postId}/comments/${commentId}/likes`,
+      comentarioTemLikes: !!commentData.likes
     });
     
     const likesRef = ref(rtdb, `posts/${postId}/comments/${commentId}/likes`);
     const unsubscribeLikes = onValue(likesRef, (snapshot) => {
-      console.log('📊 Dados de likes atualizados:', snapshot.val());
-      setLikesData(snapshot.val() || {});
+      const data = snapshot.val() || {};
+      console.log('📊 Dados de likes atualizados:', data);
+      setLikesData(data);
+    }, (error) => {
+      console.error('❌ Erro no listener de likes:', error);
+      setLikesData({});
     });
     return () => unsubscribeLikes();
-  }, [postId, commentId]);
+  }, [postId, commentId, commentData.likes]);
 
   // Carregar dados de verificação do autor
   useEffect(() => {
@@ -78,8 +83,8 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
     return () => unsubscribe();
   }, [authorId]);
 
-  const likesCount = Object.keys(likesData).length;
-  const hasLiked = currentUser && likesData[currentUser.uid];
+  const likesCount = Object.keys(likesData || {}).length;
+  const hasLiked = currentUser && likesData && likesData[currentUser.uid];
 
   const handleLike = async () => {
     console.log('=== HANDLELIKE INICIADO ===');
@@ -87,32 +92,52 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
     console.log('postId:', postId);
     console.log('commentId:', commentId);
     console.log('hasLiked:', hasLiked);
+    console.log('likesData:', likesData);
     
     if (!currentUser) {
       console.log('Abortando: usuário não autenticado');
+      alert('Você precisa estar logado para curtir!');
       return;
     }
     
     try {
-      const path = `posts/${postId}/comments/${commentId}/likes/${currentUser.uid}`;
-      const likesRef = ref(rtdb, path);
+      const likesParentPath = `posts/${postId}/comments/${commentId}/likes`;
+      const userLikePath = `${likesParentPath}/${currentUser.uid}`;
       
-      console.log('Path completo:', path);
-      console.log('hasLiked:', hasLiked);
+      console.log('Paths:', { likesParentPath, userLikePath });
       
       if (hasLiked) {
         console.log('Removendo like...');
-        await remove(likesRef);
+        const userLikeRef = ref(rtdb, userLikePath);
+        await remove(userLikeRef);
         console.log('✅ Like removido');
       } else {
         console.log('Adicionando like...');
-        await set(likesRef, true);
+        
+        // Garante que o objeto likes existe
+        const likesParentRef = ref(rtdb, likesParentPath);
+        try {
+          const snapshot = await get(likesParentRef);
+          if (!snapshot.exists()) {
+            console.log('Nó likes não existe, criando...');
+            await set(likesParentRef, {});
+          }
+        } catch (e) {
+          console.warn('Aviso ao verificar likes:', e.message);
+        }
+        
+        // Agora adiciona o like do usuário
+        const userLikeRef = ref(rtdb, userLikePath);
+        await set(userLikeRef, true);
         console.log('✅ Like adicionado');
       }
+      
+      alert('✅ Operação concluída!');
     } catch (error) {
-      console.error('❌ ERRO COMPLETO:', error);
+      console.error('❌ ERRO:', error);
       console.error('Code:', error.code);
       console.error('Message:', error.message);
+      alert('❌ Erro: ' + error.message);
     }
     console.log('=== HANDLELIKE FINALIZADO ===');
   };
@@ -223,10 +248,7 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
             <Button
               size="small"
               startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />}
-              onClick={() => {
-                alert('🔥 BOTÃO CLICADO! hasLiked=' + hasLiked);
-                handleLike();
-              }}
+              onClick={handleLike}
               color={hasLiked ? 'primary' : 'inherit'}
               sx={{ fontSize: '0.75rem' }}
             >
