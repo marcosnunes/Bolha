@@ -16,8 +16,6 @@
           ".read": "auth != null",
           ".write": "auth != null",
           "$commentId": {
-            ".write": true,
-            ".validate": true,
             "likes": {
               ".write": true,
               ".read": true,
