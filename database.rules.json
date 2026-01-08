@@ -72,14 +72,15 @@
           ".read": "auth != null && auth.uid === $uid",
           ".write": "auth != null && auth.uid === $uid",
           "$targetUid": {
-            ".write": "auth != null && auth.uid === $uid",
-            ".validate": "newData.isBoolean() || !newData.exists()"
+            ".validate": "newData.isBoolean() || !newData.exists()",
+            ".write": "auth != null && auth.uid === $uid"
           }
         }
       }
     },
     "profiles": {
       ".read": "auth != null",
+      ".indexOn": ["createdAt"],
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
         "nickname": {
@@ -88,16 +89,20 @@
         "photoURL": {
           ".validate": "newData.isString() || !newData.exists()"
         },
-        "isVerified": { ".write": false },
-        "createdAt": { ".write": false }
+        "isVerified": { 
+          ".write": false 
+        },
+        "createdAt": { 
+          ".write": false 
+        }
       }
     },
     "invites": {
       ".read": "auth != null",
       ".write": "auth != null",
       "$token": {
-        ".write": "auth != null",
-        ".validate": "newData.hasChildren(['invitedBy', 'status', 'createdAt']) && (newData.child('status').val() === 'pending' || newData.child('status').val() === 'completed')"
+        ".validate": "newData.hasChildren(['invitedBy', 'status', 'createdAt']) && (newData.child('status').val() === 'pending' || newData.child('status').val() === 'completed')",
+        ".write": "auth != null"
       }
     },
     "verificationTokens": {
