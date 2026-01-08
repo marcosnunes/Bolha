@@ -110,6 +110,7 @@ function CommentModal({ postId, open, onClose }) {
         authorPhotoURL: userProfile.photoURL || null,
         textContent: commentText,
         createdAt: serverTimestamp(),
+        likes: {},
       };
 
       await set(newCommentRef, newCommentData);
