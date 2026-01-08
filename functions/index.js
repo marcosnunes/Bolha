@@ -311,9 +311,33 @@ exports.migrateCommentLikesAdmin = onRequest({ region: "us-central1" }, async (r
       for (const [commentId, commentData] of Object.entries(postData.comments)) {
         totalComments++;
 
-        if (!commentData.likes) {
-          await db.ref(`posts/${postId}/comments/${commentId}/likes`).set({});
-          updatedCount++;
+        // Verificar se precisa de migração
+        const needsMigration = !commentData.likes || !commentData.authorId || !commentData.authorNickname;
+
+        if (needsMigration) {
+          const updates = {};
+          
+          // Adicionar likes se não existir
+          if (!commentData.likes) {
+            updates[`posts/${postId}/comments/${commentId}/likes`] = {};
+          }
+          
+          // Tentar recuperar dados do autor se faltar
+          if (!commentData.authorId && postData.authorId) {
+            updates[`posts/${postId}/comments/${commentId}/authorId`] = postData.authorId;
+          }
+          if (!commentData.authorNickname && postData.authorNickname) {
+            updates[`posts/${postId}/comments/${commentId}/authorNickname`] = postData.authorNickname;
+          }
+          if (!commentData.authorPhotoURL && postData.authorPhotoURL) {
+            updates[`posts/${postId}/comments/${commentId}/authorPhotoURL`] = postData.authorPhotoURL;
+          }
+          
+          if (Object.keys(updates).length > 0) {
+            await db.ref().update(updates);
+            updatedCount++;
+            logger.log(`✅ Comentário ${commentId} atualizado`);
+          }
         } else {
           skippedCount++;
         }
