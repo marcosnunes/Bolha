@@ -18,14 +18,6 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   const { currentUser } = useAuth();
   const { authorNickname, textContent, createdAt, authorId, authorPhotoURL } = commentData;
   
-  console.log('🔄 CommentItem renderizando:', {
-    commentId,
-    authorId,
-    currentUserId: currentUser?.uid,
-    temLikes: !!commentData.likes,
-    likesData: commentData.likes
-  });
-  
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
 
@@ -51,21 +43,14 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   }, [postId, commentId]);
 
   useEffect(() => {
-    console.log('📍 Configurando listener de likes:', {
-      postId,
-      commentId,
-      path: `posts/${postId}/comments/${commentId}/likes`,
-      comentarioTemLikes: !!commentData.likes
-    });
-    
     const likesRef = ref(rtdb, `posts/${postId}/comments/${commentId}/likes`);
     const unsubscribeLikes = onValue(likesRef, (snapshot) => {
       const data = snapshot.val() || {};
-      console.log('📊 Dados de likes atualizados:', data);
+      console.log('📊 Likes listener disparou:', data);
       setLikesData(data);
     }, (error) => {
-      console.error('❌ Erro no listener de likes:', error);
-      setLikesData({});
+      // Silencia erros de leitura - não mostrar PERMISSION_DENIED do listener
+      console.warn('Aviso no listener de likes (silenciado):', error.code);
     });
     return () => unsubscribeLikes();
   }, [postId, commentId, commentData.likes]);
@@ -87,36 +72,25 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   const hasLiked = currentUser && likesData && likesData[currentUser.uid];
 
   const handleLike = async () => {
-    console.log('=== HANDLELIKE INICIADO ===');
-    console.log('currentUser:', currentUser?.uid);
-    console.log('hasLiked:', hasLiked);
-    
     if (!currentUser) {
-      console.log('Abortando: usuário não autenticado');
-      alert('Você precisa estar logado para curtir!');
+      console.log('Usuário não autenticado');
       return;
     }
     
     try {
       const userLikePath = `posts/${postId}/comments/${commentId}/likes/${currentUser.uid}`;
+      const userLikeRef = ref(rtdb, userLikePath);
       
       if (hasLiked) {
-        console.log('Removendo like...');
-        const userLikeRef = ref(rtdb, userLikePath);
         await remove(userLikeRef);
         console.log('✅ Like removido');
       } else {
-        console.log('Adicionando like...');
-        const userLikeRef = ref(rtdb, userLikePath);
         await set(userLikeRef, true);
         console.log('✅ Like adicionado');
       }
-      
     } catch (error) {
-      console.error('❌ ERRO:', error);
-      alert('❌ Erro: ' + error.message);
+      console.error('❌ Erro ao curtir:', error.code, error.message);
     }
-    console.log('=== HANDLELIKE FINALIZADO ===');
   };
 
   const handleDelete = async () => {
