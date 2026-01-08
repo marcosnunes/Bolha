@@ -82,90 +82,39 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   const hasLiked = currentUser && likesData[currentUser.uid];
 
   const handleLike = async () => {
-    console.log('=== INICIANDO HANDLELIKE ===');
+    console.log('=== HANDLELIKE INICIADO ===');
+    console.log('currentUser:', currentUser?.uid);
+    console.log('postId:', postId);
+    console.log('commentId:', commentId);
+    console.log('hasLiked:', hasLiked);
     
     if (!currentUser) {
-      console.log('❌ Usuário não autenticado');
+      console.log('Abortando: usuário não autenticado');
       return;
     }
     
-    console.log('✅ Usuário autenticado:', {
-      uid: currentUser.uid,
-      email: currentUser.email
-    });
-    
-    console.log('📍 Dados da curtida:', {
-      postId,
-      commentId,
-      userId: currentUser.uid,
-      hasLiked,
-      likesAtualmente: likesData
-    });
-    
-    const likesRefPath = `posts/${postId}/comments/${commentId}/likes/${currentUser.uid}`;
-    const commentLikesRef = ref(rtdb, likesRefPath);
-    
-    console.log('🔗 Caminho da referência:', likesRefPath);
-    
     try {
+      const path = `posts/${postId}/comments/${commentId}/likes/${currentUser.uid}`;
+      const likesRef = ref(rtdb, path);
+      
+      console.log('Path completo:', path);
+      console.log('hasLiked:', hasLiked);
+      
       if (hasLiked) {
-        console.log('👍 REMOVENDO CURTIDA - Chamando remove()...');
-        await remove(commentLikesRef);
-        console.log('✅ SUCESSO: Curtida removida');
+        console.log('Removendo like...');
+        await remove(likesRef);
+        console.log('✅ Like removido');
       } else {
-        console.log('👎 ADICIONANDO CURTIDA');
-        
-        // Passo 1: Verifica se o objeto 'likes' existe
-        const likesParentPath = `posts/${postId}/comments/${commentId}/likes`;
-        const likesParentRef = ref(rtdb, likesParentPath);
-        
-        console.log('📌 Passo 1: Verificando se nó likes existe...');
-        console.log('   Caminho:', likesParentPath);
-        
-        try {
-          const likesSnapshot = await get(likesParentRef);
-          console.log('   Resultado get():', {
-            exists: likesSnapshot.exists(),
-            valor: likesSnapshot.val()
-          });
-          
-          if (!likesSnapshot.exists()) {
-            console.log('   ⚠️  Nó likes não existe! Criando...');
-            await set(likesParentRef, {});
-            console.log('   ✅ Nó likes criado com sucesso');
-          }
-        } catch (getError) {
-          console.error('❌ Erro ao verificar nó likes:', getError);
-          console.error('   Code:', getError.code);
-          console.error('   Message:', getError.message);
-        }
-        
-        // Passo 2: Adiciona a curtida
-        console.log('📌 Passo 2: Adicionando a curtida...');
-        console.log('   Caminho:', likesRefPath);
-        console.log('   Valor a escrever: true');
-        
-        await set(commentLikesRef, true);
-        console.log('✅ SUCESSO: Curtida adicionada');
+        console.log('Adicionando like...');
+        await set(likesRef, true);
+        console.log('✅ Like adicionado');
       }
     } catch (error) {
-      console.error("❌ ===== ERRO AO CURTIR COMENTÁRIO =====");
-      console.error("Tipo de erro:", error.constructor.name);
-      console.error("Code:", error.code);
-      console.error("Message:", error.message);
-      console.error("Stack:", error.stack);
-      console.error("Detalhes completos:", error);
-      console.error("Contexto:", {
-        postId,
-        commentId,
-        userId: currentUser.uid,
-        paths: {
-          likes: `posts/${postId}/comments/${commentId}/likes`,
-          userLike: `posts/${postId}/comments/${commentId}/likes/${currentUser.uid}`
-        }
-      });
+      console.error('❌ ERRO COMPLETO:', error);
+      console.error('Code:', error.code);
+      console.error('Message:', error.message);
     }
-    console.log('=== FIM HANDLELIKE ===');
+    console.log('=== HANDLELIKE FINALIZADO ===');
   };
 
   const handleDelete = async () => {
