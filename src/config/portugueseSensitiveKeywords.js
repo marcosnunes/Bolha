@@ -19,7 +19,25 @@ export const PORTUGUESE_SENSITIVE_KEYWORDS = {
     'tesão',
     'rola',
     'pênis',
-    'caralho'
+    'caralho',
+    'bct',
+    'xana',
+    'xoxota',
+    'xereca',
+    'piranhas',
+    'vadias',
+    'putas',
+    'novinha',
+    'virgem',
+    'amamentar',
+    'mamãe',
+    'pauzão',
+    'gostosa',
+    'gostoso',
+    'rabuda',
+    'putinha',
+    'memu',
+    'nudes'
   ],
   violence: [
     'matar',
@@ -30,7 +48,19 @@ export const PORTUGUESE_SENSITIVE_KEYWORDS = {
     'violência',
     'assassino',
     'vou te bater',
-    'vou te matar'
+    'vou te matar',
+    'assassinar',
+    'botar fogo',
+    'queimar vivo',
+    'facada',
+    'pedrada',
+    'murro',
+    'paulada',
+    'apunhalar',
+    'enforcamento',
+    'enforcar',
+    'crucificar',
+    'massacre'
   ],
   hate: [
     'negro imundo',
@@ -44,7 +74,23 @@ export const PORTUGUESE_SENSITIVE_KEYWORDS = {
     'deficiente',
     'aleijado',
     'nazista',
-    'nazismo'
+    'nazismo',
+    'lgbtfóbico',
+    'racista',
+    'xenófobo',
+    'antissemita',
+    'cigano',
+    'muçulmano',
+    'árabe',
+    'chinês',
+    'índio',
+    'gay',
+    'lésbica',
+    'trans',
+    'travesti',
+    'comunista',
+    'bolchevique',
+    'zika'
   ],
   offensive: [
     'arrombado',
@@ -56,7 +102,27 @@ export const PORTUGUESE_SENSITIVE_KEYWORDS = {
     'canalha',
     'seu lixo',
     'seu verme',
-    'seu nojento'
+    'seu nojento',
+    'idiota',
+    'estúpido',
+    'débil',
+    'imbecil',
+    'burro',
+    'tapado',
+    'jumento',
+    'asno',
+    'sua mãe',
+    'tua mãe',
+    'filho da mãe',
+    'fdp',
+    'meu pau',
+    'chupa',
+    'pau no seu cu',
+    'vai se foder',
+    'cretino',
+    'malandro',
+    'safadeza',
+    'pilantra'
   ]
 };
 
@@ -71,15 +137,31 @@ export const containsPortugueseSensitiveKeyword = (text) => {
     const keywords = PORTUGUESE_SENSITIVE_KEYWORDS[category];
     
     for (const keyword of keywords) {
-      // Usar boundary word para evitar falsos positivos
-      // Ex: "casa" não deve match "casaca"
-      const regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+      // Método 1: Usar word boundary (mais preciso)
+      let regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
       if (regex.test(lowerText)) {
         return {
           detected: true,
           category,
-          keyword
+          keyword,
+          method: 'boundary'
         };
+      }
+      
+      // Método 2: Busca direta se word boundary falhar (fallback para palavras isoladas)
+      // Importante para casos como "sua puta" onde a detecção com \b pode falhar
+      if (lowerText.includes(keyword)) {
+        // Validar que é realmente a palavra (não parte de outra palavra)
+        // Ex: "puta" não deve detectar em "deputado"
+        const words = lowerText.split(/[^a-záéíóúâêãõç]+/);
+        if (words.includes(keyword)) {
+          return {
+            detected: true,
+            category,
+            keyword,
+            method: 'direct'
+          };
+        }
       }
     }
   }
