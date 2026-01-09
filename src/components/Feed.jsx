@@ -86,11 +86,12 @@ function Feed() {
         // Se for uma carga de "mais", anexa os posts.
         setPosts(prev => cursorTimestamp ? [...prev, ...fetchedPosts] : fetchedPosts);
         
-        // Se o número de posts buscados for menor que o limite, não há mais
+        // Se o número de posts buscados for menor que o limite, não há mais posts
         if (fetchedPosts.length < POSTS_PER_PAGE) {
           setHasMore(false);
+          setLastPostTimestamp(null);
         } else {
-          // Só atualiza o cursor se houver posts buscados
+          // Se chegou aqui, pode haver mais posts, atualiza o cursor
           setLastPostTimestamp(fetchedPosts[fetchedPosts.length - 1].createdAt);
         }
       } else {
