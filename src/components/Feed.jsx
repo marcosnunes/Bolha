@@ -128,7 +128,7 @@ function Feed({ filterNSFW }) {
   // Filtros
   const finalFilteredPosts = posts
     .filter(post => !hiddenUsers.includes(post.authorId))
-    .filter(post => filterNSFW ? !post.isNSFW : true);
+    .filter(post => filterNSFW ? !(post.isNSFW === true) : true);
 
   if (loading && posts.length === 0) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>;
