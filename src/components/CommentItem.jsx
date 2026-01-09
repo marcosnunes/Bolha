@@ -173,15 +173,15 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
 
   return (
     <>
-      <Box sx={{ display: 'flex', gap: 2, pb: 2, borderBottom: '1px solid #e0e0e0' }}>
-        <Box sx={{ position: 'relative', display: 'inline-block' }}>
-          <Avatar src={profilePhotoURL}>
+      <Box sx={{ display: 'flex', gap: 2, pb: 2, borderBottom: '1px solid #e0e0e0', alignItems: 'flex-start' }}>
+        <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+          <Avatar src={profilePhotoURL} sx={{ width: 48, height: 48 }}>
             {!profilePhotoURL && authorNickname?.charAt(0).toUpperCase()}
           </Avatar>
-          <VerificationBadge isVerified={isVerified} avatarSize={48} customSx={{ bottom: '45px', right: '0px' }} />
+          <VerificationBadge isVerified={isVerified} avatarSize={48} customSx={{ bottom: '-8px', right: '-8px' }} />
         </Box>
 
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
               {authorNickname}

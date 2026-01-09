@@ -245,13 +245,13 @@ function HomePage() {
                     <>
                         <ListItem sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2, textAlign: 'center' }}>
                             <Tooltip title="Clique para alterar sua foto">
-                                <Box sx={{ position: 'relative', display: 'inline-block', mb: 1 }}>
+                                <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0, mb: 1 }}>
                                     <IconButton onClick={() => profilePicInputRef.current.click()} sx={{ p: 0 }}>
                                         <Avatar src={userProfile ? userProfile.photoURL : ''} sx={{ width: 80, height: 80 }}>
                                             {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
                                         </Avatar>
                                     </IconButton>
-                                    <VerificationBadge isVerified={userProfile?.isVerified || false} avatarSize={80} />
+                                    <VerificationBadge isVerified={userProfile?.isVerified || false} avatarSize={80} customSx={{ bottom: '-8px', right: '-8px' }} />
                                 </Box>
                             </Tooltip>
                             <ListItemText
@@ -323,11 +323,11 @@ function HomePage() {
                             .map((user) => (
                                 <ListItem key={user.uid}>
                                     <ListItemAvatar>
-                                        <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                                        <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                                             <Avatar src={user.photoURL} alt={user.nickname}>
                                                 {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
                                             </Avatar>
-                                            <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} />
+                                            <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} customSx={{ bottom: '-5px', right: '-5px' }} />
                                         </Box>
                                     </ListItemAvatar>
                                     <ListItemText primary={user.nickname} />

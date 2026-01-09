@@ -61,14 +61,14 @@ function ProfileModal({ userToDisplay, onClose, onHideUser, onShowUser, onEditPr
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, p: 2 }}>
             {userProfile ? (
-              <Box sx={{ position: 'relative', display: 'inline-block' }}>
+              <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                 <Avatar 
                   src={userProfile.photoURL} 
                   sx={{ width: 100, height: 100, bgcolor: 'primary.main', fontSize: '2.5rem' }}
                 >
                   {!userProfile.photoURL && userProfile.nickname.charAt(0).toUpperCase()}
                 </Avatar>
-                <VerificationBadge isVerified={userProfile.isVerified} avatarSize={100} />
+                <VerificationBadge isVerified={userProfile.isVerified} avatarSize={100} customSx={{ bottom: '-8px', right: '-8px' }} />
               </Box>
             ) : (
               <Skeleton variant="circular" width={100} height={100} />

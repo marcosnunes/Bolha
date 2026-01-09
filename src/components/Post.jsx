@@ -224,9 +224,9 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       <Card sx={{ mb: 3 }}>
           <CardHeader
           avatar={
-            <Box sx={{ position: 'relative', display: 'inline-block' }}>
-              <Avatar src={profilePhotoURL}>{!profilePhotoURL && (displayNickname || authorNickname).charAt(0).toUpperCase()}</Avatar>
-              <VerificationBadge isVerified={isVerified} avatarSize={48} />
+            <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+              <Avatar src={profilePhotoURL} sx={{ width: 48, height: 48 }}>{!profilePhotoURL && (displayNickname || authorNickname).charAt(0).toUpperCase()}</Avatar>
+              <VerificationBadge isVerified={isVerified} avatarSize={48} customSx={{ bottom: '-8px', right: '-8px' }} />
             </Box>
           }
           action={
@@ -333,11 +333,11 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
               {likesUsers.map((user) => (
                 <ListItem key={user.uid}>
                   <ListItemAvatar>
-                    <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                    <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                       <Avatar src={user.photoURL} alt={user.nickname}>
                         {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
                       </Avatar>
-                      <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} />
+                      <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} customSx={{ bottom: '-5px', right: '-5px' }} />
                     </Box>
                   </ListItemAvatar>
                   <ListItemText primary={user.nickname} />
