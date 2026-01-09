@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { containsPortugueseSensitiveKeyword } from '../config/portugueseSensitiveKeywords';
 
 const useToxicityModel = () => {
   const [model, setModel] = useState(null);
@@ -36,6 +37,14 @@ const useToxicityModel = () => {
     if (!model || !text || text.trim() === '') return false;
     
     try {
+      // 1. Verificar palavras-chave em português primeiro (rápido)
+      const portugueseCheck = containsPortugueseSensitiveKeyword(text);
+      if (portugueseCheck.detected) {
+        console.log('Conteúdo sensível detectado (português):', portugueseCheck.category, portugueseCheck.keyword);
+        return true;
+      }
+      
+      // 2. Se não detectou em português, usar IA (TensorFlow.js para inglês)
       const predictions = await model.classify([text]);
       
       let isSensitive = false;
@@ -66,7 +75,9 @@ const useToxicityModel = () => {
         }
       });
 
-      console.log('Análise de sensibilidade:', { text: text.substring(0, 50), scores, isSensitive });
+      if (isSensitive) {
+        console.log('Conteúdo sensível detectado (IA):', scores);
+      }
       
       return isSensitive;
     } catch (error) {
@@ -87,6 +98,19 @@ const useToxicityModel = () => {
     }
     
     try {
+      // 1. Verificar palavras-chave em português primeiro (rápido)
+      const portugueseCheck = containsPortugueseSensitiveKeyword(text);
+      if (portugueseCheck.detected) {
+        return {
+          isSensitive: true,
+          scores: {},
+          flaggedCategories: [portugueseCheck.category],
+          method: 'portuguese-keywords',
+          summary: `Conteúdo flagrado (português): ${portugueseCheck.category}`
+        };
+      }
+      
+      // 2. Se não detectou em português, usar IA
       const predictions = await model.classify([text]);
       
       let isSensitive = false;
@@ -120,7 +144,8 @@ const useToxicityModel = () => {
         isSensitive,
         scores,
         flaggedCategories,
-        summary: isSensitive ? `Conteúdo flagrado em: ${flaggedCategories.join(', ')}` : 'Conteúdo apropriado'
+        method: 'tensorflow-ai',
+        summary: isSensitive ? `Conteúdo flagrado (IA): ${flaggedCategories.join(', ')}` : 'Conteúdo apropriado'
       };
     } catch (error) {
       console.error("Erro na classificação detalhada:", error);

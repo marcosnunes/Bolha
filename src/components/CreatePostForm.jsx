@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useUpload } from '../contexts/UploadContext';
 import useToxicityModel from '../hooks/useToxicityModel';
 import useNSFWDetection from '../hooks/useNSFWDetection';
+import usePerspectiveAPI from '../hooks/usePerspectiveAPI';
 
 // Componentes e Ícones do MUI
 import {
@@ -134,6 +135,8 @@ function CreatePostForm({ onPostSuccess }) {
     }
   };
 
+  const { validateText } = usePerspectiveAPI();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -146,11 +149,22 @@ function CreatePostForm({ onPostSuccess }) {
     try {
       let isPostNSFW = false;
 
-      // 1. Classificar o texto ANTES de qualquer outra coisa
+      // 1. Validar texto com Google Perspective API (PRINCIPAL)
       if (postContent && postContent.trim().length > 0) {
-        const isToxicFromModel = await classifyText(postContent);
-        if (isToxicFromModel) {
-          isPostNSFW = true;
+        try {
+          const perspectiveResult = await validateText(postContent);
+          if (perspectiveResult.isSensitive) {
+            isPostNSFW = true;
+            console.log('Conteúdo sensível detectado por Perspective API:', perspectiveResult.flaggedCategories);
+          }
+        } catch (err) {
+          console.error('Erro ao validar com Perspective API:', err);
+          // Fallback: usar TensorFlow.js se Perspective falhar
+          const isToxicFromModel = await classifyText(postContent);
+          if (isToxicFromModel) {
+            isPostNSFW = true;
+            console.log('Conteúdo sensível detectado por TensorFlow.js (fallback)');
+          }
         }
       }
 
@@ -160,6 +174,7 @@ function CreatePostForm({ onPostSuccess }) {
           const imageClassification = await classifyFile(file);
           if (imageClassification.isNSFW) {
             isPostNSFW = true;
+            console.log('Imagem NSFW detectada');
           }
         } catch (err) {
           console.error('Erro ao classificar imagem:', err);
