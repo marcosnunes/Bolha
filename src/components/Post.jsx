@@ -7,6 +7,8 @@ import ConfirmDialog from './ConfirmDialog'; // Importa nosso componente reutili
 import CommentModal from './CommentModal.jsx'; // Importa modal de comentários
 import EditPostModal from './EditPostModal.jsx'; // Importa modal de edição de posts
 import VerificationBadge from './VerificationBadge.jsx'; // Importa badge de verificação
+import OnlineIndicator from './OnlineIndicator.jsx'; // Importa indicador de online
+import useOnlineStatus from '../hooks/useOnlineStatus.jsx'; // Hook para status de online
 
 // Componentes e Ícones do MUI
 import {
@@ -104,7 +106,8 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     return () => unsubscribeProfile();
   }, [authorId, authorPhotoURL, authorNickname]);
 
-  
+  // Hook para monitorar se o autor está online
+  const { isOnline } = useOnlineStatus(authorId);
 
   const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
@@ -239,7 +242,12 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
               </Menu>
             </>
           }
-          title={displayNickname || authorNickname}
+          title={
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <span>{displayNickname || authorNickname}</span>
+              <OnlineIndicator isOnline={isOnline} size={10} />
+            </Box>
+          }
           subheader={formattedDate}
         />
 

@@ -29,6 +29,8 @@ import PeopleIcon from '@mui/icons-material/People';
 import CreatePostForm from '../components/CreatePostForm.jsx';
 import Feed from '../components/Feed.jsx';
 import VerificationBadge from '../components/VerificationBadge.jsx';
+import OnlineIndicator from '../components/OnlineIndicator.jsx';
+import useOnlineStatus from '../hooks/useOnlineStatus.jsx';
 
 function HomePage() {
     const { currentUser, userProfile, logout } = useAuth();
@@ -321,17 +323,7 @@ function HomePage() {
                                 user.nickname.toLowerCase().includes(userSearchFilter.toLowerCase())
                             )
                             .map((user) => (
-                                <ListItem key={user.uid}>
-                                    <ListItemAvatar>
-                                        <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
-                                            <Avatar src={user.photoURL} alt={user.nickname}>
-                                                {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
-                                            </Avatar>
-                                            <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} customSx={{ bottom: '-3px', right: '-3px' }} />
-                                        </Box>
-                                    </ListItemAvatar>
-                                    <ListItemText primary={user.nickname} />
-                                </ListItem>
+                                <UserListItemWithOnlineStatus key={user.uid} user={user} />
                             ))}
                     </List>
                 </DialogContent>
@@ -390,6 +382,32 @@ function HomePage() {
             </Fab>
         </Box>
     );
+}
+
+// Componente wrapper para item de usuário com status online
+function UserListItemWithOnlineStatus({ user }) {
+  const { isOnline } = useOnlineStatus(user.uid);
+
+  return (
+    <ListItem>
+      <ListItemAvatar>
+        <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+          <Avatar src={user.photoURL} alt={user.nickname}>
+            {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
+          </Avatar>
+          <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} customSx={{ bottom: '-3px', right: '-3px' }} />
+        </Box>
+      </ListItemAvatar>
+      <ListItemText 
+        primary={
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <span>{user.nickname}</span>
+            <OnlineIndicator isOnline={isOnline} size={10} />
+          </Box>
+        } 
+      />
+    </ListItem>
+  );
 }
 
 export default HomePage;

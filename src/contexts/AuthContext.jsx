@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { auth, rtdb, functions } from '/src/firebase/config.js';
-import { ref, onValue, set, remove } from 'firebase/database';
+import { ref, onValue, set, remove, serverTimestamp, onDisconnect } from 'firebase/database';
 
 const AuthContext = createContext();
 
@@ -92,13 +92,21 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (currentUser) {
-      const hiddenUsersRef = ref(rtdb, `users/${currentUser.uid}/hiddenUsers`);
-      const unsubscribeHidden = onValue(hiddenUsersRef, (snapshot) => {
-        setHiddenUsers(snapshot.val() ? Object.keys(snapshot.val()) : []);
-      });
-      return () => unsubscribeHidden();
+      const onlineRef = ref(rtdb, `users/${currentUser.uid}/online`);
+      
+      // Define o timestamp de online quando o usuário se conecta
+      set(onlineRef, serverTimestamp());
+      
+      // Limpa o status quando desconecta
+      onDisconnect(onlineRef).remove();
+      
+      // Atualiza o status periodicamente (a cada 30 segundos)
+      const interval = setInterval(() => {
+        set(onlineRef, serverTimestamp());
+      }, 30000);
+
+      return () => clearInterval(interval);
     }
-    // hiddenUsers já foi inicializado como [] no useState
   }, [currentUser]);
 
   const value = {

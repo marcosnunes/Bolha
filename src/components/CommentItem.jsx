@@ -4,6 +4,8 @@ import { rtdb } from '../firebase/config';
 import { ref, remove, set, onValue, get } from 'firebase/database';
 import EditCommentModal from './EditCommentModal.jsx'; // Importa modal de edição
 import VerificationBadge from './VerificationBadge.jsx'; // Importa badge de verificação
+import OnlineIndicator from './OnlineIndicator.jsx'; // Importa indicador de online
+import useOnlineStatus from '../hooks/useOnlineStatus.jsx'; // Hook para status de online
 
 import {
   Box, Avatar, Typography, Button, IconButton, Tooltip, Dialog,
@@ -67,6 +69,9 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
     });
     return () => unsubscribe();
   }, [authorId]);
+
+  // Hook para monitorar se o autor está online
+  const { isOnline } = useOnlineStatus(authorId);
 
   const likesCount = Object.keys(likesData || {}).length;
   const hasLiked = currentUser && likesData && likesData[currentUser.uid];
@@ -183,9 +188,12 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-              {authorNickname}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                {authorNickname}
+              </Typography>
+              <OnlineIndicator isOnline={isOnline} size={10} />
+            </Box>
             <Typography variant="caption" color="text.secondary">
               {formattedDate}
             </Typography>
