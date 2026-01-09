@@ -134,8 +134,6 @@ function CreatePostForm({ onPostSuccess }) {
     }
   };
 
-  const { validateText } = usePerspectiveAPI();
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
