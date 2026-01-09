@@ -251,7 +251,7 @@ function HomePage() {
                                             {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
                                         </Avatar>
                                     </IconButton>
-                                    <VerificationBadge isVerified={userProfile?.isVerified || false} avatarSize={80} customSx={{ bottom: '-3px', right: '-3px' }} />
+                                    <VerificationBadge isVerified={userProfile?.isVerified || false} avatarSize={80} customSx={{ bottom: '3px', right: '3px' }} />
                                 </Box>
                             </Tooltip>
                             <ListItemText
@@ -327,7 +327,7 @@ function HomePage() {
                                             <Avatar src={user.photoURL} alt={user.nickname}>
                                                 {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
                                             </Avatar>
-                                            <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} customSx={{ bottom: '-1px', right: '-1px' }} />
+                                            <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} customSx={{ bottom: '1px', right: '1px' }} />
                                         </Box>
                                     </ListItemAvatar>
                                     <ListItemText primary={user.nickname} />
@@ -382,8 +382,6 @@ function HomePage() {
             </Dialog>
 
             <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-                <Typography variant="h4" component="h2" sx={{ mb: 3 }}>A sua bolha</Typography>
-                
                 <Feed />
             </Container>
 
