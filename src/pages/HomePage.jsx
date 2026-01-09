@@ -251,7 +251,7 @@ function HomePage() {
                                             {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
                                         </Avatar>
                                     </IconButton>
-                                    <VerificationBadge isVerified={userProfile?.isVerified || false} avatarSize={80} customSx={{ bottom: '6px', right: '6px' }} />
+                                    <VerificationBadge isVerified={userProfile?.isVerified || false} avatarSize={80} customSx={{ bottom: '-1.7px', right: '-1.7px' }} />
                                 </Box>
                             </Tooltip>
                             <ListItemText
@@ -327,7 +327,7 @@ function HomePage() {
                                             <Avatar src={user.photoURL} alt={user.nickname}>
                                                 {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
                                             </Avatar>
-                                            <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} customSx={{ bottom: '3px', right: '3px' }} />
+                                            <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} customSx={{ bottom: '-0.7px', right: '-0.7px' }} />
                                         </Box>
                                     </ListItemAvatar>
                                     <ListItemText primary={user.nickname} />
