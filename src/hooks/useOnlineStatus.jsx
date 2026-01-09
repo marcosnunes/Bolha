@@ -8,7 +8,7 @@ function useOnlineStatus(userId) {
 
   useEffect(() => {
     if (!userId) {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 0);
       return;
     }
 
