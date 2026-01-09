@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { rtdb } from '../firebase/config';
 import { ref, update, serverTimestamp } from 'firebase/database';
 import useToxicityModel from '../hooks/useToxicityModel';
-import usePerspectiveAPI from '../hooks/usePerspectiveAPI';
 import {
   Dialog,
   DialogTitle,
@@ -20,7 +19,6 @@ function EditPostModal({ open, onClose, postId, currentContent, onEditSuccess })
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { classifyText } = useToxicityModel();
-  const { validateText } = usePerspectiveAPI();
 
   const containsLink = (text) => {
     if (!text) return false;
@@ -45,23 +43,12 @@ function EditPostModal({ open, onClose, postId, currentContent, onEditSuccess })
         return;
       }
 
-      // Verificar se o conteúdo é sensível usando Google Perspective API
-      try {
-        const perspectiveResult = await validateText(content);
-        if (perspectiveResult.isSensitive) {
-          setError('Seu post contém conteúdo sensível ou malicioso.');
-          setLoading(false);
-          return;
-        }
-      } catch (err) {
-        console.error('Erro ao validar com Perspective API:', err);
-        // Fallback: usar TensorFlow.js
-        const isSensitive = await classifyText(content);
-        if (isSensitive) {
-          setError('Seu post contém conteúdo sensível ou malicioso.');
-          setLoading(false);
-          return;
-        }
+      // Verificar se o conteúdo é sensível usando IA
+      const isSensitive = await classifyText(content);
+      if (isSensitive) {
+        setError('Seu post contém conteúdo sensível ou malicioso.');
+        setLoading(false);
+        return;
       }      // Atualizar post no Firebase
       const postRef = ref(rtdb, `posts/${postId}`);
       await update(postRef, {

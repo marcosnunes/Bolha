@@ -3,7 +3,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useUpload } from '../contexts/UploadContext';
 import useToxicityModel from '../hooks/useToxicityModel';
 import useNSFWDetection from '../hooks/useNSFWDetection';
-import usePerspectiveAPI from '../hooks/usePerspectiveAPI';
 
 // Componentes e Ícones do MUI
 import {
@@ -149,22 +148,12 @@ function CreatePostForm({ onPostSuccess }) {
     try {
       let isPostNSFW = false;
 
-      // 1. Validar texto com Google Perspective API (PRINCIPAL)
+      // 1. Validar texto com TensorFlow.js + palavras-chave
       if (postContent && postContent.trim().length > 0) {
-        try {
-          const perspectiveResult = await validateText(postContent);
-          if (perspectiveResult.isSensitive) {
-            isPostNSFW = true;
-            console.log('Conteúdo sensível detectado por Perspective API:', perspectiveResult.flaggedCategories);
-          }
-        } catch (err) {
-          console.error('Erro ao validar com Perspective API:', err);
-          // Fallback: usar TensorFlow.js se Perspective falhar
-          const isToxicFromModel = await classifyText(postContent);
-          if (isToxicFromModel) {
-            isPostNSFW = true;
-            console.log('Conteúdo sensível detectado por TensorFlow.js (fallback)');
-          }
+        const isToxicFromModel = await classifyText(postContent);
+        if (isToxicFromModel) {
+          isPostNSFW = true;
+          console.log('Conteúdo sensível detectado');
         }
       }
 

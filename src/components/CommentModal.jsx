@@ -4,7 +4,6 @@ import { rtdb } from '../firebase/config';
 import { ref, push, set, get, onChildAdded, onChildChanged, onChildRemoved, serverTimestamp } from 'firebase/database';
 import CommentItem from './CommentItem.jsx';
 import useToxicityModel from '../hooks/useToxicityModel';
-import usePerspectiveAPI from '../hooks/usePerspectiveAPI';
 
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button,
@@ -15,7 +14,6 @@ import SendIcon from '@mui/icons-material/Send';
 function CommentModal({ postId, open, onClose }) {
   const { currentUser, userProfile } = useAuth();
   const { classifyText } = useToxicityModel();
-  const { validateText } = usePerspectiveAPI();
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -105,23 +103,12 @@ function CommentModal({ postId, open, onClose }) {
     setError('');
 
     try {
-      // Validar conteúdo do comentário com Google Perspective API
-      try {
-        const perspectiveResult = await validateText(commentText);
-        if (perspectiveResult.isSensitive) {
-          setError('Seu comentário contém conteúdo sensível ou malicioso.');
-          setLoading(false);
-          return;
-        }
-      } catch (err) {
-        console.error('Erro ao validar com Perspective API:', err);
-        // Fallback: usar TensorFlow.js
-        const isSensitive = await classifyText(commentText);
-        if (isSensitive) {
-          setError('Seu comentário contém conteúdo sensível ou malicioso.');
-          setLoading(false);
-          return;
-        }
+      // Validar conteúdo do comentário com TensorFlow.js
+      const isSensitive = await classifyText(commentText);
+      if (isSensitive) {
+        setError('Seu comentário contém conteúdo sensível ou malicioso.');
+        setLoading(false);
+        return;
       }
 
       const commentsRef = ref(rtdb, `posts/${postId}/comments`);
