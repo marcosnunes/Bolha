@@ -118,7 +118,6 @@ export function UploadProvider({ children }) {
         textContent: postData.textContent || '',
         mediaURL: mediaURL,
         mediaType: mediaType,
-        isNSFW: postData.isNSFW || false,
         createdAt: serverTimestamp(),
         likes: {},
         dislikes: {},

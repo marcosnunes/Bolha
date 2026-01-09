@@ -25,7 +25,6 @@ Este projeto foi construído como um **Progressive Web App (PWA)** moderno, tota
 - 🔐 **100% Privado**: Acesso exclusivo por convite
 - 👁️ **Controle de Visibilidade**: Sistema "A Mesa" - oculte usuários silenciosamente
 - 🚫 **Livre de Links**: Conteúdo focado, sem distrações externas
-- 🤖 **Moderação Inteligente**: TensorFlow.js para análise de toxicidade em tempo real
 - 🗑️ **Privacidade Total**: Exclusão completa de conta e todos os dados
 - 💬 **Comentários Aninhados**: Sistema completo de comentários com curtidas
 - ⚡ **Tempo Real**: Sincronização instantânea de posts, likes e comentários
@@ -60,12 +59,10 @@ Este projeto foi construído como um **Progressive Web App (PWA)** moderno, tota
 - Sincronização em tempo real
 - Apenas o autor pode deletar seus próprios comentários
 
-### Moderação de Conteúdo
-- **Análise de toxicidade** via TensorFlow.js (threshold: 0.85)
-- **Lista de palavras proibidas** em português
-- **Bloqueio de links**: nenhum link pode ser postado
-- Marcação automática de conteúdo NSFW
-- Política fail-open: em caso de erro na IA, o post é permitido
+### Bloqueio de Links
+- **Nenhum link permitido**: Sistema de validação bloqueia qualquer URL postada
+- Validação simples mas efetiva
+- Foco no conteúdo original, não em redirecionamentos externos
 
 ### Gerenciamento de Perfil
 - Definir **apelido** e **foto de perfil**
@@ -87,7 +84,6 @@ Este projeto foi construído como um **Progressive Web App (PWA)** moderno, tota
 - **[React 19](https://react.dev/)** - Biblioteca UI com Vite
 - **[Material-UI (MUI) 7](https://mui.com/)** - Biblioteca de componentes e design system
 - **[React Router 7](https://reactrouter.com/)** - Roteamento de páginas
-- **[TensorFlow.js](https://www.tensorflow.org/js)** - Moderação de conteúdo no cliente
 - **[React Markdown](https://github.com/remarkjs/react-markdown)** - Renderização de markdown
 
 ### Backend (BaaS)
@@ -245,7 +241,6 @@ bolha/
 │   ├── firebase/
 │   │   └── config.js              # Configuração e exports do Firebase
 │   ├── hooks/
-│   │   ├── useToxicityModel.jsx   # Hook para modelo TensorFlow.js toxicity
 │   │   └── useVideoCompressor.jsx # Hook para compressão de vídeos via FFmpeg.wasm
 │   ├── pages/
 │   │   ├── CadastroPage.jsx       # Página de registro com validação de token
@@ -265,7 +260,7 @@ bolha/
 ├── database.rules.json            # Regras de segurança do RTDB (JSON)
 ├── firebase.json                  # Configuração do Firebase Emulator e deploy
 ├── firestore.rules                # Regras do Firestore (não usado atualmente)
-├── index.html                     # HTML base com script do TensorFlow.js
+├── index.html                     # HTML base
 ├── package.json                   # Dependências e scripts do frontend
 ├── vercel.json                    # Configuração de deploy Vercel (SPA routing)
 └── vite.config.js                 # Configuração do Vite (minificação + Terser)
@@ -423,7 +418,6 @@ Essencial para manter sincronização entre posts e perfis.
 
 - **`useAuth()`**: Acesso a `currentUser`, `userProfile`, `hiddenUsers`
 - **`useUpload()`**: Rastreamento de uploads com `uploads[]` array
-- **`useToxicityModel()`**: Carregamento lazy do modelo TensorFlow.js
 - **`useVideoCompressor()`**: Compressão de vídeos via FFmpeg.wasm
 
 ---
@@ -467,12 +461,10 @@ As regras em `database.rules.json` garantem:
 - ✅ Cada usuário só pode modificar seus próprios dados ocultos
 - ✅ Perfis só podem ser editados pelo próprio usuário
 
-### Moderação
+### Validações
 
 - Links bloqueados via regex no cliente
-- Lista de palavras proibidas em português
-- TensorFlow.js toxicity model (threshold: 0.85)
-- Conteúdo tóxico marcado como NSFW
+- Nenhum URL é permitido em posts ou comentários
 
 ---
 
@@ -497,7 +489,7 @@ Este projeto possui documentação detalhada em `.github/copilot-instructions.md
 - ✅ Workflows de desenvolvimento
 - ✅ Convenções de state management
 - ✅ Integração Firebase RTDB
-- ✅ Pipeline de moderação de conteúdo
+- ✅ Validações e bloqueio de links
 - ✅ Estratégia de upload e compressão de mídia
 
 Use esta documentação para context rápido ao implementar features ou debugar issues.

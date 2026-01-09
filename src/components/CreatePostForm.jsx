@@ -140,13 +140,10 @@ function CreatePostForm({ onPostSuccess }) {
     if (!currentUser || !userProfile) return setError("Você precisa estar logado para postar.");
 
     try {
-      let isPostNSFW = false;
-
       // Capturar dados antes de processar
       const capturedPost = postContent;
       const capturedFile = file;
       const capturedFileName = fileName;
-      const capturedIsNSFW = isPostNSFW;
 
       // 3. Criar notificação IMEDIATAMENTE
       const isLargeVideo = file && file.type.startsWith('video/') && file.size > 100 * 1024 * 1024;
@@ -239,7 +236,7 @@ function CreatePostForm({ onPostSuccess }) {
           
           // Fazer upload e criar post
           await createPost(
-            { textContent: capturedPost, isNSFW: capturedIsNSFW },
+            { textContent: capturedPost },
             finalFile,
             uploadId,
             currentUser,
