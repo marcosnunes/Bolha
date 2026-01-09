@@ -86,12 +86,12 @@ function Feed() {
         // Se for uma carga de "mais", anexa os posts.
         setPosts(prev => cursorTimestamp ? [...prev, ...fetchedPosts] : fetchedPosts);
         
-        // Define o timestamp do último post para o próximo cursor
-        setLastPostTimestamp(fetchedPosts[fetchedPosts.length - 1].createdAt);
-
         // Se o número de posts buscados for menor que o limite, não há mais
         if (fetchedPosts.length < POSTS_PER_PAGE) {
           setHasMore(false);
+        } else {
+          // Só atualiza o cursor se houver posts buscados
+          setLastPostTimestamp(fetchedPosts[fetchedPosts.length - 1].createdAt);
         }
       } else {
         setHasMore(false);
@@ -110,7 +110,7 @@ function Feed() {
 
   // Função para carregar mais posts
   const loadMorePosts = () => {
-    if (!hasMore || loadingMore) return;
+    if (!hasMore || loadingMore || !lastPostTimestamp) return;
     setLoadingMore(true);
     fetchPosts(lastPostTimestamp);
   };
