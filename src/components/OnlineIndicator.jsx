@@ -11,7 +11,6 @@ function OnlineIndicator({ isOnline = false, size = 12 }) {
         display: 'inline-block',
         marginLeft: '6px',
         marginTop: '2px',
-        boxShadow: isOnline ? '0 0 0 2px white, 0 0 0 3px #4caf50' : 'none',
         verticalAlign: 'middle',
       }}
     />
