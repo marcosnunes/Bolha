@@ -11,7 +11,7 @@ import {
     AppBar, Toolbar, Typography, Button, IconButton, Drawer, List, ListItem,
     ListItemButton, ListItemIcon, ListItemText, Box, Container, Divider,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
-    Tooltip, Switch, Avatar, Fab, FormControlLabel, TextField, Chip, ListItemAvatar,
+    Tooltip, Avatar, Fab, TextField, Chip, ListItemAvatar,
     Alert
 } from '@mui/material';
 
@@ -36,7 +36,6 @@ function HomePage() {
 
     // Estados do componente
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [showNSFW, setShowNSFW] = useState(false);
     const [inviteLink, setInviteLink] = useState('');
     const [loadingInvite, setLoadingInvite] = useState(false);
     const [openInviteDialog, setOpenInviteDialog] = useState(false);
@@ -235,7 +234,6 @@ function HomePage() {
 
     const handlePostSuccess = () => {
         setOpenPostDialog(false);
-        setRefreshFeed(prev => prev + 1); 
     };
 
     const drawer = (
@@ -384,12 +382,9 @@ function HomePage() {
             </Dialog>
 
             <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-                <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', mb: 2, gap: 2 }}>
-                    <Typography variant="h4" component="h2">Posts Recentes</Typography>
-                    <FormControlLabel control={<Switch checked={showNSFW} onChange={() => setShowNSFW(!showNSFW)} />} label="Mostrar conteúdo sensível" labelPlacement="start" />
-                </Box>
+                <Typography variant="h4" component="h2" sx={{ mb: 3 }}>A sua bolha</Typography>
                 
-                <Feed filterNSFW={!showNSFW} refreshTrigger={refreshFeed} />
+                <Feed />
             </Container>
 
             <Fab color="primary" aria-label="add" onClick={() => setOpenPostDialog(true)} sx={{ position: 'fixed', bottom: { xs: 80, sm: 32 }, right: 32 }}>

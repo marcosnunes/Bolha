@@ -9,7 +9,7 @@ import { Box, Button, CircularProgress, Typography } from '@mui/material';
 
 const POSTS_PER_PAGE = 5;
 
-function Feed({ filterNSFW }) {
+function Feed() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -127,8 +127,7 @@ function Feed({ filterNSFW }) {
 
   // Filtros
   const finalFilteredPosts = posts
-    .filter(post => !hiddenUsers.includes(post.authorId))
-    .filter(post => filterNSFW ? !(post.isNSFW === true) : true);
+    .filter(post => !hiddenUsers.includes(post.authorId));
 
   if (loading && posts.length === 0) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>;
