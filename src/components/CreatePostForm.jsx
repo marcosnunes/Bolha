@@ -273,7 +273,6 @@ function CreatePostForm({ onPostSuccess }) {
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-      {(nsfwLoading) && <Typography variant="caption">Verificando segurança...</Typography>}
       {error && <Alert severity="error">{error}</Alert>}
       {info && <Alert severity="info">{info}</Alert>}
 
@@ -301,7 +300,7 @@ function CreatePostForm({ onPostSuccess }) {
         </Box>
         
         <Button
-          variant="contained" type="submit" disabled={loading || nsfwLoading}
+          variant="contained" type="submit" disabled={loading}
           startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
         >
           {loading ? 'Publicando...' : 'Publicar'}
