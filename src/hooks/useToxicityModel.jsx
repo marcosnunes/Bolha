@@ -36,16 +36,9 @@ const useToxicityModel = () => {
     if (!text || text.trim() === '') return false;
     
     try {
-      // 1. Verificar palavras-chave em português PRIMEIRO (não precisa do modelo)
-      const portugueseCheck = containsPortugueseSensitiveKeyword(text);
-      if (portugueseCheck.detected) {
-        console.log('✓ Conteúdo sensível detectado (português):', portugueseCheck.category, portugueseCheck.keyword);
-        return true;
-      }
-      
-      // 2. Se não detectou em português E o modelo carregou, usar IA
+      // Se o modelo não carregou, deixar passar
       if (!model) {
-        console.log('Modelo ainda não carregou, mas português passou');
+        console.log('Modelo ainda não carregou');
         return false;
       }
       
@@ -102,19 +95,7 @@ const useToxicityModel = () => {
     }
     
     try {
-      // 1. Verificar palavras-chave em português primeiro (rápido)
-      const portugueseCheck = containsPortugueseSensitiveKeyword(text);
-      if (portugueseCheck.detected) {
-        return {
-          isSensitive: true,
-          scores: {},
-          flaggedCategories: [portugueseCheck.category],
-          method: 'portuguese-keywords',
-          summary: `Conteúdo flagrado (português): ${portugueseCheck.category}`
-        };
-      }
-      
-      // 2. Se não detectou em português, usar IA
+      // Usar IA (TensorFlow.js)
       const predictions = await model.classify([text]);
       
       let isSensitive = false;
