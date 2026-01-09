@@ -28,25 +28,10 @@ function CreatePostForm({ onPostSuccess }) {
 
   const fileInputRef = useRef(null);
 
-  const forbiddenWords = [
-    'arrombado', 'arrombada', 'babaca', 'nazista', 'nazi',
-    'estupro', 'estuprador', 'pedofilo', 'pedofilia',
-    'macaco', 'preto imundo', 'bicha', 'traveco', 'retardado', 'mongol'
-  ];
-
   const containsLink = (text) => {
     if (!text) return false;
     const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])|(\bwww\.[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/ig;
     return urlRegex.test(text);
-  };
-
-  const containsForbiddenWord = (text) => {
-    if (!text) return false;
-    const lowerCaseText = text.toLowerCase();
-    return forbiddenWords.some(word => {
-      const regex = new RegExp(`\\b${word}\\b`, 'i');
-      return regex.test(lowerCaseText);
-    });
   };
 
   // Função para comprimir imagem usando Canvas API
@@ -164,8 +149,7 @@ function CreatePostForm({ onPostSuccess }) {
       // 1. Classificar o texto ANTES de qualquer outra coisa
       if (postContent && postContent.trim().length > 0) {
         const isToxicFromModel = await classifyText(postContent);
-        const isForbiddenFromList = containsForbiddenWord(postContent);
-        if (isToxicFromModel || isForbiddenFromList) {
+        if (isToxicFromModel) {
           isPostNSFW = true;
         }
       }

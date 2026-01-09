@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { rtdb } from '../firebase/config';
 import { ref, update, serverTimestamp } from 'firebase/database';
+import useToxicityModel from '../hooks/useToxicityModel';
 import {
   Dialog,
   DialogTitle,
@@ -17,26 +18,12 @@ function EditPostModal({ open, onClose, postId, currentContent, onEditSuccess })
   const [content, setContent] = useState(currentContent || '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const forbiddenWords = [
-    'arrombado', 'arrombada', 'babaca', 'nazista', 'nazi',
-    'estupro', 'estuprador', 'pedofilo', 'pedofilia',
-    'macaco', 'preto imundo', 'bicha', 'traveco', 'retardado', 'mongol'
-  ];
+  const { classifyText } = useToxicityModel();
 
   const containsLink = (text) => {
     if (!text) return false;
     const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])|(\bwww\.[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/ig;
     return urlRegex.test(text);
-  };
-
-  const containsForbiddenWord = (text) => {
-    if (!text) return false;
-    const lowerCaseText = text.toLowerCase();
-    return forbiddenWords.some(word => {
-      const regex = new RegExp(`\\b${word}\\b`, 'i');
-      return regex.test(lowerCaseText);
-    });
   };
 
   async function handleSave() {
@@ -56,8 +43,10 @@ function EditPostModal({ open, onClose, postId, currentContent, onEditSuccess })
         return;
       }
 
-      if (containsForbiddenWord(content)) {
-        setError('Seu post contém palavras não permitidas.');
+      // Verificar se o conteúdo é sensível usando IA
+      const isSensitive = await classifyText(content);
+      if (isSensitive) {
+        setError('Seu post contém conteúdo sensível ou malicioso.');
         setLoading(false);
         return;
       }
