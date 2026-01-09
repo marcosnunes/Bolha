@@ -8,22 +8,30 @@ function useOnlineStatus(userId) {
 
   useEffect(() => {
     if (!userId) {
-      setTimeout(() => setLoading(false), 0);
+      setIsOnline(false);
+      setLoading(false);
       return;
     }
 
     const onlineRef = ref(rtdb, `users/${userId}/online`);
+    
     const unsubscribe = onValue(
       onlineRef,
       (snapshot) => {
-        const data = snapshot.val();
-        const now = Date.now();
-        // Usuário é considerado online se atualizou o status nos últimos 5 minutos
-        const isUserOnline = data && (now - data) < 5 * 60 * 1000;
-        setIsOnline(isUserOnline);
+        if (snapshot.exists()) {
+          const timestamp = snapshot.val();
+          const now = Date.now();
+          // Usuário é considerado online se atualizou o status nos últimos 5 minutos
+          const isUserOnline = (now - timestamp) < 5 * 60 * 1000;
+          setIsOnline(isUserOnline);
+        } else {
+          setIsOnline(false);
+        }
         setLoading(false);
       },
-      () => {
+      (error) => {
+        // Se houver erro de permissão ou arquivo não encontrado, usuário não está online
+        console.warn(`Aviso ao verificar online status de ${userId}:`, error.code);
         setIsOnline(false);
         setLoading(false);
       }
