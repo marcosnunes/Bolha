@@ -41,7 +41,7 @@ const useToxicityModel = () => {
       let isSensitive = false;
       const scores = {};
 
-      // Verifica cada categoria
+      // Verifica cada categoria com thresholds específicos
       predictions.forEach(prediction => {
         const category = prediction.label;
         const probability = prediction.results[0].probabilities;
@@ -49,8 +49,19 @@ const useToxicityModel = () => {
         // Armazenar score para debug
         scores[category] = probability[1]; // [false, true] -> queremos true
         
-        // Considerar sensível se a probabilidade de ser sensível > threshold
-        if (probability[1] > 0.5) {
+        // Thresholds específicos por categoria
+        let threshold = 0.5; // padrão
+        
+        if (category === 'sexual_explicit') {
+          threshold = 0.3; // Mais sensível para conteúdo sexual
+        } else if (category === 'severe_toxicity') {
+          threshold = 0.4; // Sensível para toxicidade severa
+        } else if (category === 'threat') {
+          threshold = 0.4; // Sensível para ameaças
+        }
+        
+        // Considerar sensível se a probabilidade ultrapassar o threshold da categoria
+        if (probability[1] > threshold) {
           isSensitive = true;
         }
       });
@@ -88,7 +99,18 @@ const useToxicityModel = () => {
         
         scores[category] = probability[1];
         
-        if (probability[1] > 0.5) {
+        // Thresholds específicos por categoria
+        let threshold = 0.5; // padrão
+        
+        if (category === 'sexual_explicit') {
+          threshold = 0.3; // Mais sensível para conteúdo sexual
+        } else if (category === 'severe_toxicity') {
+          threshold = 0.4; // Sensível para toxicidade severa
+        } else if (category === 'threat') {
+          threshold = 0.4; // Sensível para ameaças
+        }
+        
+        if (probability[1] > threshold) {
           isSensitive = true;
           flaggedCategories.push(category);
         }
