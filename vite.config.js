@@ -11,6 +11,9 @@ export default defineConfig({
         drop_console: true,
       },
     },
+    rollupOptions: {
+      external: ['@tensorflow/tfjs', 'buffer']
+    }
   },
   server: {
     open: true,

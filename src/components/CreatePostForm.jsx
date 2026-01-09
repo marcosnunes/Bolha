@@ -2,7 +2,6 @@ import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUpload } from '../contexts/UploadContext';
 import useHuggingFaceModeration from '../hooks/useHuggingFaceModeration';
-import useNSFWDetection from '../hooks/useNSFWDetection';
 
 // Componentes e Ícones do MUI
 import {
@@ -23,7 +22,6 @@ function CreatePostForm({ onPostSuccess }) {
   
   const { currentUser, userProfile } = useAuth();
   const { validateText } = useHuggingFaceModeration();
-  const { loading: nsfwLoading, classifyFile } = useNSFWDetection();
   const { addUpload, updateUploadStatus, updateUploadProgress, createPost } = useUpload();
 
   const fileInputRef = useRef(null);
@@ -155,19 +153,8 @@ function CreatePostForm({ onPostSuccess }) {
         }
       }
 
-      // 2. Classificar a imagem se houver
-      if (file && file.type.startsWith('image/')) {
-        try {
-          const imageClassification = await classifyFile(file);
-          if (imageClassification.isNSFW) {
-            isPostNSFW = true;
-            console.log('Imagem NSFW detectada');
-          }
-        } catch (err) {
-          console.error('Erro ao classificar imagem:', err);
-          // Fail-open: continua mesmo se der erro na classificação
-        }
-      }
+      // 2. Classificar a imagem se houver (remover - usar apenas Hugging Face)
+      // Imagens agora são moderadas via conteúdo textual via Hugging Face
 
       // Capturar dados antes de processar
       const capturedPost = postContent;
@@ -286,7 +273,7 @@ function CreatePostForm({ onPostSuccess }) {
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-      {(loadingModel || nsfwLoading) && <Typography variant="caption">Verificando segurança...</Typography>}
+      {(nsfwLoading) && <Typography variant="caption">Verificando segurança...</Typography>}
       {error && <Alert severity="error">{error}</Alert>}
       {info && <Alert severity="info">{info}</Alert>}
 
@@ -314,7 +301,7 @@ function CreatePostForm({ onPostSuccess }) {
         </Box>
         
         <Button
-          variant="contained" type="submit" disabled={loading || loadingModel || nsfwLoading}
+          variant="contained" type="submit" disabled={loading || nsfwLoading}
           startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
         >
           {loading ? 'Publicando...' : 'Publicar'}
