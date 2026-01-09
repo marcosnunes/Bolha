@@ -148,8 +148,8 @@ function CreatePostForm({ onPostSuccess }) {
       if (postContent && postContent.trim().length > 0) {
         const result = await validateText(postContent);
         if (result.isSensitive) {
-          isPostNSFW = true;
-          console.log('Conteúdo sensível detectado (Hugging Face):', result);
+          setError(`Seu post foi rejeitado: Conteúdo considerado impróprio (Confiança: ${(result.confidence * 100).toFixed(1)}%). Motivo: ${result.reason || result.label}`);
+          return; // Bloqueia criação do post
         }
       }
 

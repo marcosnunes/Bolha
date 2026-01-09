@@ -11,7 +11,7 @@ if (!process.env.EMAIL_USER) {
 }
 
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
-const { logger } = require("firebase-functions");
+const { logger, config } = require("firebase-functions");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
@@ -388,10 +388,11 @@ exports.validateTextWithHuggingFace = onCall({ region: "us-central1" }, async (r
   }
 
   try {
-    const HF_API_KEY = process.env.HUGGINGFACE_API_KEY;
+    // Obter API key do Firebase config ou .env
+    const HF_API_KEY = config().huggingface?.api_key;
 
     if (!HF_API_KEY) {
-      logger.warn('HUGGINGFACE_API_KEY não configurada - usando fallback');
+      logger.warn('HUGGINGFACE_API_KEY não configurada');
       return {
         isSensitive: false,
         confidence: 0,
