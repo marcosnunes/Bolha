@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { rtdb } from '../firebase/config';
 import { ref, update, serverTimestamp } from 'firebase/database';
-import useHuggingFaceModeration from '../hooks/useHuggingFaceModeration';
 import {
   Dialog,
   DialogTitle,
@@ -18,7 +17,6 @@ function EditCommentModal({ open, onClose, postId, commentId, currentContent, on
   const [content, setContent] = useState(currentContent || '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { validateText } = useHuggingFaceModeration();
 
   const containsLink = (text) => {
     if (!text) return false;
@@ -43,13 +41,7 @@ function EditCommentModal({ open, onClose, postId, commentId, currentContent, on
         return;
       }
 
-      // Verificar se o conteúdo é sensível usando Hugging Face
-      const result = await validateText(content);
-      if (result.isSensitive) {
-        setError('Seu comentário contém conteúdo sensível ou malicioso.');
-        setLoading(false);
-        return;
-      }      // Atualizar comentário no Firebase
+      // Atualizar comentário no Firebase
       const commentRef = ref(rtdb, `posts/${postId}/comments/${commentId}`);
       await update(commentRef, {
         textContent: content,

@@ -3,7 +3,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, push, set, get, onChildAdded, onChildChanged, onChildRemoved, serverTimestamp } from 'firebase/database';
 import CommentItem from './CommentItem.jsx';
-import useHuggingFaceModeration from '../hooks/useHuggingFaceModeration';
 
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button,
@@ -13,7 +12,6 @@ import SendIcon from '@mui/icons-material/Send';
 
 function CommentModal({ postId, open, onClose }) {
   const { currentUser, userProfile } = useAuth();
-  const { validateText } = useHuggingFaceModeration();
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -103,14 +101,6 @@ function CommentModal({ postId, open, onClose }) {
     setError('');
 
     try {
-      // Validar conteúdo do comentário com Hugging Face
-      const result = await validateText(commentText);
-      if (result.isSensitive) {
-        setError('Seu comentário contém conteúdo sensível ou malicioso.');
-        setLoading(false);
-        return;
-      }
-
       const commentsRef = ref(rtdb, `posts/${postId}/comments`);
       const newCommentRef = push(commentsRef);
 

@@ -11,7 +11,7 @@ if (!process.env.EMAIL_USER) {
 }
 
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
-const { logger, config } = require("firebase-functions");
+const { logger } = require("firebase-functions");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
@@ -376,6 +376,9 @@ exports.migrateCommentLikesAdmin = onRequest({ region: "us-central1" }, async (r
  * @param {string} text - Texto a validar
  * @returns {object} { isSensitive, confidence, label }
  */
+// DESABILITADO: Moderação automática com Hugging Face
+// Comentado porque estava sinalizando incorretamente todo conteúdo como false
+/*
 exports.validateTextWithHuggingFace = onCall({ region: "us-central1" }, async (request) => {
   const { text } = request.data;
 
@@ -461,3 +464,4 @@ exports.validateTextWithHuggingFace = onCall({ region: "us-central1" }, async (r
     };
   }
 });
+*/

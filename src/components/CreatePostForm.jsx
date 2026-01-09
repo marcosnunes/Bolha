@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUpload } from '../contexts/UploadContext';
-import useHuggingFaceModeration from '../hooks/useHuggingFaceModeration';
 
 // Componentes e Ícones do MUI
 import {
@@ -21,7 +20,6 @@ function CreatePostForm({ onPostSuccess }) {
   const [info, setInfo] = useState('');
   
   const { currentUser, userProfile } = useAuth();
-  const { validateText } = useHuggingFaceModeration();
   const { addUpload, updateUploadStatus, updateUploadProgress, createPost } = useUpload();
 
   const fileInputRef = useRef(null);
@@ -143,18 +141,6 @@ function CreatePostForm({ onPostSuccess }) {
 
     try {
       let isPostNSFW = false;
-
-      // 1. Validar texto com Hugging Face (IA em português)
-      if (postContent && postContent.trim().length > 0) {
-        const result = await validateText(postContent);
-        if (result.isSensitive) {
-          setError(`Seu post foi rejeitado: Conteúdo considerado impróprio (Confiança: ${(result.confidence * 100).toFixed(1)}%). Motivo: ${result.reason || result.label}`);
-          return; // Bloqueia criação do post
-        }
-      }
-
-      // 2. Classificar a imagem se houver (remover - usar apenas Hugging Face)
-      // Imagens agora são moderadas via conteúdo textual via Hugging Face
 
       // Capturar dados antes de processar
       const capturedPost = postContent;
