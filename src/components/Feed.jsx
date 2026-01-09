@@ -63,7 +63,7 @@ function Feed() {
     const postsRef = ref(rtdb, 'posts');
     let postsQuery;
 
-    if (cursorTimestamp) {
+    if (cursorTimestamp && typeof cursorTimestamp === 'number') {
       // Busca a próxima página, terminando no cursor (menos 1 para não repetir)
       postsQuery = query(postsRef, orderByChild('createdAt'), endAt(cursorTimestamp - 1), limitToLast(POSTS_PER_PAGE));
     } else {
@@ -76,8 +76,18 @@ function Feed() {
       if (snapshot.exists()) {
         const fetchedPosts = [];
         snapshot.forEach(child => {
-          fetchedPosts.push({ id: child.key, ...child.val() });
+          const postData = { id: child.key, ...child.val() };
+          // Valida que o post tem createdAt válido
+          if (postData.createdAt && typeof postData.createdAt === 'number') {
+            fetchedPosts.push(postData);
+          }
         });
+
+        if (fetchedPosts.length === 0) {
+          setHasMore(false);
+          setLastPostTimestamp(null);
+          return;
+        }
 
         // A ordem vem do mais antigo para o mais novo, então revertemos
         fetchedPosts.reverse();
@@ -92,13 +102,21 @@ function Feed() {
           setLastPostTimestamp(null);
         } else {
           // Se chegou aqui, pode haver mais posts, atualiza o cursor
-          setLastPostTimestamp(fetchedPosts[fetchedPosts.length - 1].createdAt);
+          const lastPost = fetchedPosts[fetchedPosts.length - 1];
+          if (lastPost?.createdAt && typeof lastPost.createdAt === 'number') {
+            setLastPostTimestamp(lastPost.createdAt);
+          } else {
+            setHasMore(false);
+            setLastPostTimestamp(null);
+          }
         }
       } else {
         setHasMore(false);
+        setLastPostTimestamp(null);
       }
     } catch (error) {
       console.error("Erro ao buscar posts:", error);
+      setHasMore(false);
     } finally {
         if (cursorTimestamp) setLoadingMore(false); else setLoading(false);
     }
@@ -111,7 +129,11 @@ function Feed() {
 
   // Função para carregar mais posts
   const loadMorePosts = () => {
-    if (!hasMore || loadingMore || !lastPostTimestamp) return;
+    if (!hasMore || loadingMore) return;
+    if (!lastPostTimestamp || typeof lastPostTimestamp !== 'number') {
+      setHasMore(false);
+      return;
+    }
     setLoadingMore(true);
     fetchPosts(lastPostTimestamp);
   };
