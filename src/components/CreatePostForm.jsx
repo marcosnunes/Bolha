@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUpload } from '../contexts/UploadContext';
-import useToxicityModel from '../hooks/useToxicityModel';
+import useHuggingFaceModeration from '../hooks/useHuggingFaceModeration';
 import useNSFWDetection from '../hooks/useNSFWDetection';
 
 // Componentes e Ícones do MUI
@@ -22,7 +22,7 @@ function CreatePostForm({ onPostSuccess }) {
   const [info, setInfo] = useState('');
   
   const { currentUser, userProfile } = useAuth();
-  const { loadingModel, classifyText } = useToxicityModel();
+  const { validateText } = useHuggingFaceModeration();
   const { loading: nsfwLoading, classifyFile } = useNSFWDetection();
   const { addUpload, updateUploadStatus, updateUploadProgress, createPost } = useUpload();
 
@@ -146,12 +146,12 @@ function CreatePostForm({ onPostSuccess }) {
     try {
       let isPostNSFW = false;
 
-      // 1. Validar texto com TensorFlow.js + palavras-chave
+      // 1. Validar texto com Hugging Face (IA em português)
       if (postContent && postContent.trim().length > 0) {
-        const isToxicFromModel = await classifyText(postContent);
-        if (isToxicFromModel) {
+        const result = await validateText(postContent);
+        if (result.isSensitive) {
           isPostNSFW = true;
-          console.log('Conteúdo sensível detectado');
+          console.log('Conteúdo sensível detectado (Hugging Face):', result);
         }
       }
 

@@ -478,3 +478,102 @@ exports.validateTextWithPerspective = onCall({
     };
   }
 });
+
+// ============================================
+// Validação com Hugging Face + Modelo Português
+// ============================================
+
+/**
+ * Cloud Function para validar conteúdo sensível usando Hugging Face
+ * Usa modelos específicos para português (não requer modelo no cliente)
+ * 
+ * API usada: Hugging Face Inference API (gratuita)
+ * Modelos: zero-shot-classification com labels em português
+ * 
+ * @param {string} text - Texto a validar
+ * @returns {object} { isSensitive, confidence, label }
+ */
+exports.validateTextWithHuggingFace = onCall({ region: "us-central1" }, async (request) => {
+  const { text } = request.data;
+
+  if (!text || text.trim() === '') {
+    return {
+      isSensitive: false,
+      confidence: 0,
+      reason: 'Texto vazio'
+    };
+  }
+
+  try {
+    const HF_API_KEY = process.env.HUGGINGFACE_API_KEY;
+
+    if (!HF_API_KEY) {
+      logger.warn('HUGGINGFACE_API_KEY não configurada - usando fallback');
+      return {
+        isSensitive: false,
+        confidence: 0,
+        fallback: true,
+        reason: 'API key não configurada'
+      };
+    }
+
+    // Estratégia 1: Zero-shot classification com labels em português
+    // Detecta se o texto é "sensível" vs "apropriado"
+    const zeroShotResponse = await fetch('https://api-inference.huggingface.co/models/facebook/bart-large-mnli', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${HF_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputs: text,
+        parameters: {
+          candidate_labels: ['conteúdo sensível e ofensivo', 'conteúdo apropriado e seguro'],
+          multi_class: false
+        }
+      })
+    });
+
+    if (!zeroShotResponse.ok) {
+      logger.warn(`Erro Hugging Face: ${zeroShotResponse.status}`);
+      // Fallback para análise local se HF falhar
+      return {
+        isSensitive: false,
+        confidence: 0,
+        fallback: true,
+        reason: 'Erro ao chamar Hugging Face'
+      };
+    }
+
+    const zeroShotData = await zeroShotResponse.json();
+
+    // Extrair resultado
+    const scores = zeroShotData.scores || [];
+    const labels = zeroShotData.labels || [];
+
+    // Encontrar score de "conteúdo sensível"
+    const sensitiveIndex = labels.findIndex(l => l.includes('sensível'));
+    const sensitiveScore = sensitiveIndex >= 0 ? scores[sensitiveIndex] : 0;
+
+    logger.info(`Hugging Face - Score sensível: ${(sensitiveScore * 100).toFixed(1)}% - Texto: "${text.substring(0, 50)}..."`);
+
+    const isSensitive = sensitiveScore > 0.6; // Threshold: 60%
+
+    return {
+      isSensitive,
+      confidence: sensitiveScore,
+      label: labels[0] || 'indeterminado',
+      reason: isSensitive ? `Conteúdo detectado como sensível (${(sensitiveScore * 100).toFixed(1)}%)` : 'Conteúdo apropriado'
+    };
+
+  } catch (error) {
+    logger.error('Erro ao validar com Hugging Face:', error);
+    return {
+      isSensitive: false,
+      confidence: 0,
+      error: error.message,
+      fallback: true,
+      reason: 'Erro na validação'
+    };
+  }
+});

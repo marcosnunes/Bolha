@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { containsPortugueseSensitiveKeyword } from '../config/portugueseSensitiveKeywords';
 
 const useToxicityModel = () => {
   const [model, setModel] = useState(null);
