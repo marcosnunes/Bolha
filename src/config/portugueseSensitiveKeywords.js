@@ -128,7 +128,7 @@ export const PORTUGUESE_SENSITIVE_KEYWORDS = {
 
 // Verifica se o texto contém palavras-chave sensíveis em português
 export const containsPortugueseSensitiveKeyword = (text) => {
-  if (!text) return false;
+  if (!text) return { detected: false };
   
   const lowerText = text.toLowerCase();
   
@@ -137,29 +137,18 @@ export const containsPortugueseSensitiveKeyword = (text) => {
     const keywords = PORTUGUESE_SENSITIVE_KEYWORDS[category];
     
     for (const keyword of keywords) {
-      // Método 1: Usar word boundary (mais preciso)
-      let regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-      if (regex.test(lowerText)) {
-        return {
-          detected: true,
-          category,
-          keyword,
-          method: 'boundary'
-        };
-      }
-      
-      // Método 2: Busca direta se word boundary falhar (fallback para palavras isoladas)
-      // Importante para casos como "sua puta" onde a detecção com \b pode falhar
+      // Simples: buscar a palavra diretamente (case-insensitive)
       if (lowerText.includes(keyword)) {
-        // Validar que é realmente a palavra (não parte de outra palavra)
-        // Ex: "puta" não deve detectar em "deputado"
-        const words = lowerText.split(/[^a-záéíóúâêãõç]+/);
+        // Dupla-validação: separar por espaços/pontuação e conferir se realmente é a palavra
+        const cleanedText = lowerText.replace(/[^a-záéíóúâêãõç\s]/g, ' ');
+        const words = cleanedText.split(/\s+/).filter(w => w.length > 0);
+        
         if (words.includes(keyword)) {
+          console.log(`[DEBUG] Detectada palavra sensível: "${keyword}" em categoria "${category}"`);
           return {
             detected: true,
             category,
-            keyword,
-            method: 'direct'
+            keyword
           };
         }
       }

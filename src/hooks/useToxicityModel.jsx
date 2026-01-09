@@ -34,17 +34,22 @@ const useToxicityModel = () => {
 
   // Classifica texto e retorna se é sensível/malicioso em qualquer categoria
   const classifyText = async (text) => {
-    if (!model || !text || text.trim() === '') return false;
+    if (!text || text.trim() === '') return false;
     
     try {
-      // 1. Verificar palavras-chave em português primeiro (rápido)
+      // 1. Verificar palavras-chave em português PRIMEIRO (não precisa do modelo)
       const portugueseCheck = containsPortugueseSensitiveKeyword(text);
       if (portugueseCheck.detected) {
-        console.log('Conteúdo sensível detectado (português):', portugueseCheck.category, portugueseCheck.keyword);
+        console.log('✓ Conteúdo sensível detectado (português):', portugueseCheck.category, portugueseCheck.keyword);
         return true;
       }
       
-      // 2. Se não detectou em português, usar IA (TensorFlow.js para inglês)
+      // 2. Se não detectou em português E o modelo carregou, usar IA
+      if (!model) {
+        console.log('Modelo ainda não carregou, mas português passou');
+        return false;
+      }
+      
       const predictions = await model.classify([text]);
       
       let isSensitive = false;
@@ -76,7 +81,7 @@ const useToxicityModel = () => {
       });
 
       if (isSensitive) {
-        console.log('Conteúdo sensível detectado (IA):', scores);
+        console.log('✓ Conteúdo sensível detectado (TensorFlow.js):', scores);
       }
       
       return isSensitive;
