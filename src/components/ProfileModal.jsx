@@ -68,7 +68,7 @@ function ProfileModal({ userToDisplay, onClose, onHideUser, onShowUser, onEditPr
                 >
                   {!userProfile.photoURL && userProfile.nickname.charAt(0).toUpperCase()}
                 </Avatar>
-                <VerificationBadge isVerified={userProfile.isVerified} avatarSize={100} customSx={{ bottom: '-4px', right: '-4px' }} />
+                <VerificationBadge isVerified={userProfile.isVerified} avatarSize={100} customSx={{ bottom: '-5px', right: '-5px' }} />
               </Box>
             ) : (
               <Skeleton variant="circular" width={100} height={100} />
