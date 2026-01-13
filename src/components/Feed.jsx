@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { rtdb } from '../firebase/config';
-import { ref, query, orderByChild, get, startAt, onChildAdded } from 'firebase/database';
+import { ref, query, orderByChild, get, startAt, onChildAdded, onChildChanged } from 'firebase/database';
 import Post from './Post.jsx';
 import ProfileModal from './ProfileModal.jsx';
 import EditProfileModal from './EditProfileModal.jsx';
@@ -25,12 +25,13 @@ function Feed({ filterNSFW }) {
 
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
-  // 1. LISTENER REALTIME (Apenas novos posts)
+  // 1. LISTENER REALTIME (Apenas novos posts e mudanças em lastActivityAt para boost)
   useEffect(() => {
     const postsRef = ref(rtdb, 'posts');
     // +1ms para garantir que não pegue nada do passado
     const realtimeQuery = query(postsRef, orderByChild('createdAt'), startAt(mountTimeRef.current + 1));
-    const unsubscribe = onChildAdded(realtimeQuery, (snapshot) => {
+    
+    const unsubAdded = onChildAdded(realtimeQuery, (snapshot) => {
       const newPostData = snapshot.val();
       const newPostId = snapshot.key;
 
@@ -43,7 +44,22 @@ function Feed({ filterNSFW }) {
       }
     });
 
-    return () => unsubscribe();
+    // Listener para atualizar lastActivityAt quando post recebe interação (like, comentário)
+    const unsubChanged = onChildChanged(realtimeQuery, (snapshot) => {
+      if (snapshot.exists()) {
+        const updatedPostData = snapshot.val();
+        const postId = snapshot.key;
+
+        setPosts(prev => {
+          // Atualiza o post existente com novos dados (lastActivityAt mudou)
+          return prev.map(p => 
+            p.id === postId ? { id: postId, ...updatedPostData } : p
+          );
+        });
+      }
+    });
+
+    return () => { unsubAdded(); unsubChanged(); };
   }, []);
 
   // 2. Busca Inicial de IDs (Histórico)
