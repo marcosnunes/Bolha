@@ -62,18 +62,17 @@ function Feed() {
     return () => { unsubAdded(); unsubChanged(); unsubRemoved(); unsubDeletedAll(); };
   }, [hiddenUsers]);
 
-  // Busca posts paginados
+  // Busca posts paginados - usa createdAt para paginação confiável
   const fetchPosts = useCallback(async (cursorTimestamp = null) => {
     const postsRef = ref(rtdb, 'posts');
     let postsQuery;
 
     if (cursorTimestamp && typeof cursorTimestamp === 'number') {
-      // Busca a próxima página usando o cursor
-      // endAt(cursorTimestamp) pega todos os posts até esse timestamp, depois pegamos os últimos POSTS_PER_PAGE
-      postsQuery = query(postsRef, orderByChild('lastActivityAt'), endAt(cursorTimestamp), limitToLast(POSTS_PER_PAGE + 1));
+      // Busca a próxima página usando createdAt (nunca muda)
+      postsQuery = query(postsRef, orderByChild('createdAt'), endAt(cursorTimestamp - 1), limitToLast(POSTS_PER_PAGE));
     } else {
-      // Busca inicial (os posts com atividade mais recente)
-      postsQuery = query(postsRef, orderByChild('lastActivityAt'), limitToLast(POSTS_PER_PAGE));
+      // Busca inicial (os posts mais antigos primeiro para paginação)
+      postsQuery = query(postsRef, orderByChild('createdAt'), limitToLast(POSTS_PER_PAGE));
     }
 
     try {
@@ -82,8 +81,8 @@ function Feed() {
         const fetchedPosts = [];
         snapshot.forEach(child => {
           const postData = { id: child.key, ...child.val() };
-          // Valida que o post tem lastActivityAt válido
-          if (postData.lastActivityAt && typeof postData.lastActivityAt === 'number') {
+          // Valida que o post tem createdAt válido
+          if (postData.createdAt && typeof postData.createdAt === 'number') {
             fetchedPosts.push(postData);
           }
         });
@@ -94,41 +93,26 @@ function Feed() {
           return;
         }
 
-        // A ordem vem do mais antigo para o mais novo, então revertemos
+        // A ordem vem do mais antigo para o mais novo por createdAt, então revertemos
         fetchedPosts.reverse();
-
-        // Se é uma carga de "mais" (com cursor), remove o primeiro post pois ele é o cursor que já temos
-        if (cursorTimestamp && fetchedPosts.length > 0) {
-          // Remove o primeiro post se ele tiver o mesmo timestamp que o cursor (é duplicado)
-          if (fetchedPosts[0].lastActivityAt === cursorTimestamp) {
-            fetchedPosts.shift();
-          }
-        }
-
-        if (fetchedPosts.length === 0) {
-          setHasMore(false);
-          setLastPostTimestamp(null);
-          return;
-        }
+        
+        // Ordena os posts retornados por lastActivityAt (mais ativos primeiro)
+        // Mas mantém a paginação segura baseada em createdAt
+        const sortedByActivity = fetchedPosts.sort((a, b) => (b.lastActivityAt || 0) - (a.lastActivityAt || 0));
         
         // Se for a carga inicial e não houver cursor, define o próximo cursor.
         // Se for uma carga de "mais", anexa os posts.
-        setPosts(prev => cursorTimestamp ? [...prev, ...fetchedPosts] : fetchedPosts);
+        setPosts(prev => cursorTimestamp ? [...prev, ...sortedByActivity] : sortedByActivity);
         
-        // Determina se há mais posts
-        // Se buscou menos posts que o limite (ou limite+1 para paginação), não há mais
-        const actualLimit = cursorTimestamp ? POSTS_PER_PAGE + 1 : POSTS_PER_PAGE;
-        
-        if (fetchedPosts.length < actualLimit) {
-          // Menos posts que o solicitado = fim da lista
+        // Se o número de posts buscados for menor que o limite, não há mais posts
+        if (fetchedPosts.length < POSTS_PER_PAGE) {
           setHasMore(false);
           setLastPostTimestamp(null);
         } else {
-          // Há mais posts, atualiza o cursor para o post mais antigo
+          // Se chegou aqui, pode haver mais posts, atualiza o cursor baseado em createdAt
           const oldestPost = fetchedPosts[0];
-          if (oldestPost?.lastActivityAt && typeof oldestPost.lastActivityAt === 'number') {
-            setLastPostTimestamp(oldestPost.lastActivityAt);
-            setHasMore(true);
+          if (oldestPost?.createdAt && typeof oldestPost.createdAt === 'number') {
+            setLastPostTimestamp(oldestPost.createdAt);
           } else {
             setHasMore(false);
             setLastPostTimestamp(null);
