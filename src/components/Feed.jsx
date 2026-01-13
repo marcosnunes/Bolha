@@ -24,7 +24,7 @@ function Feed() {
   // Listener para novos posts (em tempo real)
   useEffect(() => {
     const postsRef = ref(rtdb, 'posts');
-    const realtimeQuery = query(postsRef, orderByChild('createdAt'), startAt(mountTimeRef.current + 1));
+    const realtimeQuery = query(postsRef, orderByChild('lastActivityAt'), startAt(mountTimeRef.current + 1));
 
     const unsubAdded = onChildAdded(realtimeQuery, (snapshot) => {
       if (snapshot.exists()) {
@@ -36,11 +36,15 @@ function Feed() {
       }
     });
 
-    // Atualiza posts existentes caso aconteça uma mudança (por exemplo, authorPhotoURL atualizado)
+    // Atualiza posts existentes caso aconteça uma mudança (por exemplo, lastActivityAt ou likes atualizados)
     const unsubChanged = onChildChanged(realtimeQuery, (snapshot) => {
       if (snapshot.exists()) {
         const updated = { id: snapshot.key, ...snapshot.val() };
-        setPosts(prev => prev.map(p => p.id === snapshot.key ? updated : p));
+        // Remove o post da sua posição atual e re-insere no topo (simulando o boost)
+        setPosts(prev => {
+          const filtered = prev.filter(p => p.id !== snapshot.key);
+          return [updated, ...filtered];
+        });
       }
     });
 
@@ -65,10 +69,10 @@ function Feed() {
 
     if (cursorTimestamp && typeof cursorTimestamp === 'number') {
       // Busca a próxima página, terminando no cursor (menos 1 para não repetir)
-      postsQuery = query(postsRef, orderByChild('createdAt'), endAt(cursorTimestamp - 1), limitToLast(POSTS_PER_PAGE));
+      postsQuery = query(postsRef, orderByChild('lastActivityAt'), endAt(cursorTimestamp - 1), limitToLast(POSTS_PER_PAGE));
     } else {
-      // Busca inicial (os posts mais recentes)
-      postsQuery = query(postsRef, orderByChild('createdAt'), limitToLast(POSTS_PER_PAGE));
+      // Busca inicial (os posts com atividade mais recente)
+      postsQuery = query(postsRef, orderByChild('lastActivityAt'), limitToLast(POSTS_PER_PAGE));
     }
 
     try {
@@ -77,8 +81,8 @@ function Feed() {
         const fetchedPosts = [];
         snapshot.forEach(child => {
           const postData = { id: child.key, ...child.val() };
-          // Valida que o post tem createdAt válido
-          if (postData.createdAt && typeof postData.createdAt === 'number') {
+          // Valida que o post tem lastActivityAt válido
+          if (postData.lastActivityAt && typeof postData.lastActivityAt === 'number') {
             fetchedPosts.push(postData);
           }
         });
@@ -103,8 +107,8 @@ function Feed() {
         } else {
           // Se chegou aqui, pode haver mais posts, atualiza o cursor
           const lastPost = fetchedPosts[fetchedPosts.length - 1];
-          if (lastPost?.createdAt && typeof lastPost.createdAt === 'number') {
-            setLastPostTimestamp(lastPost.createdAt);
+          if (lastPost?.lastActivityAt && typeof lastPost.lastActivityAt === 'number') {
+            setLastPostTimestamp(lastPost.lastActivityAt);
           } else {
             setHasMore(false);
             setLastPostTimestamp(null);

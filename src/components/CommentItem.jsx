@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
-import { ref, remove, set, onValue, get } from 'firebase/database';
+import { ref, remove, set, onValue, get, update, serverTimestamp } from 'firebase/database';
 import EditCommentModal from './EditCommentModal.jsx'; // Importa modal de edição
 import VerificationBadge from './VerificationBadge.jsx'; // Importa badge de verificação
 import OnlineIndicator from './OnlineIndicator.jsx'; // Importa indicador de online
@@ -92,6 +92,10 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
       } else {
         await set(userLikeRef, true);
         console.log('✅ Like adicionado');
+        // Atualizar lastActivityAt do post para trazer ao topo
+        await update(ref(rtdb, `posts/${postId}`), {
+          lastActivityAt: serverTimestamp()
+        });
       }
     } catch (error) {
       console.error('❌ Erro ao curtir:', error.code, error.message);

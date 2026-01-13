@@ -1,6 +1,6 @@
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
-import { ref, remove, set, onValue, get } from 'firebase/database';
+import { ref, remove, set, onValue, get, update, serverTimestamp } from 'firebase/database';
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import ConfirmDialog from './ConfirmDialog'; // Importa nosso componente reutilizável
@@ -148,6 +148,10 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
         await remove(postLikesRef);
       } else {
         await set(postLikesRef, true);
+        // Atualizar lastActivityAt do post para trazer ao topo
+        await update(ref(rtdb, `posts/${id}`), {
+          lastActivityAt: serverTimestamp()
+        });
       }
     } catch (error) {
       console.error("Erro ao curtir:", error);

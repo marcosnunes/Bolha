@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
-import { ref, push, set, get, onChildAdded, onChildChanged, onChildRemoved, serverTimestamp } from 'firebase/database';
+import { ref, push, set, get, onChildAdded, onChildChanged, onChildRemoved, serverTimestamp, update } from 'firebase/database';
 import CommentItem from './CommentItem.jsx';
 
 import {
@@ -114,6 +114,11 @@ function CommentModal({ postId, open, onClose }) {
       };
 
       await set(newCommentRef, newCommentData);
+      
+      // Atualizar lastActivityAt do post para trazer ao topo
+      await update(ref(rtdb, `posts/${postId}`), {
+        lastActivityAt: serverTimestamp()
+      });
 
       setCommentText('');
       setError('');

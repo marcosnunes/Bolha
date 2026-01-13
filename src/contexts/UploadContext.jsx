@@ -119,6 +119,7 @@ export function UploadProvider({ children }) {
         mediaURL: mediaURL,
         mediaType: mediaType,
         createdAt: serverTimestamp(),
+        lastActivityAt: serverTimestamp(),
         likes: {},
         dislikes: {},
         comments: {}
