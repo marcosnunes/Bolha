@@ -24,7 +24,7 @@ function ReportAbusePage() {
         </Toolbar>
       </AppBar>
       
-      <Container maxWidth="md" sx={{ mt: 4 }}>
+      <Container maxWidth="md" sx={{ mt: 4, pb: { xs: 12, sm: 4 }, mb: 'max(env(safe-area-inset-bottom), 0px)' }}>
         <Paper sx={{p: 4}}>
           <Typography variant="h4" gutterBottom>
             Padrões de Segurança e Denúncias de Abuso

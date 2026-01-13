@@ -18,7 +18,7 @@ function PrivacyPolicyPage() {
         </Toolbar>
       </AppBar>
       
-      <Container maxWidth="md" sx={{ mt: 4 }}>
+      <Container maxWidth="md" sx={{ mt: 4, pb: { xs: 12, sm: 4 }, mb: 'max(env(safe-area-inset-bottom), 0px)' }}>
         <Paper sx={{p: 4}}>
           <Typography variant="h4" gutterBottom>Política de Privacidade</Typography>
           <Typography variant="body1" paragraph>
@@ -41,7 +41,7 @@ function PrivacyPolicyPage() {
             Você pode, a qualquer momento, solicitar a exclusão completa da sua conta e de todos os dados associados através da opção "Apagar Conta" disponível no menu. Este processo é irreversível.
           </Typography>
           <Typography variant="caption" display="block" mt={4}>
-            Esta política é efetiva a partir de 12 de Junho de 2024.
+            Esta política é efetiva a partir de 20 de novembro de 2025.
           </Typography>
         </Paper>
       </Container>
