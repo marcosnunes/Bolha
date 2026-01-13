@@ -244,7 +244,10 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       <Card sx={{ mb: 3 }}>
           <CardHeader
           avatar={
-            <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+            <Box 
+              sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0, cursor: 'pointer' }} 
+              onClick={handleAuthorClick}
+            >
               <Avatar src={profilePhotoURL} sx={{ width: 48, height: 48 }}>{!profilePhotoURL && (displayNickname || authorNickname) ? (displayNickname || authorNickname).charAt(0).toUpperCase() : '?'}</Avatar>
               <VerificationBadge isVerified={isVerified} avatarSize={48} customSx={{ bottom: '-3px', right: '-3px' }} />
             </Box>
@@ -261,7 +264,12 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
           }
           title={
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <span>{displayNickname || authorNickname}</span>
+              <span 
+                onClick={handleAuthorClick} 
+                style={{ cursor: 'pointer' }}
+              >
+                {displayNickname || authorNickname}
+              </span>
               <OnlineIndicator isOnline={isOnline} size={10} />
             </Box>
           }
