@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { rtdb } from '../firebase/config';
-import { ref, query, orderByChild, get, startAt, onChildAdded, onChildChanged } from 'firebase/database';
+import { ref, query, orderByChild, get, startAt, onChildAdded, onValue } from 'firebase/database';
 import Post from './Post.jsx';
 import ProfileModal from './ProfileModal.jsx';
 import EditProfileModal from './EditProfileModal.jsx';
@@ -25,12 +25,31 @@ function Feed({ filterNSFW }) {
 
   const { hiddenUsers, hideUser, showUser } = useAuth();
 
-  // 1. LISTENER REALTIME (Apenas novos posts e mudanças em lastActivityAt para boost)
+  // 1. LISTENER GLOBAL PARA REORDENAÇÃO POR TIMESTAMP
+  // Detecta qualquer mudança em qualquer post (novo, comentário, like) e reordena tudo
   useEffect(() => {
     const postsRef = ref(rtdb, 'posts');
-    // +1ms para garantir que não pegue nada do passado
-    const realtimeQuery = query(postsRef, orderByChild('createdAt'), startAt(mountTimeRef.current + 1));
     
+    // Listener que dispara para QUALQUER mudança na raiz de posts
+    const unsubValue = onValue(postsRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      
+      // Pega todos os posts do banco
+      const allPostsData = {};
+      snapshot.forEach(child => {
+        allPostsData[child.key] = { id: child.key, ...child.val() };
+      });
+      
+      // Atualiza apenas os posts que estão carregados no feed
+      setPosts(prev => {
+        const updated = prev.map(p => allPostsData[p.id] || p).filter(p => p);
+        // Reordena por lastActivityAt global (qualquer timestamp recente)
+        return updated.sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
+      });
+    });
+
+    // Listener para novos posts criados após montar
+    const realtimeQuery = query(postsRef, orderByChild('createdAt'), startAt(mountTimeRef.current + 1));
     const unsubAdded = onChildAdded(realtimeQuery, (snapshot) => {
       const newPostData = snapshot.val();
       const newPostId = snapshot.key;
@@ -47,52 +66,7 @@ function Feed({ filterNSFW }) {
       }
     });
 
-    // Listener para atualizar lastActivityAt quando post recebe interação (like, comentário)
-    const unsubChanged = onChildChanged(realtimeQuery, (snapshot) => {
-      if (snapshot.exists()) {
-        const updatedPostData = snapshot.val();
-        const postId = snapshot.key;
-
-        setPosts(prev => {
-          // Atualiza o post e reordena automaticamente
-          const updated = prev.map(p => 
-            p.id === postId ? { id: postId, ...updatedPostData } : p
-          );
-          // Reordena quando lastActivityAt muda
-          return updated.sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
-        });
-      }
-    });
-
-    // Listener GLOBAL para todas as mudanças em lastActivityAt (incluindo posts antigos não carregados)
-    // Quando um post antigo recebe comentário/like, traz ele para o topo
-    const unsubChangedAll = onChildChanged(postsRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const updatedPostData = snapshot.val();
-        const postId = snapshot.key;
-
-        setPosts(prev => {
-          const existsInArray = prev.some(p => p.id === postId);
-          
-          if (existsInArray) {
-            // Post já está carregado, apenas atualiza
-            const updated = prev.map(p => 
-              p.id === postId ? { id: postId, ...updatedPostData } : p
-            );
-            // Reordena quando lastActivityAt muda
-            return updated.sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
-          } else {
-            // Post antigo não estava carregado - traz ele para o topo
-            // Isso garante que posts comentados apareçam em destaque mesmo que não tivessem sido carregados
-            const newPost = { id: postId, ...updatedPostData };
-            const newPosts = [newPost, ...prev];
-            return newPosts.sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
-          }
-        });
-      }
-    });
-
-    return () => { unsubAdded(); unsubChanged(); unsubChangedAll(); };
+    return () => { unsubValue(); unsubAdded(); };
   }, []);
 
   // 2. Busca Inicial de IDs (Histórico)
