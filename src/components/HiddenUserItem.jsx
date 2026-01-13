@@ -34,7 +34,7 @@ function HiddenUserItem({ userId, onShowUser }) {
         <ListItemAvatar>
           {userProfile ? (
             <Avatar src={userProfile.photoURL}>
-              {!userProfile.photoURL && userProfile.nickname.charAt(0).toUpperCase()}
+              {!userProfile.photoURL && userProfile.nickname ? userProfile.nickname.charAt(0).toUpperCase() : '?'}
             </Avatar>
           ) : (
             <Skeleton variant="circular" width={40} height={40} />

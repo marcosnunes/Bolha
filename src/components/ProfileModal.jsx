@@ -66,7 +66,7 @@ function ProfileModal({ userToDisplay, onClose, onHideUser, onShowUser, onEditPr
                   src={userProfile.photoURL} 
                   sx={{ width: 100, height: 100, bgcolor: 'primary.main', fontSize: '2.5rem' }}
                 >
-                  {!userProfile.photoURL && userProfile.nickname.charAt(0).toUpperCase()}
+                  {!userProfile.photoURL && userProfile.nickname ? userProfile.nickname.charAt(0).toUpperCase() : '?'}
                 </Avatar>
                 <VerificationBadge isVerified={userProfile.isVerified} avatarSize={100} customSx={{ bottom: '-5px', right: '-5px' }} />
               </Box>

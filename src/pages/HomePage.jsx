@@ -250,7 +250,7 @@ function HomePage() {
                                 <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0, mb: 1 }}>
                                     <IconButton onClick={() => profilePicInputRef.current.click()} sx={{ p: 0 }}>
                                         <Avatar src={userProfile ? userProfile.photoURL : ''} sx={{ width: 80, height: 80 }}>
-                                            {userProfile && !userProfile.photoURL ? userProfile.nickname.charAt(0).toUpperCase() : null}
+                                            {userProfile && !userProfile.photoURL && userProfile.nickname ? userProfile.nickname.charAt(0).toUpperCase() : null}
                                         </Avatar>
                                     </IconButton>
                                     <VerificationBadge isVerified={userProfile?.isVerified || false} avatarSize={80} customSx={{ bottom: '-5px', right: '-5px' }} />
