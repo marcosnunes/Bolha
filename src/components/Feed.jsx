@@ -37,14 +37,20 @@ function Feed({ filterNSFW }) {
       // Pega todos os posts do banco
       const allPostsData = {};
       snapshot.forEach(child => {
-        allPostsData[child.key] = { id: child.key, ...child.val() };
+        const postData = child.val();
+        allPostsData[child.key] = { 
+          id: child.key, 
+          ...postData,
+          // Garante que todo post tem um timestamp para ordenação
+          _sortTimestamp: postData.lastActivityAt || postData.createdAt || 0
+        };
       });
       
       // Atualiza apenas os posts que estão carregados no feed
       setPosts(prev => {
         const updated = prev.map(p => allPostsData[p.id] || p).filter(p => p);
-        // Reordena por lastActivityAt global (qualquer timestamp recente)
-        return updated.sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
+        // Reordena por timestamp (lastActivityAt > createdAt > 0)
+        return updated.sort((a, b) => (b._sortTimestamp || 0) - (a._sortTimestamp || 0));
       });
     });
 
@@ -58,10 +64,14 @@ function Feed({ filterNSFW }) {
         setPosts(prev => {
           // Evita duplicatas
           if (prev.some(p => p.id === newPostId)) return prev;
-          const newPost = { id: newPostId, ...newPostData };
-          // Insere em posição ordenada por lastActivityAt (mais recente primeiro)
+          const newPost = { 
+            id: newPostId, 
+            ...newPostData,
+            _sortTimestamp: newPostData.lastActivityAt || newPostData.createdAt || 0
+          };
+          // Insere em posição ordenada por timestamp (mais recente primeiro)
           const newPosts = [...prev, newPost];
-          return newPosts.sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
+          return newPosts.sort((a, b) => (b._sortTimestamp || 0) - (a._sortTimestamp || 0));
         });
       }
     });
@@ -69,11 +79,11 @@ function Feed({ filterNSFW }) {
     return () => { unsubValue(); unsubAdded(); };
   }, []);
 
-  // 2. Busca Inicial de IDs (Histórico)
+  // 2. Busca Inicial de IDs (Histórico) - Ordena por lastActivityAt para trazer posts com atividade recente ao topo
   const fetchAllPostMetas = useCallback(async () => {
     setLoading(true);
     const postsRef = ref(rtdb, 'posts');
-    const postsQuery = query(postsRef, orderByChild('createdAt'));
+    const postsQuery = query(postsRef, orderByChild('lastActivityAt'));
 
     try {
       const snapshot = await get(postsQuery);
@@ -82,13 +92,15 @@ function Feed({ filterNSFW }) {
         const metas = [];
         // Importante: Usar forEach para garantir a ordem correta do Firebase
         snapshot.forEach((child) => {
+          const postData = child.val();
           metas.push({
             id: child.key,
-            createdAt: child.val().createdAt
+            lastActivityAt: postData.lastActivityAt || postData.createdAt,
+            createdAt: postData.createdAt
           });
         });
 
-        // Inverte para o mais recente ficar primeiro (Descrescente)
+        // Inverte para o mais recente (em atividade) ficar primeiro (Descrescente)
         metas.reverse();
 
         setAllPostMetas(metas);
@@ -127,10 +139,18 @@ function Feed({ filterNSFW }) {
 
     const fetchedPosts = snapshots
       .filter(snap => snap.exists())
-      .map(snap => ({ id: snap.key, ...snap.val() }));
+      .map(snap => {
+        const postData = snap.val();
+        return { 
+          id: snap.key, 
+          ...postData,
+          // Garante timestamp para ordenação
+          _sortTimestamp: postData.lastActivityAt || postData.createdAt || 0
+        };
+      });
 
-    // Ordena por lastActivityAt (mais recente primeiro) para boost de atividade
-    fetchedPosts.sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
+    // Ordena por timestamp (lastActivityAt > createdAt) para boost de atividade
+    fetchedPosts.sort((a, b) => (b._sortTimestamp || 0) - (a._sortTimestamp || 0));
 
     return {
       fetchedPosts,
