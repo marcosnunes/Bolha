@@ -10,11 +10,14 @@
           ".write": "auth != null && root.child('posts').child($postId).child('authorId').val() === auth.uid"
         },
         "lastActivityAt": {
-          ".write": "auth != null"
+          ".write": "auth != null",
+          ".validate": "newData.isNumber()"
         },
         "likes": {
+          ".read": "auth != null",
           "$uid": {
-            ".write": "auth != null && auth.uid === $uid"
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.isNumber() || newData.val() === true"
           }
         },
         "dislikes": {
@@ -34,8 +37,10 @@
               ".write": "auth != null && root.child('posts').child($postId).child('comments').child($commentId).child('authorId').val() === auth.uid"
             },
             "likes": {
+              ".read": "auth != null",
               "$uid": {
-                ".write": "auth != null && auth.uid === $uid"
+                ".write": "auth != null && auth.uid === $uid",
+                ".validate": "newData.isNumber() || newData.val() === true"
               }
             }
           }

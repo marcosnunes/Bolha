@@ -143,13 +143,18 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const handleLike = async () => {
     if (!currentUser) return;
     const postLikesRef = ref(rtdb, `posts/${id}/likes/${currentUser.uid}`);
+    const postRef = ref(rtdb, `posts/${id}`);
     try {
       if (hasLiked) {
         await remove(postLikesRef);
+        // Também atualizar lastActivityAt ao remover like
+        await update(postRef, {
+          lastActivityAt: serverTimestamp()
+        });
       } else {
-        await set(postLikesRef, true);
+        await set(postLikesRef, serverTimestamp());
         // Atualizar lastActivityAt do post para trazer ao topo
-        await update(ref(rtdb, `posts/${id}`), {
+        await update(postRef, {
           lastActivityAt: serverTimestamp()
         });
       }
