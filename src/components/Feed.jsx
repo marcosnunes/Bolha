@@ -68,8 +68,9 @@ function Feed() {
     let postsQuery;
 
     if (cursorTimestamp && typeof cursorTimestamp === 'number') {
-      // Busca a próxima página, terminando no cursor (menos 1 para não repetir)
-      postsQuery = query(postsRef, orderByChild('lastActivityAt'), endAt(cursorTimestamp - 1), limitToLast(POSTS_PER_PAGE));
+      // Busca a próxima página usando o cursor
+      // endAt(cursorTimestamp) pega todos os posts até esse timestamp, depois pegamos os últimos POSTS_PER_PAGE
+      postsQuery = query(postsRef, orderByChild('lastActivityAt'), endAt(cursorTimestamp), limitToLast(POSTS_PER_PAGE + 1));
     } else {
       // Busca inicial (os posts com atividade mais recente)
       postsQuery = query(postsRef, orderByChild('lastActivityAt'), limitToLast(POSTS_PER_PAGE));
@@ -95,20 +96,39 @@ function Feed() {
 
         // A ordem vem do mais antigo para o mais novo, então revertemos
         fetchedPosts.reverse();
+
+        // Se é uma carga de "mais" (com cursor), remove o primeiro post pois ele é o cursor que já temos
+        if (cursorTimestamp && fetchedPosts.length > 0) {
+          // Remove o primeiro post se ele tiver o mesmo timestamp que o cursor (é duplicado)
+          if (fetchedPosts[0].lastActivityAt === cursorTimestamp) {
+            fetchedPosts.shift();
+          }
+        }
+
+        if (fetchedPosts.length === 0) {
+          setHasMore(false);
+          setLastPostTimestamp(null);
+          return;
+        }
         
         // Se for a carga inicial e não houver cursor, define o próximo cursor.
         // Se for uma carga de "mais", anexa os posts.
         setPosts(prev => cursorTimestamp ? [...prev, ...fetchedPosts] : fetchedPosts);
         
-        // Se o número de posts buscados for menor que o limite, não há mais posts
-        if (fetchedPosts.length < POSTS_PER_PAGE) {
+        // Determina se há mais posts
+        // Se buscou menos posts que o limite (ou limite+1 para paginação), não há mais
+        const actualLimit = cursorTimestamp ? POSTS_PER_PAGE + 1 : POSTS_PER_PAGE;
+        
+        if (fetchedPosts.length < actualLimit) {
+          // Menos posts que o solicitado = fim da lista
           setHasMore(false);
           setLastPostTimestamp(null);
         } else {
-          // Se chegou aqui, pode haver mais posts, atualiza o cursor
-          const lastPost = fetchedPosts[fetchedPosts.length - 1];
-          if (lastPost?.lastActivityAt && typeof lastPost.lastActivityAt === 'number') {
-            setLastPostTimestamp(lastPost.lastActivityAt);
+          // Há mais posts, atualiza o cursor para o post mais antigo
+          const oldestPost = fetchedPosts[0];
+          if (oldestPost?.lastActivityAt && typeof oldestPost.lastActivityAt === 'number') {
+            setLastPostTimestamp(oldestPost.lastActivityAt);
+            setHasMore(true);
           } else {
             setHasMore(false);
             setLastPostTimestamp(null);
