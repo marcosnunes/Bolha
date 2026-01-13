@@ -39,7 +39,10 @@ function Feed({ filterNSFW }) {
         setPosts(prev => {
           // Evita duplicatas
           if (prev.some(p => p.id === newPostId)) return prev;
-          return [{ id: newPostId, ...newPostData }, ...prev];
+          const newPost = { id: newPostId, ...newPostData };
+          // Insere em posição ordenada por lastActivityAt (mais recente primeiro)
+          const newPosts = [...prev, newPost];
+          return newPosts.sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
         });
       }
     });
@@ -51,10 +54,12 @@ function Feed({ filterNSFW }) {
         const postId = snapshot.key;
 
         setPosts(prev => {
-          // Atualiza o post existente com novos dados (lastActivityAt mudou)
-          return prev.map(p => 
+          // Atualiza o post e reordena automaticamente
+          const updated = prev.map(p => 
             p.id === postId ? { id: postId, ...updatedPostData } : p
           );
+          // Reordena quando lastActivityAt muda
+          return updated.sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
         });
       }
     });
@@ -122,6 +127,9 @@ function Feed({ filterNSFW }) {
       .filter(snap => snap.exists())
       .map(snap => ({ id: snap.key, ...snap.val() }));
 
+    // Ordena por lastActivityAt (mais recente primeiro) para boost de atividade
+    fetchedPosts.sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
+
     return {
       fetchedPosts,
       hasMoreItems: endIndex < metas.length
@@ -182,11 +190,10 @@ function Feed({ filterNSFW }) {
   const handleOpenEditProfile = (data) => { setSelectedUser(null); setEditProfileData(data); };
   const handleCloseEditProfile = () => setEditProfileData(null);
 
-  // Filtros - ORDENAR POR lastActivityAt PARA BOOST (mais ativos no topo)
+  // Filtros - posts já estão ordenados por lastActivityAt em tempo real
   const finalFilteredPosts = posts
     .filter(post => !hiddenUsers.includes(post.authorId))
-    .filter(post => filterNSFW ? !post.isNSFW : true)
-    .sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
+    .filter(post => filterNSFW ? !post.isNSFW : true);
 
   // Spinner apenas se estiver carregando E não tiver nenhum post na tela
   if (loading && posts.length === 0) {
