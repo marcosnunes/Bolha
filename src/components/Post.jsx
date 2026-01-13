@@ -141,25 +141,33 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const hasLiked = currentUser && likesData[currentUser.uid];
 
   const handleLike = async () => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      console.warn('Usuário não autenticado para curtir');
+      return;
+    }
     const postLikesRef = ref(rtdb, `posts/${id}/likes/${currentUser.uid}`);
     const postRef = ref(rtdb, `posts/${id}`);
     try {
+      console.log('Tentando curtir post:', id, 'usuário:', currentUser.uid);
       if (hasLiked) {
+        console.log('Removendo like...');
         await remove(postLikesRef);
-        // Também atualizar lastActivityAt ao remover like
         await update(postRef, {
           lastActivityAt: serverTimestamp()
         });
+        console.log('Like removido com sucesso');
       } else {
+        console.log('Adicionando like...');
         await set(postLikesRef, serverTimestamp());
-        // Atualizar lastActivityAt do post para trazer ao topo
         await update(postRef, {
           lastActivityAt: serverTimestamp()
         });
+        console.log('Like adicionado com sucesso');
       }
     } catch (error) {
-      console.error("Erro ao curtir:", error);
+      console.error('Erro ao curtir:', error);
+      console.error('Código do erro:', error.code);
+      console.error('Mensagem:', error.message);
     }
   };
 
