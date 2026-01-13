@@ -64,23 +64,30 @@ function Feed({ filterNSFW }) {
       }
     });
 
-    // Listener GLOBAL para todas as mudanças em lastActivityAt (incluindo posts antigos)
-    // Isso garante que posts comentados/curtidos antigos subam ao topo
+    // Listener GLOBAL para todas as mudanças em lastActivityAt (incluindo posts antigos não carregados)
+    // Quando um post antigo recebe comentário/like, traz ele para o topo
     const unsubChangedAll = onChildChanged(postsRef, (snapshot) => {
       if (snapshot.exists()) {
         const updatedPostData = snapshot.val();
         const postId = snapshot.key;
 
         setPosts(prev => {
-          // Verifica se o post está no array (foi carregado)
-          if (!prev.some(p => p.id === postId)) return prev;
+          const existsInArray = prev.some(p => p.id === postId);
           
-          // Atualiza o post e reordena automaticamente
-          const updated = prev.map(p => 
-            p.id === postId ? { id: postId, ...updatedPostData } : p
-          );
-          // Reordena quando lastActivityAt muda
-          return updated.sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
+          if (existsInArray) {
+            // Post já está carregado, apenas atualiza
+            const updated = prev.map(p => 
+              p.id === postId ? { id: postId, ...updatedPostData } : p
+            );
+            // Reordena quando lastActivityAt muda
+            return updated.sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
+          } else {
+            // Post antigo não estava carregado - traz ele para o topo
+            // Isso garante que posts comentados apareçam em destaque mesmo que não tivessem sido carregados
+            const newPost = { id: postId, ...updatedPostData };
+            const newPosts = [newPost, ...prev];
+            return newPosts.sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
+          }
         });
       }
     });
