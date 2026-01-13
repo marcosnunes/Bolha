@@ -232,7 +232,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
           <CardHeader
           avatar={
             <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
-              <Avatar src={profilePhotoURL} sx={{ width: 48, height: 48 }}>{!profilePhotoURL && (displayNickname || authorNickname).charAt(0).toUpperCase()}</Avatar>
+              <Avatar src={profilePhotoURL} sx={{ width: 48, height: 48 }}>{!profilePhotoURL && (displayNickname || authorNickname) ? (displayNickname || authorNickname).charAt(0).toUpperCase() : '?'}</Avatar>
               <VerificationBadge isVerified={isVerified} avatarSize={48} customSx={{ bottom: '-3px', right: '-3px' }} />
             </Box>
           }
@@ -346,7 +346,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
                 <ListItem key={user.uid}>
                   <ListItemAvatar>
                     <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
-                      <Avatar src={user.photoURL} alt={user.nickname}>
+                      <Avatar src={user.photoURL} alt={user.nickname || '?'}>
                         {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
                       </Avatar>
                       <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} customSx={{ bottom: '-3px', right: '-3px' }} />
