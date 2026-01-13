@@ -109,6 +109,21 @@ export function AuthProvider({ children }) {
     }
   }, [currentUser]);
 
+  // Carrega a lista de usuários ocultos quando o usuário faz login
+  useEffect(() => {
+    if (currentUser) {
+      const hiddenUsersRef = ref(rtdb, `users/${currentUser.uid}/hiddenUsers`);
+      const unsubscribeHidden = onValue(hiddenUsersRef, (snapshot) => {
+        if (snapshot.exists()) {
+          setHiddenUsers(Object.keys(snapshot.val()));
+        } else {
+          setHiddenUsers([]);
+        }
+      });
+      return () => unsubscribeHidden();
+    }
+  }, [currentUser]);
+
   const value = {
     currentUser,
     userProfile,
