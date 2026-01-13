@@ -22,7 +22,10 @@ function UploadNotifications() {
         backgroundColor: 'background.paper',
         boxShadow: 3,
         borderBottom: '1px solid',
-        borderColor: 'divider'
+        borderColor: 'divider',
+        paddingTop: 'max(env(safe-area-inset-top), 8px)',
+        paddingLeft: 'max(env(safe-area-inset-left), 0px)',
+        paddingRight: 'max(env(safe-area-inset-right), 0px)'
       }}
     >
       <Collapse in={true}>
