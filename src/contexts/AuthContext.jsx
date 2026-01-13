@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
-import { auth, rtdb, functions } from '/src/firebase/config.js';
+import { auth, rtdb, functions } from '../firebase/config.js';
 import { ref, onValue, set, remove, serverTimestamp, onDisconnect } from 'firebase/database';
 
 const AuthContext = createContext();
