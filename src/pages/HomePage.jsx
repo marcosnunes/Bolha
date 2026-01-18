@@ -100,13 +100,13 @@ function HomePage() {
         console.log('HomePage: Registrando listeners de online para cada usuário');
         const profilesRef = ref(rtdb, 'profiles');
 
-        const unsubscribeProfiles = onValue(profilesRef, (snapshot) => {
+        const unsubscribeProfiles = onValue(profilesRef, async (snapshot) => {
             const profilesData = snapshot.val() || {};
             console.log('HomePage: Perfis carregados:', Object.keys(profilesData));
             
             // Para cada usuário em profiles, monitorar seu status online
-            Object.keys(profilesData).forEach((userId) => {
-                if (userId === currentUser.uid) return; // Ignorar o próprio usuário
+            for (const userId of Object.keys(profilesData)) {
+                if (userId === currentUser.uid) continue; // Ignorar o próprio usuário
                 
                 // Se já temos um listener para este usuário, remover antes de criar novo
                 if (unsubscribersRef.current[userId]) {
@@ -115,13 +115,23 @@ function HomePage() {
                 
                 const onlineRef = ref(rtdb, `users/${userId}/online`);
                 
+                // Primeira: fazer uma leitura inicial para capturar o estado ANTES de registrar o listener
+                try {
+                    const initialSnapshot = await get(onlineRef);
+                    const initialState = initialSnapshot.exists();
+                    previousOnlineStatesRef.current[userId] = initialState;
+                    console.log(`HomePage: Estado inicial de ${userId}: ${initialState}`);
+                } catch (error) {
+                    console.warn(`Erro ao ler estado inicial de ${userId}:`, error.code);
+                }
+                
+                // Agora registrar o listener com o estado inicial já conhecido
                 const unsubscribe = onValue(onlineRef, (snapshot) => {
                     const hasOnlineNow = snapshot.exists();
                     const hadOnlineBefore = previousOnlineStatesRef.current[userId];
-                    const isInitialized = initializedUsersRef.current.has(userId);
-                    const isFirstRead = !isInitialized;
+                    const isFirstRead = !initializedUsersRef.current.has(userId);
                     
-                    console.log(`HomePage: Usuário ${userId} - antes: ${hadOnlineBefore}, agora: ${hasOnlineNow}, initialized: ${isInitialized}, firstRead: ${isFirstRead}`);
+                    console.log(`HomePage: Usuário ${userId} - antes: ${hadOnlineBefore}, agora: ${hasOnlineNow}, initialized: ${initializedUsersRef.current.has(userId)}, firstRead: ${isFirstRead}`);
                     
                     // Tocar som APENAS se:
                     // 1. Não é primeira leitura (skip first read)
@@ -144,7 +154,7 @@ function HomePage() {
                 });
                 
                 unsubscribersRef.current[userId] = unsubscribe;
-            });
+            }
             
             // Limpar listeners de usuários que não estão mais em profiles
             Object.keys(unsubscribersRef.current).forEach((userId) => {
