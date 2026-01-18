@@ -8,18 +8,36 @@ const SOUNDS = {
 
 function useSoundNotification(enabled = true) {
   const audioRef = useRef(new Audio());
+  const abortControllerRef = useRef(null);
 
   const playSound = useCallback((soundType) => {
     if (!enabled) return;
 
     try {
+      // Cancelar reprodução anterior
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+
       const soundUrl = SOUNDS[soundType];
       if (soundUrl) {
+        // Pausar e resetar áudio anterior
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        
         audioRef.current.src = soundUrl;
         audioRef.current.volume = 0.3; // 30% volume para não assustar
-        audioRef.current.play().catch((error) => {
-          console.log('Som não pôde ser reproduzido:', error);
-        });
+        
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            // Ignorar erros de abort ou interrupção
+            if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+              console.log('Som não pôde ser reproduzido:', error.message);
+            }
+          });
+        }
       }
     } catch (error) {
       console.error('Erro ao tocar som:', error);

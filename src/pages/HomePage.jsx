@@ -32,6 +32,7 @@ import Feed from '../components/Feed.jsx';
 import VerificationBadge from '../components/VerificationBadge.jsx';
 import OnlineIndicator from '../components/OnlineIndicator.jsx';
 import useOnlineStatus from '../hooks/useOnlineStatus.jsx';
+import useCurrentUserOnlineStatus from '../hooks/useCurrentUserOnlineStatus.jsx';
 import useSoundNotification from '../hooks/useSoundNotification.jsx';
 import { useSoundPreference } from '../hooks/useSoundPreference.jsx';
 
@@ -99,6 +100,21 @@ function HomePage() {
 
         return () => unsubscribeStatus();
     }, [currentUser, playOnlineSound]);
+
+    // Listener para detectar quando o PRÓPRIO USUÁRIO entra/sai
+    const { didConnect, didDisconnect } = useCurrentUserOnlineStatus(currentUser?.uid);
+
+    useEffect(() => {
+        if (didConnect) {
+            playOnlineSound();
+        }
+    }, [didConnect, playOnlineSound]);
+
+    useEffect(() => {
+        if (didDisconnect) {
+            playOnlineSound();
+        }
+    }, [didDisconnect, playOnlineSound]);
 
     // Função para comprimir imagem de perfil
     const compressProfileImage = (file) => {
