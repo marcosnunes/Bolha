@@ -226,7 +226,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
                 <Box
                   sx={{
                     position: 'absolute',
-                    bottom: 0,
+                    top: 0,
                     right: 0,
                     width: 14,
                     height: 14,
