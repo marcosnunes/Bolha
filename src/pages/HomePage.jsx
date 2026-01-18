@@ -57,6 +57,7 @@ function HomePage() {
     const [userSearchFilter, setUserSearchFilter] = useState('');
 
     const profilePicInputRef = useRef(null);
+    const previousOnlineStatesRef = useRef({});
 
     // Efeito para contar e listar usuários em tempo real
     useEffect(() => {
@@ -84,7 +85,6 @@ function HomePage() {
         if (!currentUser) return;
         
         const usersStatusRef = ref(rtdb, 'users');
-        let previousStates = {};
 
         const unsubscribeStatus = onValue(usersStatusRef, (snapshot) => {
             const usersData = snapshot.val() || {};
@@ -94,14 +94,14 @@ function HomePage() {
                 if (userId === currentUser.uid) return; // Ignorar o próprio usuário
                 
                 const hasOnlineNow = !!usersData[userId]?.online;
-                const hadOnlineBefore = previousStates[userId];
+                const hadOnlineBefore = previousOnlineStatesRef.current[userId];
                 
                 // Se mudou de offline para online OU de online para offline, tocar som
                 if (hasOnlineNow !== hadOnlineBefore && hadOnlineBefore !== undefined) {
                     playOnlineSound();
                 }
                 
-                previousStates[userId] = hasOnlineNow;
+                previousOnlineStatesRef.current[userId] = hasOnlineNow;
             });
         });
 
