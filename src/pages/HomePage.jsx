@@ -115,21 +115,25 @@ function HomePage() {
                     const hasOnlineNow = snapshot.exists();
                     const hadOnlineBefore = previousOnlineStatesRef.current[userId];
                     const isInitialized = initializedUsersRef.current.has(userId);
+                    const isFirstRead = !isInitialized;
                     
-                    console.log(`HomePage: Usuário ${userId} - antes: ${hadOnlineBefore}, agora: ${hasOnlineNow}, initialized: ${isInitialized}`);
+                    console.log(`HomePage: Usuário ${userId} - antes: ${hadOnlineBefore}, agora: ${hasOnlineNow}, initialized: ${isInitialized}, firstRead: ${isFirstRead}`);
                     
-                    // Se mudou de offline para online OU de online para offline, tocar som
-                    // Apenas para usuários já inicializados (skip first read)
-                    if (isInitialized && hadOnlineBefore !== undefined && hasOnlineNow !== hadOnlineBefore) {
+                    // Tocar som APENAS se:
+                    // 1. Não é primeira leitura (skip first read)
+                    // 2. Tinha estado anterior definido
+                    // 3. Houve mudança de estado
+                    if (!isFirstRead && hadOnlineBefore !== undefined && hasOnlineNow !== hadOnlineBefore) {
                         console.log(`Usuário ${userId} mudou de status:`, hadOnlineBefore, '→', hasOnlineNow);
                         playOnlineSoundRef.current();
                     }
                     
-                    // Marcar como inicializado após primeira leitura
-                    if (!isInitialized) {
+                    // Marcar como inicializado ANTES de armazenar o estado
+                    if (isFirstRead) {
                         initializedUsersRef.current.add(userId);
                     }
                     
+                    // Sempre armazenar o estado atual para próxima leitura
                     previousOnlineStatesRef.current[userId] = hasOnlineNow;
                 }, (error) => {
                     console.warn(`Erro ao monitorar online de ${userId}:`, error.code);
