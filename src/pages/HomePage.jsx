@@ -55,9 +55,9 @@ function HomePage() {
     const [allUsers, setAllUsers] = useState([]);
     const [openUserListDialog, setOpenUserListDialog] = useState(false);
     const [userSearchFilter, setUserSearchFilter] = useState('');
-    const [previousUserOnlineCount, setPreviousUserOnlineCount] = useState(0);
 
     const profilePicInputRef = useRef(null);
+    const previousUserOnlineCountRef = useRef(0);
 
     // Efeito para contar e listar usuários em tempo real
     useEffect(() => {
@@ -90,15 +90,15 @@ function HomePage() {
             const statusData = snapshot.val() || {};
             const newOnlineCount = Object.values(statusData).filter(status => status === 'online').length;
             
-            // Tocar som se alguém entrou online (e não é o usuário atual)
-            if (newOnlineCount > previousUserOnlineCount && newOnlineCount > 0) {
+            // Tocar som se alguém entrou online
+            if (newOnlineCount > previousUserOnlineCountRef.current) {
                 playOnlineSound();
             }
-            setPreviousUserOnlineCount(newOnlineCount);
+            previousUserOnlineCountRef.current = newOnlineCount;
         });
 
         return () => unsubscribeStatus();
-    }, [currentUser, previousUserOnlineCount, playOnlineSound]);
+    }, [currentUser, playOnlineSound]);
 
     // Função para comprimir imagem de perfil
     const compressProfileImage = (file) => {
