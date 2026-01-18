@@ -9,6 +9,7 @@ const SOUNDS = {
 function useSoundNotification(enabled = true) {
   const audioRef = useRef(new Audio());
   const abortControllerRef = useRef(null);
+  const autoplayNotAllowedRef = useRef(false);
 
   const playSound = useCallback((soundType) => {
     if (!enabled) return;
@@ -33,7 +34,13 @@ function useSoundNotification(enabled = true) {
         if (playPromise !== undefined) {
           playPromise.catch((error) => {
             // Ignorar erros de abort ou interrupção
-            if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+            if (error.name === 'NotAllowedError') {
+              // Autoplay policy bloqueado (só registra primeira vez)
+              if (!autoplayNotAllowedRef.current) {
+                console.log('Autoplay bloqueado pela browser policy. Usuário precisa interagir com a página para tocar sons.');
+                autoplayNotAllowedRef.current = true;
+              }
+            } else if (error.name !== 'AbortError') {
               console.log('Som não pôde ser reproduzido:', error.message);
             }
           });

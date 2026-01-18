@@ -59,6 +59,7 @@ function HomePage() {
     const profilePicInputRef = useRef(null);
     const previousOnlineStatesRef = useRef({});
     const unsubscribersRef = useRef({});
+    const initializedUsersRef = useRef(new Set()); // Track which users are initialized
 
     // Efeito para contar e listar usuários em tempo real
     useEffect(() => {
@@ -107,13 +108,20 @@ function HomePage() {
                 const unsubscribe = onValue(onlineRef, (snapshot) => {
                     const hasOnlineNow = snapshot.exists();
                     const hadOnlineBefore = previousOnlineStatesRef.current[userId];
+                    const isInitialized = initializedUsersRef.current.has(userId);
                     
-                    console.log(`HomePage: Usuário ${userId} - antes: ${hadOnlineBefore}, agora: ${hasOnlineNow}`);
+                    console.log(`HomePage: Usuário ${userId} - antes: ${hadOnlineBefore}, agora: ${hasOnlineNow}, initialized: ${isInitialized}`);
                     
                     // Se mudou de offline para online OU de online para offline, tocar som
-                    if (hadOnlineBefore !== undefined && hasOnlineNow !== hadOnlineBefore) {
+                    // Apenas para usuários já inicializados (skip first read)
+                    if (isInitialized && hadOnlineBefore !== undefined && hasOnlineNow !== hadOnlineBefore) {
                         console.log(`Usuário ${userId} mudou de status:`, hadOnlineBefore, '→', hasOnlineNow);
                         playOnlineSound();
+                    }
+                    
+                    // Marcar como inicializado após primeira leitura
+                    if (!isInitialized) {
+                        initializedUsersRef.current.add(userId);
                     }
                     
                     previousOnlineStatesRef.current[userId] = hasOnlineNow;
@@ -131,6 +139,7 @@ function HomePage() {
                     unsubscribersRef.current[userId]();
                     delete unsubscribersRef.current[userId];
                     delete previousOnlineStatesRef.current[userId];
+                    initializedUsersRef.current.delete(userId);
                 }
             });
         }, (error) => {
