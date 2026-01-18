@@ -58,7 +58,7 @@ function HomePage() {
 
     const profilePicInputRef = useRef(null);
     const previousOnlineStatesRef = useRef({});
-    const [onlineUsers, setOnlineUsers] = useState({});
+    const unsubscribersRef = useRef({});
 
     // Efeito para contar e listar usuários em tempo real
     useEffect(() => {
@@ -82,53 +82,67 @@ function HomePage() {
     }, []);
 
     // Listener para detectar mudanças de status online de outros usuários
+    // Monitora /profiles para encontrar usuários, depois monitora cada um em /users/{userId}/online
     useEffect(() => {
-        if (!currentUser) {
-            console.log('HomePage: currentUser não existe ainda');
-            return;
-        }
+        if (!currentUser) return;
         
-        console.log('HomePage: Registrando listener de usuários online para', currentUser.uid);
-        const usersRef = ref(rtdb, 'users');
+        console.log('HomePage: Registrando listeners de online para cada usuário');
+        const profilesRef = ref(rtdb, 'profiles');
 
-        const unsubscribe = onValue(usersRef, (snapshot) => {
-            console.log('HomePage: onValue disparado');
-            const usersData = snapshot.val() || {};
-            console.log('HomePage: usersData completo =', usersData);
+        const unsubscribeProfiles = onValue(profilesRef, (snapshot) => {
+            const profilesData = snapshot.val() || {};
+            console.log('HomePage: Perfis carregados:', Object.keys(profilesData));
             
-            const newOnlineUsers = {};
-            
-            // Monitorar cada usuário para detectar mudanças de online/offline
-            Object.keys(usersData).forEach((userId) => {
-                console.log(`HomePage: Checando usuário ${userId}, online =`, usersData[userId]?.online);
+            // Para cada usuário em profiles, monitorar seu status online
+            Object.keys(profilesData).forEach((userId) => {
+                if (userId === currentUser.uid) return; // Ignorar o próprio usuário
                 
-                if (userId === currentUser.uid) {
-                    console.log(`HomePage: Ignorando próprio usuário ${userId}`);
-                    return; // Ignorar o próprio usuário
+                // Se já temos um listener para este usuário, remover antes de criar novo
+                if (unsubscribersRef.current[userId]) {
+                    unsubscribersRef.current[userId]();
                 }
                 
-                const hasOnlineNow = !!usersData[userId]?.online;
-                newOnlineUsers[userId] = hasOnlineNow;
+                const onlineRef = ref(rtdb, `users/${userId}/online`);
                 
-                const hadOnlineBefore = previousOnlineStatesRef.current[userId];
+                const unsubscribe = onValue(onlineRef, (snapshot) => {
+                    const hasOnlineNow = snapshot.exists();
+                    const hadOnlineBefore = previousOnlineStatesRef.current[userId];
+                    
+                    console.log(`HomePage: Usuário ${userId} - antes: ${hadOnlineBefore}, agora: ${hasOnlineNow}`);
+                    
+                    // Se mudou de offline para online OU de online para offline, tocar som
+                    if (hadOnlineBefore !== undefined && hasOnlineNow !== hadOnlineBefore) {
+                        console.log(`Usuário ${userId} mudou de status:`, hadOnlineBefore, '→', hasOnlineNow);
+                        playOnlineSound();
+                    }
+                    
+                    previousOnlineStatesRef.current[userId] = hasOnlineNow;
+                }, (error) => {
+                    console.warn(`Erro ao monitorar online de ${userId}:`, error.code);
+                });
                 
-                console.log(`HomePage: Usuário ${userId} - antes: ${hadOnlineBefore}, agora: ${hasOnlineNow}`);
-                
-                // Se mudou de offline para online OU de online para offline, tocar som
-                if (hadOnlineBefore !== undefined && hasOnlineNow !== hadOnlineBefore) {
-                    console.log(`Usuário ${userId} mudou de status:`, hadOnlineBefore, '→', hasOnlineNow);
-                    playOnlineSound();
-                }
-                
-                previousOnlineStatesRef.current[userId] = hasOnlineNow;
+                unsubscribersRef.current[userId] = unsubscribe;
             });
             
-            setOnlineUsers(newOnlineUsers);
+            // Limpar listeners de usuários que não estão mais em profiles
+            Object.keys(unsubscribersRef.current).forEach((userId) => {
+                if (!profilesData[userId]) {
+                    console.log(`HomePage: Removendo listener de ${userId}`);
+                    unsubscribersRef.current[userId]();
+                    delete unsubscribersRef.current[userId];
+                    delete previousOnlineStatesRef.current[userId];
+                }
+            });
         }, (error) => {
-            console.error('HomePage: Erro no listener de usuários:', error);
+            console.error('HomePage: Erro no listener de profiles:', error);
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribeProfiles();
+            // Limpar todos os listeners de usuários
+            Object.values(unsubscribersRef.current).forEach(unsub => unsub());
+            unsubscribersRef.current = {};
+        };
     }, [currentUser, playOnlineSound]);
 
     // Função para comprimir imagem de perfil
