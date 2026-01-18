@@ -106,8 +106,6 @@ function HomePage() {
             
             // Para cada usuário em profiles, monitorar seu status online
             for (const userId of Object.keys(profilesData)) {
-                if (userId === currentUser.uid) continue; // Ignorar o próprio usuário
-                
                 // Se já temos um listener para este usuário, remover antes de criar novo
                 if (unsubscribersRef.current[userId]) {
                     unsubscribersRef.current[userId]();
