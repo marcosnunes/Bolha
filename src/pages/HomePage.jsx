@@ -12,7 +12,7 @@ import {
     ListItemButton, ListItemIcon, ListItemText, Box, Container, Divider,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
     Tooltip, Avatar, Fab, TextField, Chip, ListItemAvatar,
-    Alert
+    Alert, useMediaQuery
 } from '@mui/material';
 
 // Ícones do MUI
@@ -24,6 +24,7 @@ import AddIcon from '@mui/icons-material/Add';
 import PolicyIcon from '@mui/icons-material/Policy';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import PeopleIcon from '@mui/icons-material/People';
+import GetAppIcon from '@mui/icons-material/GetApp';
 
 // Nossos componentes
 import CreatePostForm from '../components/CreatePostForm.jsx';
@@ -35,6 +36,7 @@ import useOnlineStatus from '../hooks/useOnlineStatus.jsx';
 function HomePage() {
     const { currentUser, userProfile, logout } = useAuth();
     const navigate = useNavigate();
+    const isDesktop = useMediaQuery('(min-width:901px)');
 
     // Estados do componente
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -268,6 +270,9 @@ function HomePage() {
                         <ListItem disablePadding><ListItemButton onClick={handleDeleteAccountClick} sx={{ color: 'error.main' }}><ListItemIcon><DeleteForeverIcon color="error" /></ListItemIcon><ListItemText primary="Apagar Conta" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/politica-de-privacidade"><ListItemIcon><PolicyIcon /></ListItemIcon><ListItemText primary="Política de Privacidade" /></ListItemButton></ListItem>
                         <ListItem disablePadding><ListItemButton component={RouterLink} to="/denuncia"><ListItemIcon><ReportProblemIcon color="warning" /></ListItemIcon><ListItemText primary="Denunciar Abuso" /></ListItemButton></ListItem>
+                        {isDesktop && (
+                            <ListItem disablePadding><ListItemButton component="a" href="https://play.google.com/store/apps/details?id=com.bolha" target="_blank" rel="noopener noreferrer"><ListItemIcon><GetAppIcon color="success" /></ListItemIcon><ListItemText primary="Baixar App" sx={{ color: 'success.main' }} /></ListItemButton></ListItem>
+                        )}
                         <ListItem disablePadding><ListItemButton onClick={handleLogout}><ListItemIcon><LogoutIcon /></ListItemIcon><ListItemText primary="Sair" /></ListItemButton></ListItem>
                     </>
                 )}
