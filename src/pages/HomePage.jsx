@@ -58,6 +58,7 @@ function HomePage() {
 
     const profilePicInputRef = useRef(null);
     const previousOnlineStatesRef = useRef({});
+    const [onlineUsers, setOnlineUsers] = useState({});
 
     // Efeito para contar e listar usuários em tempo real
     useEffect(() => {
@@ -84,28 +85,34 @@ function HomePage() {
     useEffect(() => {
         if (!currentUser) return;
         
-        const usersStatusRef = ref(rtdb, 'users');
+        const usersRef = ref(rtdb, 'users');
 
-        const unsubscribeStatus = onValue(usersStatusRef, (snapshot) => {
+        const unsubscribe = onValue(usersRef, (snapshot) => {
             const usersData = snapshot.val() || {};
+            const newOnlineUsers = {};
             
             // Monitorar cada usuário para detectar mudanças de online/offline
             Object.keys(usersData).forEach((userId) => {
                 if (userId === currentUser.uid) return; // Ignorar o próprio usuário
                 
                 const hasOnlineNow = !!usersData[userId]?.online;
+                newOnlineUsers[userId] = hasOnlineNow;
+                
                 const hadOnlineBefore = previousOnlineStatesRef.current[userId];
                 
                 // Se mudou de offline para online OU de online para offline, tocar som
-                if (hasOnlineNow !== hadOnlineBefore && hadOnlineBefore !== undefined) {
+                if (hadOnlineBefore !== undefined && hasOnlineNow !== hadOnlineBefore) {
+                    console.log(`Usuário ${userId} mudou de status:`, hadOnlineBefore, '→', hasOnlineNow);
                     playOnlineSound();
                 }
                 
                 previousOnlineStatesRef.current[userId] = hasOnlineNow;
             });
+            
+            setOnlineUsers(newOnlineUsers);
         });
 
-        return () => unsubscribeStatus();
+        return () => unsubscribe();
     }, [currentUser, playOnlineSound]);
 
     // Função para comprimir imagem de perfil
