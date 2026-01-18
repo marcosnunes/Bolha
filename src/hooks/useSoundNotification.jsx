@@ -12,7 +12,10 @@ function useSoundNotification(enabled = true) {
   const autoplayNotAllowedRef = useRef(false);
 
   const playSound = useCallback((soundType) => {
-    if (!enabled) return;
+    if (!enabled) {
+      console.log('🔇 Som desativado pelo usuário');
+      return;
+    }
 
     try {
       // Cancelar reprodução anterior
@@ -30,24 +33,30 @@ function useSoundNotification(enabled = true) {
         audioRef.current.src = soundUrl;
         audioRef.current.volume = 0.3; // 30% volume para não assustar
         
+        console.log(`▶️ Tocando som: ${soundType}`);
+        
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
-          playPromise.catch((error) => {
-            // Ignorar erros de abort ou interrupção
-            if (error.name === 'NotAllowedError') {
-              // Autoplay policy bloqueado (só registra primeira vez)
-              if (!autoplayNotAllowedRef.current) {
-                console.log('Autoplay bloqueado pela browser policy. Usuário precisa interagir com a página para tocar sons.');
-                autoplayNotAllowedRef.current = true;
+          playPromise
+            .then(() => {
+              console.log(`✅ Som ${soundType} tocado com sucesso`);
+            })
+            .catch((error) => {
+              // Ignorar erros de abort ou interrupção
+              if (error.name === 'NotAllowedError') {
+                // Autoplay policy bloqueado (só registra primeira vez)
+                if (!autoplayNotAllowedRef.current) {
+                  console.warn('🔒 Autoplay bloqueado pela browser policy. Clique na página para desbloquear.');
+                  autoplayNotAllowedRef.current = true;
+                }
+              } else if (error.name !== 'AbortError') {
+                console.warn(`⚠️ Erro ao tocar som ${soundType}:`, error.name, error.message);
               }
-            } else if (error.name !== 'AbortError') {
-              console.log('Som não pôde ser reproduzido:', error.message);
-            }
-          });
+            });
         }
       }
     } catch (error) {
-      console.error('Erro ao tocar som:', error);
+      console.error('❌ Erro ao tocar som:', error);
     }
   }, [enabled]);
 
