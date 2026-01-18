@@ -174,7 +174,7 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
               </Typography>
               <OnlineIndicator isOnline={isOnline} size={isMobile ? 8 : 10} />
             </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: isMobile ? '0.7rem' : 'inherit', whiteSpace: 'nowrap' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: isMobile ? '0.65rem' : '0.75rem', whiteSpace: 'nowrap' }}>
               {formattedDate}
             </Typography>
           </Box>
