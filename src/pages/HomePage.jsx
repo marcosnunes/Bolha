@@ -32,7 +32,6 @@ import Feed from '../components/Feed.jsx';
 import VerificationBadge from '../components/VerificationBadge.jsx';
 import OnlineIndicator from '../components/OnlineIndicator.jsx';
 import useOnlineStatus from '../hooks/useOnlineStatus.jsx';
-import useCurrentUserOnlineStatus from '../hooks/useCurrentUserOnlineStatus.jsx';
 import useSoundNotification from '../hooks/useSoundNotification.jsx';
 import { useSoundPreference } from '../hooks/useSoundPreference.jsx';
 
@@ -58,7 +57,6 @@ function HomePage() {
     const [userSearchFilter, setUserSearchFilter] = useState('');
 
     const profilePicInputRef = useRef(null);
-    const previousUserOnlineCountRef = useRef(0);
 
     // Efeito para contar e listar usuários em tempo real
     useEffect(() => {
@@ -81,40 +79,34 @@ function HomePage() {
         return () => unsubscribe();
     }, []);
 
-    // Listener para detectar quando alguém entra online
+    // Listener para detectar mudanças de status online de outros usuários
     useEffect(() => {
         if (!currentUser) return;
         
-        const usersStatusRef = ref(rtdb, 'status');
+        const usersStatusRef = ref(rtdb, 'users');
+        let previousStates = {};
 
         const unsubscribeStatus = onValue(usersStatusRef, (snapshot) => {
-            const statusData = snapshot.val() || {};
-            const newOnlineCount = Object.values(statusData).filter(status => status === 'online').length;
+            const usersData = snapshot.val() || {};
             
-            // Tocar som se alguém entrou online
-            if (newOnlineCount > previousUserOnlineCountRef.current) {
-                playOnlineSound();
-            }
-            previousUserOnlineCountRef.current = newOnlineCount;
+            // Monitorar cada usuário para detectar mudanças de online/offline
+            Object.keys(usersData).forEach((userId) => {
+                if (userId === currentUser.uid) return; // Ignorar o próprio usuário
+                
+                const hasOnlineNow = !!usersData[userId]?.online;
+                const hadOnlineBefore = previousStates[userId];
+                
+                // Se mudou de offline para online OU de online para offline, tocar som
+                if (hasOnlineNow !== hadOnlineBefore && hadOnlineBefore !== undefined) {
+                    playOnlineSound();
+                }
+                
+                previousStates[userId] = hasOnlineNow;
+            });
         });
 
         return () => unsubscribeStatus();
     }, [currentUser, playOnlineSound]);
-
-    // Listener para detectar quando o PRÓPRIO USUÁRIO entra/sai
-    const { didConnect, didDisconnect } = useCurrentUserOnlineStatus(currentUser?.uid);
-
-    useEffect(() => {
-        if (didConnect) {
-            playOnlineSound();
-        }
-    }, [didConnect, playOnlineSound]);
-
-    useEffect(() => {
-        if (didDisconnect) {
-            playOnlineSound();
-        }
-    }, [didDisconnect, playOnlineSound]);
 
     // Função para comprimir imagem de perfil
     const compressProfileImage = (file) => {
