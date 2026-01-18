@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
-import { ref, push, set, update, serverTimestamp, onValue, query, orderByChild, equalTo, get } from 'firebase/database';
+import { ref, push, set, update, serverTimestamp, onValue, query, orderByChild, equalTo } from 'firebase/database';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import SettingsIcon from '@mui/icons-material/Settings';
 
@@ -32,19 +32,11 @@ import Feed from '../components/Feed.jsx';
 import VerificationBadge from '../components/VerificationBadge.jsx';
 import OnlineIndicator from '../components/OnlineIndicator.jsx';
 import useOnlineStatus from '../hooks/useOnlineStatus.jsx';
-import useSoundNotification from '../hooks/useSoundNotification.jsx';
-import { useSoundPreference } from '../hooks/useSoundPreference.jsx';
-import useAudioUnlock from '../hooks/useAudioUnlock.jsx';
 
 function HomePage() {
     const { currentUser, userProfile, logout } = useAuth();
     const navigate = useNavigate();
     const isDesktop = useMediaQuery('(min-width:901px)');
-    const { soundsEnabled } = useSoundPreference();
-    const { playOnlineSound } = useSoundNotification(soundsEnabled);
-    
-    // Desbloquear autoplay no primeiro clique/interação
-    useAudioUnlock();
 
     // Estados do componente
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -61,15 +53,6 @@ function HomePage() {
     const [userSearchFilter, setUserSearchFilter] = useState('');
 
     const profilePicInputRef = useRef(null);
-    const previousOnlineStatesRef = useRef({});
-    const unsubscribersRef = useRef({});
-    const initializedUsersRef = useRef(new Set()); // Track which users are initialized
-    const playOnlineSoundRef = useRef(playOnlineSound); // Ref para usar em closure
-
-    // Atualizar ref quando playOnlineSound muda (sem causar re-subscriptions)
-    useEffect(() => {
-        playOnlineSoundRef.current = playOnlineSound;
-    }, [playOnlineSound]);
 
     // Efeito para contar e listar usuários em tempo real
     useEffect(() => {
@@ -91,92 +74,6 @@ function HomePage() {
         });
         return () => unsubscribe();
     }, []);
-
-    // Listener para detectar mudanças de status online de outros usuários
-    // Monitora /profiles para encontrar usuários, depois monitora cada um em /users/{userId}/online
-    useEffect(() => {
-        if (!currentUser) return;
-        
-        console.log('HomePage: Registrando listeners de online para cada usuário');
-        const profilesRef = ref(rtdb, 'profiles');
-
-        const unsubscribeProfiles = onValue(profilesRef, async (snapshot) => {
-            const profilesData = snapshot.val() || {};
-            console.log('HomePage: Perfis carregados:', Object.keys(profilesData));
-            
-            // Para cada usuário em profiles, monitorar seu status online
-            for (const userId of Object.keys(profilesData)) {
-                // Se já temos um listener para este usuário, remover antes de criar novo
-                if (unsubscribersRef.current[userId]) {
-                    unsubscribersRef.current[userId]();
-                }
-                
-                const onlineRef = ref(rtdb, `users/${userId}/online`);
-                
-                // Primeira: fazer uma leitura inicial para capturar o estado ANTES de registrar o listener
-                try {
-                    const initialSnapshot = await get(onlineRef);
-                    const initialState = initialSnapshot.exists();
-                    previousOnlineStatesRef.current[userId] = initialState;
-                    console.log(`HomePage: Estado inicial de ${userId}: ${initialState}`);
-                } catch (error) {
-                    console.warn(`Erro ao ler estado inicial de ${userId}:`, error.code);
-                }
-                
-                // Agora registrar o listener com o estado inicial já conhecido
-                const unsubscribe = onValue(onlineRef, (snapshot) => {
-                    const hasOnlineNow = snapshot.exists();
-                    const hadOnlineBefore = previousOnlineStatesRef.current[userId];
-                    const isFirstRead = !initializedUsersRef.current.has(userId);
-                    
-                    // Tocar som APENAS se:
-                    // 1. Não é primeira leitura (skip first read)
-                    // 2. Tinha estado anterior definido
-                    // 3. Houve mudança de estado
-                    if (!isFirstRead && hadOnlineBefore !== undefined && hasOnlineNow !== hadOnlineBefore) {
-                        const statusChange = hasOnlineNow ? 'entrou' : 'saiu';
-                        console.log(`🔔 ${userId} ${statusChange} (chamando playOnlineSound)`);
-                        playOnlineSoundRef.current();
-                    } else if (!isFirstRead && hadOnlineBefore === hasOnlineNow) {
-                        // Log apenas para debug: estado não mudou
-                        console.debug(`ℹ️ ${userId} continua ${hasOnlineNow ? 'online' : 'offline'}`);
-                    }
-                    
-                    // Marcar como inicializado ANTES de armazenar o estado
-                    if (isFirstRead) {
-                        initializedUsersRef.current.add(userId);
-                    }
-                    
-                    // Sempre armazenar o estado atual para próxima leitura
-                    previousOnlineStatesRef.current[userId] = hasOnlineNow;
-                }, (error) => {
-                    console.warn(`Erro ao monitorar online de ${userId}:`, error.code);
-                });
-                
-                unsubscribersRef.current[userId] = unsubscribe;
-            }
-            
-            // Limpar listeners de usuários que não estão mais em profiles
-            Object.keys(unsubscribersRef.current).forEach((userId) => {
-                if (!profilesData[userId]) {
-                    console.log(`HomePage: Removendo listener de ${userId}`);
-                    unsubscribersRef.current[userId]();
-                    delete unsubscribersRef.current[userId];
-                    delete previousOnlineStatesRef.current[userId];
-                    initializedUsersRef.current.delete(userId);
-                }
-            });
-        }, (error) => {
-            console.error('HomePage: Erro no listener de profiles:', error);
-        });
-
-        return () => {
-            unsubscribeProfiles();
-            // Limpar todos os listeners de usuários
-            Object.values(unsubscribersRef.current).forEach(unsub => unsub());
-            unsubscribersRef.current = {};
-        };
-    }, [currentUser]);
 
     // Função para comprimir imagem de perfil
     const compressProfileImage = (file) => {
