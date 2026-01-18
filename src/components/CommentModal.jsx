@@ -140,11 +140,12 @@ function CommentModal({ postId, open, onClose }) {
       open={open} 
       onClose={onClose} 
       fullWidth 
-      maxWidth={isMobile ? 'xs' : 'sm'}
+      maxWidth={isMobile ? 'xs' : 'md'}
       PaperProps={{
         sx: {
-          maxHeight: isMobile ? '90vh' : '80vh',
-          margin: isMobile ? 1 : 'auto'
+          maxHeight: isMobile ? '90vh' : '85vh',
+          margin: isMobile ? 1 : 'auto',
+          width: isMobile ? 'auto' : 'auto'
         }
       }}
     >
@@ -153,13 +154,13 @@ function CommentModal({ postId, open, onClose }) {
       </DialogTitle>
 
       <DialogContent dividers sx={{ 
-        maxHeight: isMobile ? 'calc(90vh - 120px)' : '60vh', 
-        minHeight: isMobile ? '200px' : '300px', 
+        maxHeight: isMobile ? 'calc(90vh - 120px)' : 'calc(85vh - 120px)', 
+        minHeight: isMobile ? '200px' : '400px', 
         display: 'flex', 
         flexDirection: 'column', 
         gap: isMobile ? 1 : 2, 
         overflow: 'auto',
-        p: isMobile ? 1 : 2
+        p: isMobile ? 1 : 3
       }}>
         {error && <Alert severity="error" sx={{ fontSize: isMobile ? '0.85rem' : 'inherit' }}>{error}</Alert>}
 
@@ -167,32 +168,32 @@ function CommentModal({ postId, open, onClose }) {
         <Box sx={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: 1, 
-          p: isMobile ? 1.5 : 2, 
+          gap: 1.5, 
+          p: isMobile ? 1.5 : 2.5, 
           bgcolor: 'grey.50', 
           borderRadius: 1, 
           border: '1px solid #e0e0e0',
           flexShrink: 0
         }}>
-          <Typography variant={isMobile ? 'subtitle2' : 'subtitle2'} sx={{ fontWeight: 'bold', color: 'text.primary', fontSize: isMobile ? '0.95rem' : 'inherit' }}>
+          <Typography variant={isMobile ? 'subtitle2' : 'h6'} sx={{ fontWeight: 'bold', color: 'text.primary', fontSize: isMobile ? '0.95rem' : '1rem' }}>
             Adicionar comentário
           </Typography>
-          <Box component="form" onSubmit={handleSubmitComment} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box component="form" onSubmit={handleSubmitComment} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             <TextField
               fullWidth
               multiline
-              rows={isMobile ? 2 : 3}
+              rows={isMobile ? 2 : 4}
               placeholder="O que você pensa?"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               disabled={loading}
               variant="outlined"
-              size={isMobile ? 'small' : 'small'}
+              size={isMobile ? 'small' : 'medium'}
               sx={{ 
                 bgcolor: 'white',
-                fontSize: isMobile ? '0.9rem' : 'inherit',
+                fontSize: isMobile ? '0.9rem' : '0.95rem',
                 '& .MuiInputBase-input': {
-                  fontSize: isMobile ? '0.9rem' : 'inherit'
+                  fontSize: isMobile ? '0.9rem' : '0.95rem'
                 }
               }}
             />
@@ -203,7 +204,7 @@ function CommentModal({ postId, open, onClose }) {
                 size={isMobile ? 'small' : 'medium'}
                 disabled={loading || !commentText.trim()}
                 startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <SendIcon />}
-                sx={{ fontSize: isMobile ? '0.8rem' : 'inherit' }}
+                sx={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}
               >
                 Enviar
               </Button>
@@ -212,7 +213,7 @@ function CommentModal({ postId, open, onClose }) {
         </Box>
 
         {/* Separador */}
-        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', my: isMobile ? 0.5 : 1, fontSize: isMobile ? '0.75rem' : 'inherit' }}>
+        <Typography variant={isMobile ? 'caption' : 'subtitle2'} color="text.secondary" sx={{ textAlign: 'center', my: isMobile ? 0.5 : 1.5, fontSize: isMobile ? '0.75rem' : 'inherit', fontWeight: isMobile ? 'normal' : '600' }}>
           Comentários
         </Typography>
 
