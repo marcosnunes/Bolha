@@ -17,7 +17,6 @@ function useCurrentUserOnlineStatus(userId) {
 
   useEffect(() => {
     if (!userId) {
-      setIsOnline(false);
       return;
     }
 
@@ -57,6 +56,25 @@ function useCurrentUserOnlineStatus(userId) {
     );
 
     return () => unsubscribe();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      // Cleanup state asynchronously to avoid cascading renders
+      setTimeout(() => {
+        setIsOnline(false);
+        setDidConnect(false);
+        setDidDisconnect(false);
+        previousStatusRef.current = null;
+      }, 0);
+      return;
+    }
+    return () => {
+      setIsOnline(false);
+      setDidConnect(false);
+      setDidDisconnect(false);
+      previousStatusRef.current = null;
+    };
   }, [userId]);
 
   return { isOnline, didConnect, didDisconnect };

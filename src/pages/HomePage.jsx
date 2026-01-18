@@ -60,6 +60,12 @@ function HomePage() {
     const previousOnlineStatesRef = useRef({});
     const unsubscribersRef = useRef({});
     const initializedUsersRef = useRef(new Set()); // Track which users are initialized
+    const playOnlineSoundRef = useRef(playOnlineSound); // Ref para usar em closure
+
+    // Atualizar ref quando playOnlineSound muda (sem causar re-subscriptions)
+    useEffect(() => {
+        playOnlineSoundRef.current = playOnlineSound;
+    }, [playOnlineSound]);
 
     // Efeito para contar e listar usuários em tempo real
     useEffect(() => {
@@ -116,7 +122,7 @@ function HomePage() {
                     // Apenas para usuários já inicializados (skip first read)
                     if (isInitialized && hadOnlineBefore !== undefined && hasOnlineNow !== hadOnlineBefore) {
                         console.log(`Usuário ${userId} mudou de status:`, hadOnlineBefore, '→', hasOnlineNow);
-                        playOnlineSound();
+                        playOnlineSoundRef.current();
                     }
                     
                     // Marcar como inicializado após primeira leitura
@@ -152,7 +158,7 @@ function HomePage() {
             Object.values(unsubscribersRef.current).forEach(unsub => unsub());
             unsubscribersRef.current = {};
         };
-    }, [currentUser, playOnlineSound]);
+    }, [currentUser]);
 
     // Função para comprimir imagem de perfil
     const compressProfileImage = (file) => {

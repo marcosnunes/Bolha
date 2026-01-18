@@ -1,7 +1,7 @@
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, remove, set, onValue, get, update, serverTimestamp } from 'firebase/database';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import ConfirmDialog from './ConfirmDialog'; // Importa nosso componente reutilizável
 import CommentModal from './CommentModal.jsx'; // Importa modal de comentários
@@ -34,6 +34,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const isOwner = currentUser && currentUser.uid === authorId;
   const { soundsEnabled } = useSoundPreference();
   const { playReactionSound } = useSoundNotification(soundsEnabled);
+  const playReactionSoundRef = useRef(playReactionSound); // Ref para usar em closure
 
   const [reactionsData, setReactionsData] = useState(postData.reactions || {});
   const [profilePhotoURL, setProfilePhotoURL] = useState(authorPhotoURL || null);
@@ -51,6 +52,11 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const [previousReactionCount, setPreviousReactionCount] = useState(Object.keys(postData.reactions || {}).length);
   const openMenu = Boolean(anchorEl);
 
+  // Atualizar ref quando playReactionSound muda (sem causar re-subscriptions)
+  useEffect(() => {
+    playReactionSoundRef.current = playReactionSound;
+  }, [playReactionSound]);
+
   // Monitorar mudanças no conteúdo do post (incluindo edições)
   useEffect(() => {
     const postRef = ref(rtdb, `posts/${id}`);
@@ -61,7 +67,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       }
     });
     return () => unsubscribePost();
-  }, [id, authorId, currentUser?.uid, playReactionSound, previousReactionCount]);
+  }, [id]);
 
   // Listeners para reactions e likes em tempo real
   useEffect(() => {
@@ -89,7 +95,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       // Tocar som se houver novas reações (não é do usuário atual)
       const currentReactionCount = Object.keys(newReactions).length;
       if (currentReactionCount > previousReactionCount && currentUser?.uid !== authorId) {
-        playReactionSound();
+        playReactionSoundRef.current();
         setPreviousReactionCount(currentReactionCount);
       } else if (currentReactionCount <= previousReactionCount) {
         setPreviousReactionCount(currentReactionCount);
@@ -107,7 +113,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       unsubscribeReactions();
       unsubscribeLikes();
     };
-  }, [id, authorId, currentUser?.uid, playReactionSound, previousReactionCount]);
+  }, [id, authorId, currentUser?.uid, previousReactionCount]);
 
   // Carregar contador de comentários
   useEffect(() => {

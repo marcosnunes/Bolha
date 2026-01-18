@@ -8,8 +8,10 @@ function useOnlineStatus(userId) {
 
   useEffect(() => {
     if (!userId) {
-      setIsOnline(false);
-      setLoading(false);
+      queueMicrotask(() => {
+        setIsOnline(false);
+        setLoading(false);
+      });
       return;
     }
 
