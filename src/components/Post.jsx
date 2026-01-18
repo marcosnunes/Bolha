@@ -11,6 +11,7 @@ import OnlineIndicator from './OnlineIndicator.jsx'; // Importa indicador de onl
 import useOnlineStatus from '../hooks/useOnlineStatus.jsx'; // Hook para status de online
 import useSoundNotification from '../hooks/useSoundNotification.jsx'; // Hook para sons
 import { useSoundPreference } from '../hooks/useSoundPreference.jsx'; // Hook para preferência de som
+import useAudioUnlock from '../hooks/useAudioUnlock.jsx'; // Hook para desbloquear autoplay
 import ReactionSelector from './ReactionSelector.jsx'; // Seletor de reactions
 import ReactionDisplay from './ReactionDisplay.jsx'; // Exibidor de reactions
 import ReactionsUsersModal from './ReactionsUsersModal.jsx'; // Modal de usuários que reagiram
@@ -35,6 +36,9 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const { soundsEnabled } = useSoundPreference();
   const { playReactionSound } = useSoundNotification(soundsEnabled);
   const playReactionSoundRef = useRef(playReactionSound); // Ref para usar em closure
+  
+  // Desbloquear autoplay no primeiro clique/interação
+  useAudioUnlock();
 
   const [reactionsData, setReactionsData] = useState(postData.reactions || {});
   const [profilePhotoURL, setProfilePhotoURL] = useState(authorPhotoURL || null);

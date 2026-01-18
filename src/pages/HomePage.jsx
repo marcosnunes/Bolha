@@ -34,6 +34,7 @@ import OnlineIndicator from '../components/OnlineIndicator.jsx';
 import useOnlineStatus from '../hooks/useOnlineStatus.jsx';
 import useSoundNotification from '../hooks/useSoundNotification.jsx';
 import { useSoundPreference } from '../hooks/useSoundPreference.jsx';
+import useAudioUnlock from '../hooks/useAudioUnlock.jsx';
 
 function HomePage() {
     const { currentUser, userProfile, logout } = useAuth();
@@ -41,6 +42,9 @@ function HomePage() {
     const isDesktop = useMediaQuery('(min-width:901px)');
     const { soundsEnabled } = useSoundPreference();
     const { playOnlineSound } = useSoundNotification(soundsEnabled);
+    
+    // Desbloquear autoplay no primeiro clique/interação
+    useAudioUnlock();
 
     // Estados do componente
     const [mobileOpen, setMobileOpen] = useState(false);
