@@ -4,7 +4,6 @@ import { rtdb } from '../firebase/config';
 import { ref, remove, set, onValue, update, serverTimestamp } from 'firebase/database';
 import EditCommentModal from './EditCommentModal.jsx'; // Importa modal de edição
 import VerificationBadge from './VerificationBadge.jsx'; // Importa badge de verificação
-import OnlineIndicator from './OnlineIndicator.jsx'; // Importa indicador de online
 import useOnlineStatus from '../hooks/useOnlineStatus.jsx'; // Hook para status de online
 import ReactionSelector from './ReactionSelector.jsx'; // Seletor de reactions
 import ReactionDisplay from './ReactionDisplay.jsx'; // Exibidor de reactions
@@ -158,20 +157,34 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   return (
     <>
       <Box sx={{ display: 'flex', gap: 2, pb: 2, borderBottom: '1px solid #e0e0e0', alignItems: 'flex-start' }}>
-        <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
-          <Avatar src={profilePhotoURL} sx={{ width: 48, height: 48 }}>
-            {!profilePhotoURL && authorNickname?.charAt(0).toUpperCase()}
-          </Avatar>
-          <VerificationBadge isVerified={isVerified} avatarSize={48} customSx={{ bottom: '-3px', right: '-3px' }} />
-        </Box>
+        <Tooltip title={isOnline ? 'Online agora' : 'Offline'} placement="top">
+          <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+            <Avatar src={profilePhotoURL} sx={{ width: 48, height: 48 }}>
+              {!profilePhotoURL && authorNickname?.charAt(0).toUpperCase()}
+            </Avatar>
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: 14,
+                height: 14,
+                borderRadius: '50%',
+                backgroundColor: isOnline ? '#4caf50' : '#bdbdbd',
+                border: '2px solid white',
+                boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.1)'
+              }}
+            />
+            <VerificationBadge isVerified={isVerified} avatarSize={48} customSx={{ bottom: '-3px', right: '-3px' }} />
+          </Box>
+        </Tooltip>
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                 {authorNickname}
               </Typography>
-              <OnlineIndicator isOnline={isOnline} size={10} />
             </Box>
             <Typography variant="caption" color="text.secondary">
               {formattedDate}

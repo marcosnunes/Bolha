@@ -7,7 +7,6 @@ import ConfirmDialog from './ConfirmDialog'; // Importa nosso componente reutili
 import CommentModal from './CommentModal.jsx'; // Importa modal de comentários
 import EditPostModal from './EditPostModal.jsx'; // Importa modal de edição de posts
 import VerificationBadge from './VerificationBadge.jsx'; // Importa badge de verificação
-import OnlineIndicator from './OnlineIndicator.jsx'; // Importa indicador de online
 import useOnlineStatus from '../hooks/useOnlineStatus.jsx'; // Hook para status de online
 import ReactionSelector from './ReactionSelector.jsx'; // Seletor de reactions
 import ReactionDisplay from './ReactionDisplay.jsx'; // Exibidor de reactions
@@ -218,13 +217,28 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       <Card sx={{ mb: 3 }}>
           <CardHeader
           avatar={
-            <Box 
-              sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0, cursor: 'pointer' }} 
-              onClick={handleAuthorClick}
-            >
-              <Avatar src={profilePhotoURL} sx={{ width: 48, height: 48 }}>{!profilePhotoURL && (displayNickname || authorNickname) ? (displayNickname || authorNickname).charAt(0).toUpperCase() : '?'}</Avatar>
-              <VerificationBadge isVerified={isVerified} avatarSize={48} customSx={{ bottom: '-3px', right: '-3px' }} />
-            </Box>
+            <Tooltip title={isOnline ? 'Online agora' : 'Offline'} placement="top">
+              <Box 
+                sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0, cursor: 'pointer' }} 
+                onClick={handleAuthorClick}
+              >
+                <Avatar src={profilePhotoURL} sx={{ width: 48, height: 48 }}>{!profilePhotoURL && (displayNickname || authorNickname) ? (displayNickname || authorNickname).charAt(0).toUpperCase() : '?'}</Avatar>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                    width: 14,
+                    height: 14,
+                    borderRadius: '50%',
+                    backgroundColor: isOnline ? '#4caf50' : '#bdbdbd',
+                    border: '2px solid white',
+                    boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
+                <VerificationBadge isVerified={isVerified} avatarSize={48} customSx={{ bottom: '-3px', right: '-3px' }} />
+              </Box>
+            </Tooltip>
           }
           action={
             <>
@@ -237,14 +251,13 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
             </>
           }
           title={
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <span 
                 onClick={handleAuthorClick} 
                 style={{ cursor: 'pointer' }}
               >
                 {displayNickname || authorNickname}
               </span>
-              <OnlineIndicator isOnline={isOnline} size={10} />
             </Box>
           }
           subheader={formattedDate}
