@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
-import { ref, push, set, update, serverTimestamp, onValue, query, orderByChild, equalTo } from 'firebase/database';
+import { ref, push, set, update, serverTimestamp, onValue, query, orderByChild, equalTo, get } from 'firebase/database';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import SettingsIcon from '@mui/icons-material/Settings';
 
