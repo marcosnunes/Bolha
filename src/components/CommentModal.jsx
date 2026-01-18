@@ -6,12 +6,13 @@ import CommentItem from './CommentItem.jsx';
 
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button,
-  Box, CircularProgress, Typography, Alert
+  Box, CircularProgress, Typography, Alert, useMediaQuery
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 
 function CommentModal({ postId, open, onClose }) {
   const { currentUser, userProfile } = useAuth();
+  const isMobile = useMediaQuery('(max-width:600px)');
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -135,36 +136,74 @@ function CommentModal({ postId, open, onClose }) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Comentários</DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      fullWidth 
+      maxWidth={isMobile ? 'xs' : 'sm'}
+      PaperProps={{
+        sx: {
+          maxHeight: isMobile ? '90vh' : '80vh',
+          margin: isMobile ? 1 : 'auto'
+        }
+      }}
+    >
+      <DialogTitle sx={{ fontSize: isMobile ? '1.1rem' : '1.25rem', pb: isMobile ? 1 : 2 }}>
+        Comentários
+      </DialogTitle>
 
-      <DialogContent dividers sx={{ maxHeight: '60vh', minHeight: '300px', display: 'flex', flexDirection: 'column', gap: 2, overflow: 'auto' }}>
-        {error && <Alert severity="error">{error}</Alert>}
+      <DialogContent dividers sx={{ 
+        maxHeight: isMobile ? 'calc(90vh - 120px)' : '60vh', 
+        minHeight: isMobile ? '200px' : '300px', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: isMobile ? 1 : 2, 
+        overflow: 'auto',
+        p: isMobile ? 1 : 2
+      }}>
+        {error && <Alert severity="error" sx={{ fontSize: isMobile ? '0.85rem' : 'inherit' }}>{error}</Alert>}
 
         {/* Formulário para novo comentário */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: 1, 
+          p: isMobile ? 1.5 : 2, 
+          bgcolor: 'grey.50', 
+          borderRadius: 1, 
+          border: '1px solid #e0e0e0',
+          flexShrink: 0
+        }}>
+          <Typography variant={isMobile ? 'subtitle2' : 'subtitle2'} sx={{ fontWeight: 'bold', color: 'text.primary', fontSize: isMobile ? '0.95rem' : 'inherit' }}>
             Adicionar comentário
           </Typography>
           <Box component="form" onSubmit={handleSubmitComment} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <TextField
               fullWidth
               multiline
-              rows={3}
-              placeholder="O que você pensa sobre este post?"
+              rows={isMobile ? 2 : 3}
+              placeholder="O que você pensa?"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               disabled={loading}
               variant="outlined"
-              size="small"
-              sx={{ bgcolor: 'white' }}
+              size={isMobile ? 'small' : 'small'}
+              sx={{ 
+                bgcolor: 'white',
+                fontSize: isMobile ? '0.9rem' : 'inherit',
+                '& .MuiInputBase-input': {
+                  fontSize: isMobile ? '0.9rem' : 'inherit'
+                }
+              }}
             />
             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
               <Button
                 type="submit"
                 variant="contained"
+                size={isMobile ? 'small' : 'medium'}
                 disabled={loading || !commentText.trim()}
-                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+                startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <SendIcon />}
+                sx={{ fontSize: isMobile ? '0.8rem' : 'inherit' }}
               >
                 Enviar
               </Button>
@@ -173,7 +212,7 @@ function CommentModal({ postId, open, onClose }) {
         </Box>
 
         {/* Separador */}
-        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', my: 1 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', my: isMobile ? 0.5 : 1, fontSize: isMobile ? '0.75rem' : 'inherit' }}>
           Comentários
         </Typography>
 
@@ -194,15 +233,15 @@ function CommentModal({ postId, open, onClose }) {
               />
             ))
           ) : (
-            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4, fontSize: isMobile ? '0.9rem' : 'inherit' }}>
               Nenhum comentário ainda. Seja o primeiro a comentar!
             </Typography>
           )}
         </Box>
       </DialogContent>
 
-      <DialogActions>
-        <Button onClick={onClose}>Fechar</Button>
+      <DialogActions sx={{ p: isMobile ? 1 : 2 }}>
+        <Button onClick={onClose} sx={{ fontSize: isMobile ? '0.8rem' : 'inherit' }}>Fechar</Button>
       </DialogActions>
     </Dialog>
   );
