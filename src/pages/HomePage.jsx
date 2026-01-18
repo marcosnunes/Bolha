@@ -32,11 +32,15 @@ import Feed from '../components/Feed.jsx';
 import VerificationBadge from '../components/VerificationBadge.jsx';
 import OnlineIndicator from '../components/OnlineIndicator.jsx';
 import useOnlineStatus from '../hooks/useOnlineStatus.jsx';
+import useSoundNotification from '../hooks/useSoundNotification.jsx';
+import { useSoundPreference } from '../hooks/useSoundPreference.jsx';
 
 function HomePage() {
     const { currentUser, userProfile, logout } = useAuth();
     const navigate = useNavigate();
     const isDesktop = useMediaQuery('(min-width:901px)');
+    const { soundsEnabled } = useSoundPreference();
+    const { playOnlineSound } = useSoundNotification(soundsEnabled);
 
     // Estados do componente
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -48,11 +52,11 @@ function HomePage() {
     
     // Estados para Usuários e Lista
     const [userCount, setUserCount] = useState(0);
-    const [allUsers, setAllUsers] = useState([]); // Lista de objetos de usuários
-    const [openUserListDialog, setOpenUserListDialog] = useState(false); // Controle do modal da lista
-    const [userSearchFilter, setUserSearchFilter] = useState(''); // Filtro de busca
+    const [allUsers, setAllUsers] = useState([]);
+    const [openUserListDialog, setOpenUserListDialog] = useState(false);
+    const [userSearchFilter, setUserSearchFilter] = useState('');
+    const [previousUserOnlineCount, setPreviousUserOnlineCount] = useState(0);
 
-    const [refreshFeed, setRefreshFeed] = useState(0);
     const profilePicInputRef = useRef(null);
 
     // Efeito para contar e listar usuários em tempo real
@@ -75,6 +79,26 @@ function HomePage() {
         });
         return () => unsubscribe();
     }, []);
+
+    // Listener para detectar quando alguém entra online
+    useEffect(() => {
+        if (!currentUser) return;
+        
+        const usersStatusRef = ref(rtdb, 'status');
+
+        const unsubscribeStatus = onValue(usersStatusRef, (snapshot) => {
+            const statusData = snapshot.val() || {};
+            const newOnlineCount = Object.values(statusData).filter(status => status === 'online').length;
+            
+            // Tocar som se alguém entrou online (e não é o usuário atual)
+            if (newOnlineCount > previousUserOnlineCount && newOnlineCount > 0) {
+                playOnlineSound();
+            }
+            setPreviousUserOnlineCount(newOnlineCount);
+        });
+
+        return () => unsubscribeStatus();
+    }, [currentUser, previousUserOnlineCount, playOnlineSound]);
 
     // Função para comprimir imagem de perfil
     const compressProfileImage = (file) => {

@@ -15,6 +15,7 @@ import PagamentoPage from './pages/PagamentoPage.jsx';
 import ConvitePage from './pages/ConvitePage.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { UploadProvider } from './contexts/UploadContext.jsx';
+import { SoundProvider } from './contexts/SoundContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import UploadNotifications from './components/UploadNotifications.jsx';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage.jsx';
@@ -73,8 +74,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <CssBaseline />
     <AuthProvider>
       <UploadProvider>
-        <RouterProvider router={router} />
-        <UploadNotifications />
+        <SoundProvider>
+          <RouterProvider router={router} />
+          <UploadNotifications />
+        </SoundProvider>
       </UploadProvider>
     </AuthProvider>
   </React.StrictMode>

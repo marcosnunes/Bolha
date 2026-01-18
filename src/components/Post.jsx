@@ -9,6 +9,8 @@ import EditPostModal from './EditPostModal.jsx'; // Importa modal de edição de
 import VerificationBadge from './VerificationBadge.jsx'; // Importa badge de verificação
 import OnlineIndicator from './OnlineIndicator.jsx'; // Importa indicador de online
 import useOnlineStatus from '../hooks/useOnlineStatus.jsx'; // Hook para status de online
+import useSoundNotification from '../hooks/useSoundNotification.jsx'; // Hook para sons
+import { useSoundPreference } from '../hooks/useSoundPreference.jsx'; // Hook para preferência de som
 import ReactionSelector from './ReactionSelector.jsx'; // Seletor de reactions
 import ReactionDisplay from './ReactionDisplay.jsx'; // Exibidor de reactions
 import ReactionsUsersModal from './ReactionsUsersModal.jsx'; // Modal de usuários que reagiram
@@ -30,6 +32,8 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
+  const { soundsEnabled } = useSoundPreference();
+  const { playReactionSound } = useSoundNotification(soundsEnabled);
 
   const [reactionsData, setReactionsData] = useState(postData.reactions || {});
   const [profilePhotoURL, setProfilePhotoURL] = useState(authorPhotoURL || null);
@@ -44,6 +48,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const [reactionsModalOpen, setReactionsModalOpen] = useState(false);
   const [selectedReactionType, setSelectedReactionType] = useState(null);
   const [selectedReactionUsers, setSelectedReactionUsers] = useState([]);
+  const [previousReactionCount, setPreviousReactionCount] = useState(Object.keys(postData.reactions || {}).length);
   const openMenu = Boolean(anchorEl);
 
   // Monitorar mudanças no conteúdo do post (incluindo edições)
@@ -56,7 +61,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       }
     });
     return () => unsubscribePost();
-  }, [id]);
+  }, [id, authorId, currentUser?.uid, playReactionSound, previousReactionCount]);
 
   // Listeners para reactions e likes em tempo real
   useEffect(() => {
@@ -78,7 +83,18 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     };
     
     const unsubscribeReactions = onValue(reactionsRef, (snapshot) => {
-      currentReactions = snapshot.val() || {};
+      const newReactions = snapshot.val() || {};
+      currentReactions = newReactions;
+      
+      // Tocar som se houver novas reações (não é do usuário atual)
+      const currentReactionCount = Object.keys(newReactions).length;
+      if (currentReactionCount > previousReactionCount && currentUser?.uid !== authorId) {
+        playReactionSound();
+        setPreviousReactionCount(currentReactionCount);
+      } else if (currentReactionCount <= previousReactionCount) {
+        setPreviousReactionCount(currentReactionCount);
+      }
+      
       mergeReactionsAndLikes();
     });
     
@@ -91,7 +107,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       unsubscribeReactions();
       unsubscribeLikes();
     };
-  }, [id]);
+  }, [id, authorId, currentUser?.uid, playReactionSound, previousReactionCount]);
 
   // Carregar contador de comentários
   useEffect(() => {
