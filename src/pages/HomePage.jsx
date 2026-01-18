@@ -138,7 +138,8 @@ function HomePage() {
                     // 2. Tinha estado anterior definido
                     // 3. Houve mudança de estado
                     if (!isFirstRead && hadOnlineBefore !== undefined && hasOnlineNow !== hadOnlineBefore) {
-                        console.log(`Usuário ${userId} mudou de status:`, hadOnlineBefore, '→', hasOnlineNow);
+                        const statusChange = hasOnlineNow ? 'entrou' : 'saiu';
+                        console.log(`🔔 ${userId} ${statusChange} (chamando playOnlineSound)`);
                         playOnlineSoundRef.current();
                     }
                     

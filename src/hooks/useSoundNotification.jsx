@@ -13,7 +13,7 @@ function useSoundNotification(enabled = true) {
 
   const playSound = useCallback((soundType) => {
     if (!enabled) {
-      console.log('🔇 Som desativado pelo usuário');
+      console.debug('🔇 Som desativado pelo usuário');
       return;
     }
 
@@ -32,8 +32,6 @@ function useSoundNotification(enabled = true) {
         
         audioRef.current.src = soundUrl;
         audioRef.current.volume = 0.3; // 30% volume para não assustar
-        
-        console.log(`▶️ Tocando som: ${soundType}`);
         
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
