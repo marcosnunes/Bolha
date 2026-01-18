@@ -83,22 +83,36 @@ function HomePage() {
 
     // Listener para detectar mudanças de status online de outros usuários
     useEffect(() => {
-        if (!currentUser) return;
+        if (!currentUser) {
+            console.log('HomePage: currentUser não existe ainda');
+            return;
+        }
         
+        console.log('HomePage: Registrando listener de usuários online para', currentUser.uid);
         const usersRef = ref(rtdb, 'users');
 
         const unsubscribe = onValue(usersRef, (snapshot) => {
+            console.log('HomePage: onValue disparado');
             const usersData = snapshot.val() || {};
+            console.log('HomePage: usersData completo =', usersData);
+            
             const newOnlineUsers = {};
             
             // Monitorar cada usuário para detectar mudanças de online/offline
             Object.keys(usersData).forEach((userId) => {
-                if (userId === currentUser.uid) return; // Ignorar o próprio usuário
+                console.log(`HomePage: Checando usuário ${userId}, online =`, usersData[userId]?.online);
+                
+                if (userId === currentUser.uid) {
+                    console.log(`HomePage: Ignorando próprio usuário ${userId}`);
+                    return; // Ignorar o próprio usuário
+                }
                 
                 const hasOnlineNow = !!usersData[userId]?.online;
                 newOnlineUsers[userId] = hasOnlineNow;
                 
                 const hadOnlineBefore = previousOnlineStatesRef.current[userId];
+                
+                console.log(`HomePage: Usuário ${userId} - antes: ${hadOnlineBefore}, agora: ${hasOnlineNow}`);
                 
                 // Se mudou de offline para online OU de online para offline, tocar som
                 if (hadOnlineBefore !== undefined && hasOnlineNow !== hadOnlineBefore) {
@@ -110,6 +124,8 @@ function HomePage() {
             });
             
             setOnlineUsers(newOnlineUsers);
+        }, (error) => {
+            console.error('HomePage: Erro no listener de usuários:', error);
         });
 
         return () => unsubscribe();
