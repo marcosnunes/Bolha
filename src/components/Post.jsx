@@ -9,6 +9,9 @@ import EditPostModal from './EditPostModal.jsx'; // Importa modal de edição de
 import VerificationBadge from './VerificationBadge.jsx'; // Importa badge de verificação
 import OnlineIndicator from './OnlineIndicator.jsx'; // Importa indicador de online
 import useOnlineStatus from '../hooks/useOnlineStatus.jsx'; // Hook para status de online
+import ReactionSelector from './ReactionSelector.jsx'; // Seletor de reactions
+import ReactionDisplay from './ReactionDisplay.jsx'; // Exibidor de reactions
+import ReactionsUsersModal from './ReactionsUsersModal.jsx'; // Modal de usuários que reagiram
 
 // Componentes e Ícones do MUI
 import {
@@ -19,8 +22,6 @@ import {
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import ThumbUpIcon from '@mui/icons-material/ThumbUp';
-import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 
 function Post({ postData, onAuthorClick, onPostDelete }) {
@@ -30,7 +31,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
 
-  const [likesData, setLikesData] = useState(postData.likes || {});
+  const [reactionsData, setReactionsData] = useState(postData.reactions || {});
   const [profilePhotoURL, setProfilePhotoURL] = useState(authorPhotoURL || null);
   const [displayNickname, setDisplayNickname] = useState(authorNickname || '');
   const [isVerified, setIsVerified] = useState(false);
@@ -39,10 +40,10 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [commentModalOpen, setCommentModalOpen] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
-  const [likesModalOpen, setLikesModalOpen] = useState(false);
-  const [likesUsers, setLikesUsers] = useState([]);
-  const [loadingLikes, setLoadingLikes] = useState(false);
   const [displayContent, setDisplayContent] = useState(textContent);
+  const [reactionsModalOpen, setReactionsModalOpen] = useState(false);
+  const [selectedReactionType, setSelectedReactionType] = useState(null);
+  const [selectedReactionUsers, setSelectedReactionUsers] = useState([]);
   const openMenu = Boolean(anchorEl);
 
   // Monitorar mudanças no conteúdo do post (incluindo edições)
@@ -57,12 +58,39 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     return () => unsubscribePost();
   }, [id]);
 
+  // Listeners para reactions e likes em tempo real
   useEffect(() => {
+    const reactionsRef = ref(rtdb, `posts/${id}/reactions`);
     const likesRef = ref(rtdb, `posts/${id}/likes`);
-    const unsubscribeLikes = onValue(likesRef, (snapshot) => {
-      setLikesData(snapshot.val() || {});
+    
+    let currentReactions = {};
+    let currentLikes = {};
+    
+    const mergeReactionsAndLikes = () => {
+      const mergedReactions = { ...currentReactions };
+      Object.keys(currentLikes).forEach((uid) => {
+        // Se o usuário não tem uma reação nova, contar o like antigo como heart
+        if (!mergedReactions[uid]) {
+          mergedReactions[uid] = 'heart';
+        }
+      });
+      setReactionsData(mergedReactions);
+    };
+    
+    const unsubscribeReactions = onValue(reactionsRef, (snapshot) => {
+      currentReactions = snapshot.val() || {};
+      mergeReactionsAndLikes();
     });
-    return () => unsubscribeLikes();
+    
+    const unsubscribeLikes = onValue(likesRef, (snapshot) => {
+      currentLikes = snapshot.val() || {};
+      mergeReactionsAndLikes();
+    });
+    
+    return () => {
+      unsubscribeReactions();
+      unsubscribeLikes();
+    };
   }, [id]);
 
   // Carregar contador de comentários
@@ -137,107 +165,53 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     return optimizedVideoUrl.substring(0, optimizedVideoUrl.lastIndexOf('.')) + '.jpg';
   };
 
-  const likesCount = Object.keys(likesData).length;
-  const hasLiked = currentUser && likesData[currentUser.uid];
+  const handleReactionClick = (reactionType, userIds) => {
+    setSelectedReactionType(reactionType);
+    setSelectedReactionUsers(Array.isArray(userIds) && userIds.length > 0 ? userIds : []);
+    setReactionsModalOpen(true);
+  };
 
-  const handleLike = async () => {
+  const handleReactionSelect = async (reactionType) => {
     if (!currentUser) {
-      console.warn('Usuário não autenticado para curtir');
+      console.warn('Usuário não autenticado para reagir');
       return;
     }
-    const postLikesRef = ref(rtdb, `posts/${id}/likes/${currentUser.uid}`);
+
+    const postReactionRef = ref(rtdb, `posts/${id}/reactions/${currentUser.uid}`);
+    const postLikeRef = ref(rtdb, `posts/${id}/likes/${currentUser.uid}`);
     const postRef = ref(rtdb, `posts/${id}`);
+
     try {
-      console.log('Tentando curtir post:', id, 'usuário:', currentUser.uid);
-      if (hasLiked) {
-        console.log('Removendo like...');
-        await remove(postLikesRef);
-        await update(postRef, {
-          lastActivityAt: serverTimestamp()
-        });
-        console.log('Like removido com sucesso');
+      const currentReaction = reactionsData[currentUser.uid];
+
+      if (currentReaction === reactionType) {
+        // Remover reaction se clicou no mesmo emoji
+        console.log('Removendo reaction:', reactionType);
+        await remove(postReactionRef);
+        
+        // Se for remover heart (amei), também remover like antigo correspondente
+        if (reactionType === 'heart') {
+          await remove(postLikeRef);
+        }
       } else {
-        console.log('Adicionando like...');
-        await set(postLikesRef, serverTimestamp());
-        await update(postRef, {
-          lastActivityAt: serverTimestamp()
-        });
-        console.log('Like adicionado com sucesso');
+        // Adicionar ou trocar reaction
+        console.log('Adicionando/trocando reaction:', reactionType);
+        await set(postReactionRef, reactionType);
+        
+        // Se mudar para heart (amei), remover like antigo se existir
+        if (reactionType === 'heart') {
+          await remove(postLikeRef);
+        }
       }
+
+      // Atualizar lastActivityAt para reordenar feed
+      await update(postRef, {
+        lastActivityAt: serverTimestamp()
+      });
     } catch (error) {
-      console.error('Erro ao curtir:', error);
-      console.error('Código do erro:', error.code);
-      console.error('Mensagem:', error.message);
+      console.error('Erro ao reagir:', error);
     }
   };
-
-  const handleOpenLikesModal = async () => {
-    if (likesCount === 0) return;
-    setLikesModalOpen(true);
-    setLoadingLikes(true);
-    
-    try {
-      const userIds = Object.keys(likesData);
-      const usersData = await Promise.all(
-        userIds.map(async (uid) => {
-          const profileRef = ref(rtdb, `profiles/${uid}`);
-          const snapshot = await get(profileRef);
-          const profile = snapshot.val() || {};
-          return {
-            uid,
-            nickname: profile.nickname || 'Usuário',
-            photoURL: profile.photoURL || null,
-            isVerified: profile.isVerified || false
-          };
-        })
-      );
-      setLikesUsers(usersData);
-    } catch (error) {
-      console.error("Erro ao carregar usuários:", error);
-    } finally {
-      setLoadingLikes(false);
-    }
-  };
-
-  const getLikesTooltipText = () => {
-    const userIds = Object.keys(likesData);
-    if (userIds.length === 0) return '';
-    if (userIds.length <= 3) {
-      return likesUsers.map(u => u.nickname).join(', ');
-    }
-    return `${likesUsers.slice(0, 3).map(u => u.nickname).join(', ')} e mais ${userIds.length - 3}`;
-  };
-
-  // Carregar nicknames para tooltip quando houver curtidas
-  useEffect(() => {
-    const loadNicknamesForTooltip = async () => {
-      const userIds = Object.keys(likesData);
-      if (userIds.length === 0) {
-        setLikesUsers([]);
-        return;
-      }
-      
-      try {
-        const usersData = await Promise.all(
-          userIds.slice(0, 3).map(async (uid) => {
-            const profileRef = ref(rtdb, `profiles/${uid}`);
-            const snapshot = await get(profileRef);
-            const profile = snapshot.val() || {};
-            return {
-              uid,
-              nickname: profile.nickname || 'Usuário',
-              photoURL: profile.photoURL || null
-            };
-          })
-        );
-        setLikesUsers(usersData);
-      } catch (error) {
-        console.error("Erro ao carregar nomes:", error);
-      }
-    };
-
-    loadNicknamesForTooltip();
-  }, [likesData]);
 
   return (
     <>
@@ -296,51 +270,57 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
         )}
 
         <Divider />
-        <CardActions sx={{ justifyContent: 'flex-start', p: 1 }}>
-          <Button 
-            startIcon={hasLiked ? <ThumbUpIcon /> : <ThumbUpOutlinedIcon />}
-            onClick={handleLike}
-            color={hasLiked ? 'primary' : 'inherit'}
-          >
-            Curtir
-          </Button>
+        <CardActions sx={{ justifyContent: 'space-between', alignItems: 'center', p: 1.5 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <ReactionSelector 
+              currentReaction={reactionsData[currentUser?.uid]}
+              onReactionSelect={handleReactionSelect}
+              size="medium"
+            />
 
-          {likesCount > 0 && (
-            <Tooltip title={getLikesTooltipText()} arrow>
-              <Box 
-                onClick={handleOpenLikesModal}
-                sx={{ 
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  px: 2,
-                  py: 1,
-                  ml: 1,
-                  borderRadius: 1,
-                  '&:hover': { 
-                    backgroundColor: 'action.hover',
-                    textDecoration: 'underline'
-                  },
-                  minWidth: '44px',
-                  minHeight: '44px',
-                  justifyContent: 'center'
-                }}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  {likesCount}
-                </Typography>
-              </Box>
-            </Tooltip>
-          )}
+            {Object.keys(reactionsData).length > 0 && (
+              <Tooltip title={`Total de ${Object.keys(reactionsData).length} reações`} arrow>
+                <Box 
+                  sx={{ 
+                    cursor: 'default',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    px: 1.5,
+                    py: 0.75,
+                    borderRadius: 1,
+                    backgroundColor: '#f5f5f5',
+                    minHeight: '36px',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: '500' }}>
+                    {Object.keys(reactionsData).length}
+                  </Typography>
+                </Box>
+              </Tooltip>
+            )}
 
-          <Button
-            startIcon={<ChatBubbleOutlineIcon />}
-            onClick={() => setCommentModalOpen(true)}
-            color="inherit"
-          >
-            {commentCount > 0 ? commentCount : 'Comentar'}
-          </Button>
+            <Button
+              startIcon={<ChatBubbleOutlineIcon />}
+              onClick={() => setCommentModalOpen(true)}
+              color="inherit"
+            >
+              {commentCount > 0 ? commentCount : 'Comentar'}
+            </Button>
+          </Box>
         </CardActions>
+
+        {/* Exibir reactions agrupadas */}
+        {Object.keys(reactionsData).length > 0 && (
+          <CardContent sx={{ pt: 0, pb: 1 }}>
+            <ReactionDisplay 
+              reactions={reactionsData}
+              onReactionClick={(reactionType, userIds) => 
+                handleReactionClick(reactionType, userIds)
+              }
+            />
+          </CardContent>
+        )}
       </Card>
 
       {/* Modal de comentários */}
@@ -349,40 +329,6 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
         open={commentModalOpen}
         onClose={() => setCommentModalOpen(false)}
       />
-
-      {/* Modal de curtidas */}
-      <Dialog 
-        open={likesModalOpen} 
-        onClose={() => setLikesModalOpen(false)} 
-        fullWidth 
-        maxWidth="sm"
-      >
-        <DialogTitle>Curtidas ({likesCount})</DialogTitle>
-        <DialogContent dividers>
-          {loadingLikes ? (
-            <Typography align="center" sx={{ py: 2 }}>Carregando...</Typography>
-          ) : (
-            <List>
-              {likesUsers.map((user) => (
-                <ListItem key={user.uid}>
-                  <ListItemAvatar>
-                    <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
-                      <Avatar src={user.photoURL} alt={user.nickname || '?'}>
-                        {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
-                      </Avatar>
-                      <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} customSx={{ bottom: '-3px', right: '-3px' }} />
-                    </Box>
-                  </ListItemAvatar>
-                  <ListItemText primary={user.nickname} />
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLikesModalOpen(false)}>Fechar</Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Modal de edição de post */}
       <EditPostModal
@@ -402,6 +348,14 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
         message="Tem certeza de que deseja apagar este post? Esta ação não poderá ser desfeita."
         confirmText="Apagar"
         cancelText="Cancelar"
+      />
+
+      {/* Modal de usuários que reagiram */}
+      <ReactionsUsersModal
+        open={reactionsModalOpen}
+        onClose={() => setReactionsModalOpen(false)}
+        reactionType={selectedReactionType}
+        userIds={selectedReactionUsers}
       />
     </>
   );
