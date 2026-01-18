@@ -241,8 +241,14 @@ function CommentModal({ postId, open, onClose }) {
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: isMobile ? 1 : 2 }}>
-        <Button onClick={onClose} sx={{ fontSize: isMobile ? '0.8rem' : 'inherit' }}>Fechar</Button>
+      <DialogActions sx={{ p: isMobile ? 0.5 : 1, justifyContent: 'flex-end' }}>
+        <Button 
+          onClick={onClose} 
+          size="small"
+          sx={{ fontSize: isMobile ? '0.75rem' : '0.85rem' }}
+        >
+          Fechar
+        </Button>
       </DialogActions>
     </Dialog>
   );
