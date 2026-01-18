@@ -138,7 +138,7 @@ function CommentModal({ postId, open, onClose }) {
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>Comentários</DialogTitle>
 
-      <DialogContent dividers sx={{ minHeight: '400px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <DialogContent dividers sx={{ maxHeight: '60vh', minHeight: '300px', display: 'flex', flexDirection: 'column', gap: 2, overflow: 'auto' }}>
         {error && <Alert severity="error">{error}</Alert>}
 
         {/* Formulário para novo comentário */}
