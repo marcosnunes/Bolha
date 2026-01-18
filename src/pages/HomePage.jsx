@@ -306,7 +306,7 @@ function HomePage() {
 
             <Dialog open={openUserListDialog} onClose={() => { setOpenUserListDialog(false); setUserSearchFilter(''); }} fullWidth maxWidth="sm">
                 <DialogTitle>Membros da Bolha ({userCount})</DialogTitle>
-                <DialogContent dividers>
+                <DialogContent dividers sx={{ maxHeight: '60vh', overflow: 'auto', p: 2 }}>
                     <TextField
                         fullWidth
                         variant="outlined"

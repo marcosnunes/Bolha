@@ -72,7 +72,7 @@ function ReactionsUsersModal({ open, onClose, reactionType, userIds = [] }) {
           ({userIds.length})
         </Typography>
       </DialogTitle>
-      <DialogContent sx={{ pt: 1 }}>
+      <DialogContent sx={{ pt: 1, maxHeight: '60vh', overflow: 'auto' }}>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
             <CircularProgress size={40} />
