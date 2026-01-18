@@ -12,13 +12,14 @@ import ReactionsUsersModal from './ReactionsUsersModal.jsx'; // Modal de usuári
 
 import {
   Box, Avatar, Typography, IconButton, Tooltip, Dialog,
-  DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemAvatar, ListItemText
+  DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemAvatar, ListItemText, useMediaQuery
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 
 function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
   const { currentUser } = useAuth();
+  const isMobile = useMediaQuery('(max-width:600px)');
   const { authorNickname, textContent, createdAt, authorId, authorPhotoURL } = commentData;
   
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
@@ -159,21 +160,21 @@ function CommentItem({ postId, commentId, commentData, onCommentDelete }) {
     <>
       <Box sx={{ display: 'flex', gap: 2, pb: 2, borderBottom: '1px solid #e0e0e0', alignItems: 'flex-start' }}>
         <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
-          <Avatar src={profilePhotoURL} sx={{ width: 48, height: 48 }}>
+          <Avatar src={profilePhotoURL} sx={{ width: isMobile ? 40 : 48, height: isMobile ? 40 : 48 }}>
             {!profilePhotoURL && authorNickname?.charAt(0).toUpperCase()}
           </Avatar>
-          <VerificationBadge isVerified={isVerified} avatarSize={48} customSx={{ bottom: '-3px', right: '-3px' }} />
+          <VerificationBadge isVerified={isVerified} avatarSize={isMobile ? 40 : 48} customSx={{ bottom: '-3px', right: '-3px' }} />
         </Box>
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', mb: 0.5, flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? 0.5 : 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.2, flexWrap: 'nowrap' }}>
+              <Typography variant={isMobile ? 'body2' : 'subtitle2'} sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                 {authorNickname}
               </Typography>
-              <OnlineIndicator isOnline={isOnline} size={10} />
+              <OnlineIndicator isOnline={isOnline} size={isMobile ? 8 : 10} />
             </Box>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: isMobile ? '0.7rem' : 'inherit', whiteSpace: 'nowrap' }}>
               {formattedDate}
             </Typography>
           </Box>
