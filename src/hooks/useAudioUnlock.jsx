@@ -57,11 +57,6 @@ function useAudioUnlock() {
         if (audioUnlocked) {
           unlockedRef.current = true;
           console.log('🔊 ✨ Autoplay desbloqueado com sucesso! Som agora funcionará.');
-          
-          // 🎵 Teste: tocar um som de teste após desbloquear
-          setTimeout(() => {
-            testPlaySound();
-          }, 500);
         }
       } catch (error) {
         console.warn('⚠️ Erro ao desbloquear audio:', error.message);
@@ -78,9 +73,7 @@ function useAudioUnlock() {
       } catch (error) {
         console.warn('⚠️ Erro ao tocar som de teste:', error.message);
       }
-    };
-
-    // Listeners para diversos eventos de interação do usuário
+    };// Listeners para diversos eventos de interação do usuário
     const events = ['click', 'touchstart', 'touchend', 'keydown', 'mousedown', 'pointerdown'];
     
     const handleUserInteraction = (event) => {

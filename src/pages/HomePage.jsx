@@ -129,8 +129,6 @@ function HomePage() {
                     const hadOnlineBefore = previousOnlineStatesRef.current[userId];
                     const isFirstRead = !initializedUsersRef.current.has(userId);
                     
-                    console.log(`HomePage: Usuário ${userId} - antes: ${hadOnlineBefore}, agora: ${hasOnlineNow}, initialized: ${initializedUsersRef.current.has(userId)}, firstRead: ${isFirstRead}`);
-                    
                     // Tocar som APENAS se:
                     // 1. Não é primeira leitura (skip first read)
                     // 2. Tinha estado anterior definido
@@ -139,6 +137,9 @@ function HomePage() {
                         const statusChange = hasOnlineNow ? 'entrou' : 'saiu';
                         console.log(`🔔 ${userId} ${statusChange} (chamando playOnlineSound)`);
                         playOnlineSoundRef.current();
+                    } else if (!isFirstRead && hadOnlineBefore === hasOnlineNow) {
+                        // Log apenas para debug: estado não mudou
+                        console.debug(`ℹ️ ${userId} continua ${hasOnlineNow ? 'online' : 'offline'}`);
                     }
                     
                     // Marcar como inicializado ANTES de armazenar o estado
