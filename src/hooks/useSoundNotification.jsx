@@ -2,7 +2,6 @@ import { useCallback, useRef } from 'react';
 
 // Importar sons ou criar URLs de sons (você pode adicionar arquivos em public/sounds/)
 const SOUNDS = {
-  online: '/sounds/notification-online.mp3',
   reaction: '/sounds/notification-reaction.mp3'
 };
 
@@ -74,7 +73,6 @@ function useSoundNotification(enabled = true) {
 
   return {
     playSound,
-    playOnlineSound: () => playSound('online'),
     playReactionSound: () => playSound('reaction'),
     SOUNDS
   };

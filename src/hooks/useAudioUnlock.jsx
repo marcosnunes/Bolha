@@ -66,7 +66,7 @@ function useAudioUnlock() {
     const testPlaySound = async () => {
       try {
         console.log('🧪 Testando som...');
-        const testAudio = new Audio('/sounds/notification-online.mp3');
+        const testAudio = new Audio('/sounds/notification-reaction.mp3');
         testAudio.volume = 0.3;
         await testAudio.play();
         console.log('✅ Som de teste tocado com sucesso! Se ouviu, tudo está funcionando.');

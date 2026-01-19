@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { auth, rtdb, functions } from '../firebase/config.js';
-import { ref, onValue, set, remove, serverTimestamp, onDisconnect } from 'firebase/database';
+import { ref, onValue, set, remove } from 'firebase/database';
 
 const AuthContext = createContext();
 
@@ -88,25 +88,6 @@ export function AuthProvider({ children }) {
       return () => unsubscribeProfile();
     }
     // Se não há usuário, o loading já foi setado no primeiro useEffect
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (currentUser) {
-      const onlineRef = ref(rtdb, `users/${currentUser.uid}/online`);
-      
-      // Define o timestamp de online quando o usuário se conecta
-      set(onlineRef, serverTimestamp());
-      
-      // Limpa o status quando desconecta
-      onDisconnect(onlineRef).remove();
-      
-      // Atualiza o status periodicamente (a cada 30 segundos)
-      const interval = setInterval(() => {
-        set(onlineRef, serverTimestamp());
-      }, 30000);
-
-      return () => clearInterval(interval);
-    }
   }, [currentUser]);
 
   // Carrega a lista de usuários ocultos quando o usuário faz login
