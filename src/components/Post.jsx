@@ -9,9 +9,6 @@ import EditPostModal from './EditPostModal.jsx'; // Importa modal de edição de
 import VerificationBadge from './VerificationBadge.jsx'; // Importa badge de verificação
 import OnlineIndicator from './OnlineIndicator.jsx'; // Importa indicador de online
 import useOnlineStatus from '../hooks/useOnlineStatus.jsx'; // Hook para status de online
-import useSoundNotification from '../hooks/useSoundNotification.jsx'; // Hook para sons
-import { useSoundPreference } from '../hooks/useSoundPreference.jsx'; // Hook para preferência de som
-import useAudioUnlock from '../hooks/useAudioUnlock.jsx'; // Hook para desbloquear autoplay
 import ReactionSelector from './ReactionSelector.jsx'; // Seletor de reactions
 import ReactionDisplay from './ReactionDisplay.jsx'; // Exibidor de reactions
 import ReactionsUsersModal from './ReactionsUsersModal.jsx'; // Modal de usuários que reagiram
@@ -33,12 +30,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   
   const formattedDate = new Date(createdAt).toLocaleString('pt-BR');
   const isOwner = currentUser && currentUser.uid === authorId;
-  const { soundsEnabled } = useSoundPreference();
-  const { playReactionSound } = useSoundNotification(soundsEnabled);
-  const playReactionSoundRef = useRef(playReactionSound); // Ref para usar em closure
-  
-  // Desbloquear autoplay no primeiro clique/interação
-  useAudioUnlock();
+  const playReactionSoundRef = useRef(() => {}); // Manter ref para compatibilidade
 
   const [reactionsData, setReactionsData] = useState(postData.reactions || {});
   const [profilePhotoURL, setProfilePhotoURL] = useState(authorPhotoURL || null);
@@ -58,8 +50,8 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
 
   // Atualizar ref quando playReactionSound muda (sem causar re-subscriptions)
   useEffect(() => {
-    playReactionSoundRef.current = playReactionSound;
-  }, [playReactionSound]);
+    playReactionSoundRef.current = () => {}; // Sem operação
+  }, []);
 
   // Monitorar mudanças no conteúdo do post (incluindo edições)
   useEffect(() => {
@@ -95,15 +87,6 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
     const unsubscribeReactions = onValue(reactionsRef, (snapshot) => {
       const newReactions = snapshot.val() || {};
       currentReactions = newReactions;
-      
-      // Tocar som se houver novas reações (não é do usuário atual)
-      const currentReactionCount = Object.keys(newReactions).length;
-      if (currentReactionCount > previousReactionCount && currentUser?.uid !== authorId) {
-        playReactionSoundRef.current();
-        setPreviousReactionCount(currentReactionCount);
-      } else if (currentReactionCount <= previousReactionCount) {
-        setPreviousReactionCount(currentReactionCount);
-      }
       
       mergeReactionsAndLikes();
     });
