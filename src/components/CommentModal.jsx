@@ -136,16 +136,17 @@ function CommentModal({ postId, open, onClose }) {
   };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      fullWidth 
-      maxWidth={isMobile ? 'xs' : 'md'}
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth={isMobile ? 'xs' : 'sm'}
       PaperProps={{
         sx: {
+          maxWidth: isMobile ? '100vw' : 520,
+          width: '100%',
           maxHeight: isMobile ? '90vh' : '85vh',
           margin: isMobile ? 1 : 'auto',
-          width: isMobile ? 'auto' : 'auto'
         }
       }}
     >
