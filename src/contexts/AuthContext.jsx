@@ -93,16 +93,19 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (currentUser) {
       const onlineRef = ref(rtdb, `users/${currentUser.uid}/online`);
+      const lastSeenRef = ref(rtdb, `users/${currentUser.uid}/lastSeen`);
       
-      // Define o timestamp de online quando o usuário se conecta
+      // Define o timestamp de online e lastSeen quando o usuário se conecta
       set(onlineRef, serverTimestamp());
+      set(lastSeenRef, serverTimestamp());
       
-      // Limpa o status quando desconecta
+      // Remove apenas o status online quando desconecta (lastSeen persiste)
       onDisconnect(onlineRef).remove();
       
       // Atualiza o status periodicamente (a cada 30 segundos)
       const interval = setInterval(() => {
         set(onlineRef, serverTimestamp());
+        set(lastSeenRef, serverTimestamp());
       }, 30000);
 
       return () => clearInterval(interval);

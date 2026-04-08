@@ -262,10 +262,10 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
         {mediaURL && (
           <Box sx={{ bgcolor: 'white', display: 'flex', justifyContent: 'center' }}>
             {mediaType === 'image' && (
-              <Box component="img" src={getOptimizedUrl(mediaURL)} sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
+              <Box component="img" src={getOptimizedUrl(mediaURL)} onContextMenu={(e) => e.preventDefault()} sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
             )}
             {mediaType === 'video' && (
-              <Box component="video" poster={getVideoThumbnail(mediaURL)} src={getOptimizedUrl(mediaURL)} controls playsInline sx={{ maxWidth: '100%', maxHeight: '80vh' }} />
+              <Box component="video" poster={getVideoThumbnail(mediaURL)} src={getOptimizedUrl(mediaURL)} controls playsInline controlsList="nodownload" onContextMenu={(e) => e.preventDefault()} sx={{ maxWidth: '100%', maxHeight: '80vh' }} />
             )}
           </Box>
         )}

@@ -4,6 +4,7 @@ import { ref, onValue } from 'firebase/database';
 
 function useOnlineStatus(userId) {
   const [isOnline, setIsOnline] = useState(false);
+  const [lastSeenAt, setLastSeenAt] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,8 +17,9 @@ function useOnlineStatus(userId) {
     }
 
     const onlineRef = ref(rtdb, `users/${userId}/online`);
+    const lastSeenRef = ref(rtdb, `users/${userId}/lastSeen`);
     
-    const unsubscribe = onValue(
+    const unsubscribeOnline = onValue(
       onlineRef,
       (snapshot) => {
         if (snapshot.exists()) {
@@ -39,10 +41,25 @@ function useOnlineStatus(userId) {
       }
     );
 
-    return () => unsubscribe();
+    const unsubscribeLastSeen = onValue(
+      lastSeenRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          setLastSeenAt(snapshot.val());
+        }
+      },
+      (error) => {
+        console.warn(`Aviso ao verificar lastSeen de ${userId}:`, error.code);
+      }
+    );
+
+    return () => {
+      unsubscribeOnline();
+      unsubscribeLastSeen();
+    };
   }, [userId]);
 
-  return { isOnline, loading };
+  return { isOnline, lastSeenAt, loading };
 }
 
 export default useOnlineStatus;

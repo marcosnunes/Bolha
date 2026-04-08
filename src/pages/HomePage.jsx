@@ -389,8 +389,25 @@ function HomePage() {
 }
 
 // Componente wrapper para item de usuário com status online
+function formatLastSeen(timestamp) {
+  if (!timestamp) return null;
+  const diff = Date.now() - timestamp;
+  const minutes = Math.floor(diff / (60 * 1000));
+  const hours = Math.floor(diff / (60 * 60 * 1000));
+  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+  const months = Math.floor(diff / (30 * 24 * 60 * 60 * 1000));
+  const years = Math.floor(diff / (365 * 24 * 60 * 60 * 1000));
+
+  if (minutes < 1) return 'agora mesmo';
+  if (minutes < 60) return `há ${minutes} min`;
+  if (hours < 24) return `há ${hours} hora${hours > 1 ? 's' : ''}`;
+  if (days < 30) return `há ${days} dia${days > 1 ? 's' : ''}`;
+  if (months < 12) return `há ${months} ${months > 1 ? 'meses' : 'mês'}`;
+  return `há ${years} ano${years > 1 ? 's' : ''}`;
+}
+
 function UserListItemWithOnlineStatus({ user }) {
-  const { isOnline } = useOnlineStatus(user.uid);
+  const { isOnline, lastSeenAt } = useOnlineStatus(user.uid);
 
   return (
     <ListItem>
@@ -408,7 +425,13 @@ function UserListItemWithOnlineStatus({ user }) {
             <span>{user.nickname}</span>
             <OnlineIndicator isOnline={isOnline} size={10} />
           </Box>
-        } 
+        }
+        secondary={
+          !isOnline && lastSeenAt
+            ? `visto por último ${formatLastSeen(lastSeenAt)}`
+            : null
+        }
+        secondaryTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
       />
     </ListItem>
   );
