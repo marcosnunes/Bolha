@@ -11,6 +11,7 @@ if (!process.env.EMAIL_USER) {
 }
 
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { logger } = require("firebase-functions");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
@@ -40,6 +41,52 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+const MAX_AUTO_DELETIONS_PER_RUN = 50;
+const MAX_BACKFILL_UPDATES_PER_BATCH = 200;
+
+function getFallbackLastSeenFromAuthRecord(authUserRecord) {
+  if (authUserRecord.metadata?.lastSignInTime) {
+    return new Date(authUserRecord.metadata.lastSignInTime).getTime();
+  }
+  if (authUserRecord.metadata?.creationTime) {
+    return new Date(authUserRecord.metadata.creationTime).getTime();
+  }
+  return 0;
+}
+
+async function deleteUserAndData(uid, reason = "manual") {
+  const db = admin.database();
+  const authAdmin = admin.auth();
+
+  const updates = {};
+  updates[`/profiles/${uid}`] = null;
+  updates[`/users/${uid}`] = null;
+
+  const postsQuery = db.ref("/posts").orderByChild("authorId").equalTo(uid);
+  const postsSnapshot = await postsQuery.once("value");
+  if (postsSnapshot.exists()) {
+    postsSnapshot.forEach((child) => {
+      updates[`/posts/${child.key}`] = null;
+    });
+  }
+
+  await db.ref().update(updates);
+  await authAdmin.deleteUser(uid);
+  logger.info(`Conta removida (${reason}) para UID: ${uid}`);
+}
+
+async function getLastActivityMs(uid, authUserRecord) {
+  const lastSeenSnapshot = await admin.database().ref(`/users/${uid}/lastSeen`).once("value");
+  const lastSeen = lastSeenSnapshot.val();
+  if (typeof lastSeen === "number" && Number.isFinite(lastSeen)) {
+    return lastSeen;
+  }
+
+  // Fallback seguro para contas antigas sem campo lastSeen.
+  return getFallbackLastSeenFromAuthRecord(authUserRecord);
+}
+
 
 // A definição da função agora é mais direta
 exports.deleteUserAccount = onCall({ region: "us-central1" }, async (request) => {
@@ -54,29 +101,11 @@ exports.deleteUserAccount = onCall({ region: "us-central1" }, async (request) =>
   }
 
   const uid = auth.uid;
-  const db = admin.database();
-  const authAdmin = admin.auth();
 
   logger.info(`Iniciando o processo de exclusão para o UID: ${uid}`);
 
   try {
-    const updates = {};
-    updates[`/profiles/${uid}`] = null;
-    updates[`/users/${uid}`] = null;
-    
-    const postsQuery = db.ref("/posts").orderByChild("authorId").equalTo(uid);
-    const postsSnapshot = await postsQuery.once("value");
-    if (postsSnapshot.exists()) {
-      postsSnapshot.forEach((child) => {
-        updates[`/posts/${child.key}`] = null;
-      });
-    }
-
-    await db.ref().update(updates);
-    logger.info(`Dados do RTDB para o UID ${uid} foram removidos.`);
-
-    await authAdmin.deleteUser(uid);
-    logger.info(`Usuário ${uid} apagado do Authentication com sucesso.`);
+    await deleteUserAndData(uid, "manual");
 
     return { success: true, message: "Sua conta foi removida com sucesso." };
   } catch (error) {
@@ -88,6 +117,66 @@ exports.deleteUserAccount = onCall({ region: "us-central1" }, async (request) =>
     );
   }
 });
+
+// Exclusao silenciosa de contas com mais de 1 ano de inatividade.
+exports.deleteInactiveAccounts = onSchedule(
+  {
+    region: "us-central1",
+    schedule: "every day 03:00",
+    timeZone: "America/Sao_Paulo",
+  },
+  async () => {
+    const now = Date.now();
+    let nextPageToken;
+    let scanned = 0;
+    let deleted = 0;
+    let errors = 0;
+
+    logger.info("Iniciando varredura de inatividade para exclusao automatica.");
+
+    do {
+      const page = await admin.auth().listUsers(1000, nextPageToken);
+
+      for (const user of page.users) {
+        scanned += 1;
+
+        if (deleted >= MAX_AUTO_DELETIONS_PER_RUN) {
+          logger.warn("Limite de exclusoes automaticas por execucao atingido.", {
+            limit: MAX_AUTO_DELETIONS_PER_RUN,
+          });
+          break;
+        }
+
+        try {
+          const lastActivityMs = await getLastActivityMs(user.uid, user);
+          if (!lastActivityMs) continue;
+
+          const inactiveForMs = now - lastActivityMs;
+          if (inactiveForMs >= ONE_YEAR_MS) {
+            await deleteUserAndData(user.uid, "inactive-1y");
+            deleted += 1;
+          }
+        } catch (error) {
+          errors += 1;
+          logger.error(`Falha ao processar exclusao automatica para UID ${user.uid}`, error);
+        }
+      }
+
+      if (deleted >= MAX_AUTO_DELETIONS_PER_RUN) {
+        break;
+      }
+
+      nextPageToken = page.pageToken;
+    } while (nextPageToken);
+
+    logger.info("Varredura de inatividade concluida.", {
+      scanned,
+      deleted,
+      errors,
+      maxDeletionsPerRun: MAX_AUTO_DELETIONS_PER_RUN,
+    });
+  }
+);
 
 // Função para enviar email de verificação (HTTP com CORS)
 exports.sendVerificationEmail = onRequest({ region: "us-central1" }, async (req, res) => {
@@ -358,6 +447,113 @@ exports.migrateCommentLikesAdmin = onRequest({ region: "us-central1" }, async (r
     logger.error("❌ Erro na migração:", error);
     return res.status(500).json({
       error: `Erro na migração: ${error.message}`
+    });
+  }
+});
+
+/**
+ * Backfill de lastSeen para contas antigas que ainda nao possuem users/{uid}/lastSeen.
+ *
+ * Seguranca:
+ * - Exige metodo POST
+ * - Exige cabecalho x-admin-key igual a process.env.MIGRATION_ADMIN_KEY
+ *
+ * Modo:
+ * - dryRun=true (padrao): apenas simula e retorna contagens
+ * - dryRun=false: grava no RTDB em lotes
+ */
+exports.backfillLastSeenAdmin = onRequest({ region: "us-central1", secrets: ["MIGRATION_ADMIN_KEY"] }, async (req, res) => {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Método não permitido" });
+  }
+
+  const adminKey = process.env.MIGRATION_ADMIN_KEY;
+  const incomingKey = req.headers["x-admin-key"];
+
+  if (!adminKey) {
+    logger.error("MIGRATION_ADMIN_KEY não configurada no ambiente.");
+    return res.status(500).json({ error: "Chave administrativa não configurada" });
+  }
+
+  if (!incomingKey || incomingKey !== adminKey) {
+    return res.status(403).json({ error: "Acesso negado" });
+  }
+
+  const dryRun = req.query.dryRun !== "false" && req.body?.dryRun !== false;
+
+  try {
+    let nextPageToken;
+    let scanned = 0;
+    let alreadyHadLastSeen = 0;
+    let eligibleToBackfill = 0;
+    let backfilled = 0;
+    let skippedNoFallback = 0;
+
+    const pendingUpdates = {};
+
+    const flushUpdatesIfNeeded = async (force = false) => {
+      const pendingCount = Object.keys(pendingUpdates).length;
+      if (dryRun || pendingCount === 0) return;
+
+      if (force || pendingCount >= MAX_BACKFILL_UPDATES_PER_BATCH) {
+        await admin.database().ref().update(pendingUpdates);
+        Object.keys(pendingUpdates).forEach((key) => delete pendingUpdates[key]);
+      }
+    };
+
+    do {
+      const page = await admin.auth().listUsers(1000, nextPageToken);
+
+      for (const user of page.users) {
+        scanned += 1;
+
+        const lastSeenSnapshot = await admin.database().ref(`/users/${user.uid}/lastSeen`).once("value");
+        const existingLastSeen = lastSeenSnapshot.val();
+
+        if (typeof existingLastSeen === "number" && Number.isFinite(existingLastSeen)) {
+          alreadyHadLastSeen += 1;
+          continue;
+        }
+
+        const fallbackLastSeen = getFallbackLastSeenFromAuthRecord(user);
+        if (!fallbackLastSeen) {
+          skippedNoFallback += 1;
+          continue;
+        }
+
+        eligibleToBackfill += 1;
+
+        if (!dryRun) {
+          pendingUpdates[`/users/${user.uid}/lastSeen`] = fallbackLastSeen;
+          backfilled += 1;
+          await flushUpdatesIfNeeded();
+        }
+      }
+
+      nextPageToken = page.pageToken;
+    } while (nextPageToken);
+
+    await flushUpdatesIfNeeded(true);
+
+    const result = {
+      success: true,
+      dryRun,
+      scanned,
+      alreadyHadLastSeen,
+      eligibleToBackfill,
+      backfilled,
+      skippedNoFallback,
+      message: dryRun ?
+        "Dry-run concluído. Nenhum dado foi alterado." :
+        "Backfill de lastSeen concluído com sucesso.",
+    };
+
+    logger.info("Backfill de lastSeen finalizado.", result);
+    return res.status(200).json(result);
+  } catch (error) {
+    logger.error("Erro no backfill de lastSeen:", error);
+    return res.status(500).json({
+      error: `Erro no backfill de lastSeen: ${error.message}`,
     });
   }
 });
