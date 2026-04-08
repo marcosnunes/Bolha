@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { auth, rtdb, functions } from '../firebase/config.js';
-import { ref, onValue, set, remove, serverTimestamp, onDisconnect } from 'firebase/database';
+import { ref, onValue, set, remove, serverTimestamp, onDisconnect, get, update } from 'firebase/database';
 
 const AuthContext = createContext();
 
@@ -21,10 +21,38 @@ export function AuthProvider({ children }) {
     return createUserWithEmailAndPassword(auth, email, password);
   }
 
+  const syncVerificationStatus = useCallback(async (userArg = auth.currentUser) => {
+    if (!userArg) return;
+
+    await userArg.reload();
+    if (!userArg.emailVerified) return;
+
+    const profileRef = ref(rtdb, `profiles/${userArg.uid}`);
+    const profileSnap = await get(profileRef);
+    const profile = profileSnap.val() || {};
+
+    const patch = {};
+    if (!profile.isVerified) {
+      patch.isVerified = true;
+    }
+    if (!profile.verifiedAt) {
+      patch.verifiedAt = serverTimestamp();
+    }
+
+    if (Object.keys(patch).length > 0) {
+      await update(profileRef, patch);
+    }
+  }, []);
+
   async function login(email, password) {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     // Garante que emailVerified esteja atualizado logo apos login.
     await userCredential.user.reload();
+
+    if (userCredential.user.emailVerified) {
+      await syncVerificationStatus(userCredential.user);
+    }
+
     return userCredential;
   }
 
@@ -160,6 +188,7 @@ export function AuthProvider({ children }) {
     logout,
     deleteAccount,
     resetPassword,
+    syncVerificationStatus,
   };
 
   return (

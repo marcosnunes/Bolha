@@ -45,7 +45,6 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
   const [reactionsModalOpen, setReactionsModalOpen] = useState(false);
   const [selectedReactionType, setSelectedReactionType] = useState(null);
   const [selectedReactionUsers, setSelectedReactionUsers] = useState([]);
-  const [previousReactionCount, setPreviousReactionCount] = useState(Object.keys(postData.reactions || {}).length);
   const openMenu = Boolean(anchorEl);
 
   // Atualizar ref quando playReactionSound muda (sem causar re-subscriptions)
@@ -100,7 +99,7 @@ function Post({ postData, onAuthorClick, onPostDelete }) {
       unsubscribeReactions();
       unsubscribeLikes();
     };
-  }, [id, authorId, currentUser?.uid, previousReactionCount]);
+  }, [id]);
 
   // Carregar contador de comentários
   useEffect(() => {

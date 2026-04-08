@@ -16,7 +16,7 @@ function EmailVerificationRequiredPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, syncVerificationStatus } = useAuth();
   const navigate = useNavigate();
 
   const handleResend = async () => {
@@ -42,6 +42,7 @@ function EmailVerificationRequiredPage() {
 
     await auth.currentUser.reload();
     if (auth.currentUser.emailVerified) {
+      await syncVerificationStatus(auth.currentUser);
       navigate('/');
     } else {
       setError('Seu e-mail ainda não foi confirmado.');
