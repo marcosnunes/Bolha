@@ -42,6 +42,8 @@ const transporter = nodemailer.createTransport({
 });
 
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+const EIGHT_MONTHS_MS = 8 * 30 * 24 * 60 * 60 * 1000;
+const TEN_MONTHS_MS = 10 * 30 * 24 * 60 * 60 * 1000;
 const MAX_AUTO_DELETIONS_PER_RUN = 50;
 const MAX_BACKFILL_UPDATES_PER_BATCH = 200;
 
@@ -87,6 +89,72 @@ async function getLastActivityMs(uid, authUserRecord) {
   return getFallbackLastSeenFromAuthRecord(authUserRecord);
 }
 
+async function sendInactivityWarningEmail(user, stage) {
+  if (!EMAIL_USER || !EMAIL_PASSWORD) {
+    logger.warn("Credenciais de email ausentes. Avisos de inatividade nao enviados.");
+    return false;
+  }
+
+  if (!user.email) {
+    return false;
+  }
+
+  const monthsToDeletion = stage === "8m" ? 4 : 2;
+  const subject = "Bolha: sua conta pode ser excluida por inatividade";
+  const html = `
+    <h2>Sentimos sua falta no Bolha</h2>
+    <p>Identificamos que sua conta esta inativa.</p>
+    <p>Se a inatividade chegar a 12 meses, sua conta e publicacoes serao excluidas automaticamente.</p>
+    <p><strong>Prazo atual: ${monthsToDeletion} mes(es) para exclusao automatica.</strong></p>
+    <p>Para manter sua conta, basta entrar no app novamente.</p>
+  `;
+
+  await transporter.sendMail({
+    from: EMAIL_USER,
+    to: user.email,
+    subject,
+    html,
+  });
+
+  return true;
+}
+
+async function maybeSendInactivityWarnings(user, inactiveForMs) {
+  if (inactiveForMs >= ONE_YEAR_MS) {
+    return { sent8m: false, sent10m: false };
+  }
+
+  const warningsRef = admin.database().ref(`/users/${user.uid}/inactivityWarnings`);
+  const warningsSnapshot = await warningsRef.once("value");
+  const warnings = warningsSnapshot.val() || {};
+  const updates = {};
+
+  let sent8m = false;
+  let sent10m = false;
+
+  if (inactiveForMs >= EIGHT_MONTHS_MS && inactiveForMs < TEN_MONTHS_MS && !warnings.warn8SentAt) {
+    const sent = await sendInactivityWarningEmail(user, "8m");
+    if (sent) {
+      sent8m = true;
+      updates.warn8SentAt = admin.database.ServerValue.TIMESTAMP;
+    }
+  }
+
+  if (inactiveForMs >= TEN_MONTHS_MS && inactiveForMs < ONE_YEAR_MS && !warnings.warn10SentAt) {
+    const sent = await sendInactivityWarningEmail(user, "10m");
+    if (sent) {
+      sent10m = true;
+      updates.warn10SentAt = admin.database.ServerValue.TIMESTAMP;
+    }
+  }
+
+  if (Object.keys(updates).length > 0) {
+    await warningsRef.update(updates);
+  }
+
+  return { sent8m, sent10m };
+}
+
 
 // A definição da função agora é mais direta
 exports.deleteUserAccount = onCall({ region: "us-central1" }, async (request) => {
@@ -122,7 +190,7 @@ exports.deleteUserAccount = onCall({ region: "us-central1" }, async (request) =>
 exports.deleteInactiveAccounts = onSchedule(
   {
     region: "us-central1",
-    schedule: "every day 03:00",
+    schedule: "every sunday 03:00",
     timeZone: "America/Sao_Paulo",
   },
   async () => {
@@ -130,6 +198,8 @@ exports.deleteInactiveAccounts = onSchedule(
     let nextPageToken;
     let scanned = 0;
     let deleted = 0;
+    let warning8mSent = 0;
+    let warning10mSent = 0;
     let errors = 0;
 
     logger.info("Iniciando varredura de inatividade para exclusao automatica.");
@@ -155,7 +225,12 @@ exports.deleteInactiveAccounts = onSchedule(
           if (inactiveForMs >= ONE_YEAR_MS) {
             await deleteUserAndData(user.uid, "inactive-1y");
             deleted += 1;
+            continue;
           }
+
+          const warningResult = await maybeSendInactivityWarnings(user, inactiveForMs);
+          if (warningResult.sent8m) warning8mSent += 1;
+          if (warningResult.sent10m) warning10mSent += 1;
         } catch (error) {
           errors += 1;
           logger.error(`Falha ao processar exclusao automatica para UID ${user.uid}`, error);
@@ -172,6 +247,8 @@ exports.deleteInactiveAccounts = onSchedule(
     logger.info("Varredura de inatividade concluida.", {
       scanned,
       deleted,
+      warning8mSent,
+      warning10mSent,
       errors,
       maxDeletionsPerRun: MAX_AUTO_DELETIONS_PER_RUN,
     });
