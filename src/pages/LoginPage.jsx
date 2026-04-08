@@ -24,8 +24,12 @@ function LoginPage() {
     try {
       setError('');
       setLoading(true);
-      await login(email, password);
-      navigate('/'); // Redireciona para a home após o login
+      const userCredential = await login(email, password);
+      if (userCredential.user.emailVerified) {
+        navigate('/');
+      } else {
+        navigate('/verificacao-email');
+      }
     } catch (err) {
       console.error(err);
       setError('Falha ao entrar. Verifique seu e-mail e senha.');
@@ -35,7 +39,11 @@ function LoginPage() {
 
   // Redireciona se o usuário já estiver logado
   if (currentUser) {
-    navigate('/');
+    if (currentUser.emailVerified) {
+      navigate('/');
+    } else {
+      navigate('/verificacao-email');
+    }
     return null; // Renderiza nada enquanto redireciona
   }
 

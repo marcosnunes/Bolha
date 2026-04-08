@@ -21,8 +21,11 @@ export function AuthProvider({ children }) {
     return createUserWithEmailAndPassword(auth, email, password);
   }
 
-  function login(email, password) {
-    return signInWithEmailAndPassword(auth, email, password);
+  async function login(email, password) {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    // Garante que emailVerified esteja atualizado logo apos login.
+    await userCredential.user.reload();
+    return userCredential;
   }
 
   async function logout() {

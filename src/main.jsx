@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import CadastroPage from './pages/CadastroPage.jsx';
 import PagamentoPage from './pages/PagamentoPage.jsx';
 import ConvitePage from './pages/ConvitePage.jsx';
+import EmailVerificationRequiredPage from './pages/EmailVerificationRequiredPage.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { UploadProvider } from './contexts/UploadContext.jsx';
 import { SoundProvider } from './contexts/SoundContext.jsx';
@@ -36,6 +37,14 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <SettingsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/verificacao-email',
+    element: (
+      <ProtectedRoute allowUnverified>
+        <EmailVerificationRequiredPage />
       </ProtectedRoute>
     ),
   },

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, set, update, serverTimestamp } from 'firebase/database';
+import { sendEmailVerification } from 'firebase/auth';
 import { useNavigate, useParams, Link as RouterLink } from 'react-router-dom';
 
 // Componentes e Ícones do MUI
@@ -130,6 +131,8 @@ function CadastroPage() {
       const userCredential = await signup(email, password);
       const user = userCredential.user;
 
+      await sendEmailVerification(user);
+
       await set(ref(rtdb, `profiles/${user.uid}`), {
         nickname: nickname,
         photoURL: photoURL,
@@ -143,7 +146,7 @@ function CadastroPage() {
         });
       }
 
-      navigate('/');
+      navigate('/verificacao-email');
     } catch (err) {
       console.error(err);
       setError('Falha ao criar a conta. Verifique os dados ou o e-mail pode já estar em uso.');
