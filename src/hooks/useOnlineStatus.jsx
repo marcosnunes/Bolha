@@ -25,8 +25,8 @@ function useOnlineStatus(userId) {
         if (snapshot.exists()) {
           const timestamp = snapshot.val();
           const now = Date.now();
-          // Usuário é considerado online se atualizou o status nos últimos 5 minutos
-          const isUserOnline = (now - timestamp) < 5 * 60 * 1000;
+          // Usuário é considerado online se atualizou o status no último minuto
+          const isUserOnline = (now - timestamp) < 1 * 60 * 1000;
           setIsOnline(isUserOnline);
         } else {
           setIsOnline(false);

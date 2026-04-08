@@ -26,6 +26,17 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
+    if (auth.currentUser) {
+      const onlineRef = ref(rtdb, `users/${auth.currentUser.uid}/online`);
+      const lastSeenRef = ref(rtdb, `users/${auth.currentUser.uid}/lastSeen`);
+
+      // Forca o status offline imediatamente para os outros usuarios.
+      await Promise.allSettled([
+        set(lastSeenRef, serverTimestamp()),
+        remove(onlineRef),
+      ]);
+    }
+
     await signOut(auth);
     window.location.assign('/login');
   }
@@ -94,13 +105,16 @@ export function AuthProvider({ children }) {
     if (currentUser) {
       const onlineRef = ref(rtdb, `users/${currentUser.uid}/online`);
       const lastSeenRef = ref(rtdb, `users/${currentUser.uid}/lastSeen`);
+      const onlineDisconnect = onDisconnect(onlineRef);
+      const lastSeenDisconnect = onDisconnect(lastSeenRef);
       
       // Define o timestamp de online e lastSeen quando o usuário se conecta
       set(onlineRef, serverTimestamp());
       set(lastSeenRef, serverTimestamp());
       
-      // Remove apenas o status online quando desconecta (lastSeen persiste)
-      onDisconnect(onlineRef).remove();
+      // No disconnect, remove online e registra o ultimo seen.
+      onlineDisconnect.remove();
+      lastSeenDisconnect.set(serverTimestamp());
       
       // Atualiza o status periodicamente (a cada 30 segundos)
       const interval = setInterval(() => {
@@ -108,7 +122,12 @@ export function AuthProvider({ children }) {
         set(lastSeenRef, serverTimestamp());
       }, 30000);
 
-      return () => clearInterval(interval);
+      return () => {
+        clearInterval(interval);
+        // Evita operacoes pendentes de onDisconnect quando o efeito reinicia.
+        onlineDisconnect.cancel();
+        lastSeenDisconnect.cancel();
+      };
     }
   }, [currentUser]);
 

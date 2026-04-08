@@ -51,6 +51,7 @@ function HomePage() {
     const [allUsers, setAllUsers] = useState([]);
     const [openUserListDialog, setOpenUserListDialog] = useState(false);
     const [userSearchFilter, setUserSearchFilter] = useState('');
+    const [presenceClock, setPresenceClock] = useState(Date.now());
 
     const profilePicInputRef = useRef(null);
 
@@ -74,6 +75,18 @@ function HomePage() {
         });
         return () => unsubscribe();
     }, []);
+
+    // Atualiza textos de "visto por ultimo" a cada minuto enquanto o modal estiver aberto.
+    useEffect(() => {
+        if (!openUserListDialog) return;
+
+        setPresenceClock(Date.now());
+        const interval = setInterval(() => {
+            setPresenceClock(Date.now());
+        }, 60000);
+
+        return () => clearInterval(interval);
+    }, [openUserListDialog]);
 
     // Função para comprimir imagem de perfil
     const compressProfileImage = (file) => {
@@ -327,7 +340,7 @@ function HomePage() {
                                 user.nickname.toLowerCase().includes(userSearchFilter.toLowerCase())
                             )
                             .map((user) => (
-                                <UserListItemWithOnlineStatus key={user.uid} user={user} />
+                                <UserListItemWithOnlineStatus key={user.uid} user={user} currentTime={presenceClock} />
                             ))}
                     </List>
                 </DialogContent>
@@ -389,24 +402,24 @@ function HomePage() {
 }
 
 // Componente wrapper para item de usuário com status online
-function formatLastSeen(timestamp) {
+function formatLastSeen(timestamp, now = Date.now()) {
   if (!timestamp) return null;
-  const diff = Date.now() - timestamp;
+    const diff = now - timestamp;
   const minutes = Math.floor(diff / (60 * 1000));
   const hours = Math.floor(diff / (60 * 60 * 1000));
   const days = Math.floor(diff / (24 * 60 * 60 * 1000));
   const months = Math.floor(diff / (30 * 24 * 60 * 60 * 1000));
   const years = Math.floor(diff / (365 * 24 * 60 * 60 * 1000));
 
-  if (minutes < 1) return 'agora mesmo';
-  if (minutes < 60) return `há ${minutes} min`;
+    if (minutes < 1) return 'agora mesmo';
+    if (minutes < 60) return `há ${minutes} min`;
   if (hours < 24) return `há ${hours} hora${hours > 1 ? 's' : ''}`;
   if (days < 30) return `há ${days} dia${days > 1 ? 's' : ''}`;
   if (months < 12) return `há ${months} ${months > 1 ? 'meses' : 'mês'}`;
   return `há ${years} ano${years > 1 ? 's' : ''}`;
 }
 
-function UserListItemWithOnlineStatus({ user }) {
+function UserListItemWithOnlineStatus({ user, currentTime }) {
   const { isOnline, lastSeenAt } = useOnlineStatus(user.uid);
 
   return (
@@ -428,10 +441,17 @@ function UserListItemWithOnlineStatus({ user }) {
         }
         secondary={
           !isOnline && lastSeenAt
-            ? `visto por último ${formatLastSeen(lastSeenAt)}`
+                        ? `visto por último ${formatLastSeen(lastSeenAt, currentTime)}`
             : null
         }
-        secondaryTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
+                secondaryTypographyProps={{
+                    variant: 'caption',
+                    sx: {
+                        color: 'grey.600',
+                        fontSize: '0.72rem',
+                        mt: 0.25,
+                    },
+                }}
       />
     </ListItem>
   );
