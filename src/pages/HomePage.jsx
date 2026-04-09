@@ -196,7 +196,7 @@ function HomePage() {
     async function handleLogout() {
         try {
             await logout();
-            navigate('/login');
+            navigate('/auth?mode=login');
         } catch (error) {
             console.error("Falha ao fazer logout", error);
         }
@@ -244,7 +244,7 @@ function HomePage() {
         } catch (error) {
             console.error("Erro no processo de exclusão:", error);
         } finally {
-            navigate('/cadastro');
+            navigate('/auth?mode=signup');
         }
     };
 
@@ -335,10 +335,10 @@ function HomePage() {
                     />
                     <List>
                         {allUsers
-                            .filter(user => 
-                                user.nickname && 
-                                user.nickname.toLowerCase().includes(userSearchFilter.toLowerCase())
-                            )
+                            .filter(user => {
+                                const displayName = (user.nickname || 'Usuário').toLowerCase();
+                                return displayName.includes(userSearchFilter.toLowerCase());
+                            })
                             .map((user) => (
                                 <UserListItemWithOnlineStatus key={user.uid} user={user} currentTime={presenceClock} />
                             ))}
@@ -421,13 +421,17 @@ function formatLastSeen(timestamp, now = Date.now()) {
 
 function UserListItemWithOnlineStatus({ user, currentTime }) {
   const { isOnline, lastSeenAt } = useOnlineStatus(user.uid);
+    const displayName = user.nickname || 'Usuário';
+  const presenceText = isOnline
+    ? 'online agora'
+    : (lastSeenAt ? `visto por último ${formatLastSeen(lastSeenAt, currentTime)}` : 'atividade recente indisponível');
 
   return (
     <ListItem>
       <ListItemAvatar>
         <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
-          <Avatar src={user.photoURL} alt={user.nickname}>
-            {!user.photoURL && user.nickname ? user.nickname.charAt(0).toUpperCase() : '?'}
+          <Avatar src={user.photoURL} alt={displayName}>
+            {!user.photoURL && displayName ? displayName.charAt(0).toUpperCase() : '?'}
           </Avatar>
           <VerificationBadge isVerified={user.isVerified || false} avatarSize={40} customSx={{ bottom: '-3px', right: '-3px' }} />
         </Box>
@@ -435,23 +439,19 @@ function UserListItemWithOnlineStatus({ user, currentTime }) {
       <ListItemText 
         primary={
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <span>{user.nickname}</span>
+            <span>{displayName}</span>
             <OnlineIndicator isOnline={isOnline} size={10} />
           </Box>
         }
-        secondary={
-          !isOnline && lastSeenAt
-                        ? `visto por último ${formatLastSeen(lastSeenAt, currentTime)}`
-            : null
-        }
-                secondaryTypographyProps={{
-                    variant: 'caption',
-                    sx: {
-                        color: 'grey.600',
-                        fontSize: '0.72rem',
-                        mt: 0.25,
-                    },
-                }}
+        secondary={presenceText}
+        secondaryTypographyProps={{
+          variant: 'caption',
+          sx: {
+            color: 'grey.600',
+            fontSize: '0.72rem',
+            mt: 0.25,
+          },
+        }}
       />
     </ListItem>
   );

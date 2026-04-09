@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { rtdb } from '../firebase/config';
 import { ref, get } from 'firebase/database';
-import CadastroPage from './CadastroPage'; // Reutilizaremos nossa página de cadastro!
 
 function ConvitePage() {
   const { token } = useParams(); // Pega o ':token' da URL
@@ -45,9 +44,8 @@ function ConvitePage() {
     return <div className="container center-align"><h4>{error}</h4></div>;
   }
   
-  // Se o token for válido, renderiza a página de cadastro.
-  // Caso contrário, poderia redirecionar para a página de login.
-  return isValid ? <CadastroPage /> : <Navigate to="/login" />;
+  // Se o token for válido, envia para fluxo unificado de autenticação.
+  return isValid ? <Navigate to={`/auth?mode=signup&token=${token}`} replace /> : <Navigate to="/auth?mode=login" replace />;
 }
 
 export default ConvitePage;

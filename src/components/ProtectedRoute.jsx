@@ -6,7 +6,7 @@ function ProtectedRoute({ children, allowUnverified = false }) {
 
   if (!currentUser) {
     // Se não houver usuário logado, redireciona para a página de login
-    return <Navigate to="/login" />;
+    return <Navigate to="/auth?mode=login" replace />;
   }
 
   if (!allowUnverified && !currentUser.emailVerified) {

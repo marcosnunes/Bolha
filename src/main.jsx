@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { CssBaseline } from '@mui/material';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import SettingsPage from './pages/SettingsPage.jsx';
 import VerificacaoPage from './pages/VerificacaoPage.jsx';
 
@@ -9,8 +9,7 @@ import './index.css';
 
 // Importando nossas páginas
 import HomePage from './pages/HomePage.jsx';
-import LoginPage from './pages/LoginPage.jsx';
-import CadastroPage from './pages/CadastroPage.jsx';
+import AuthPage from './pages/AuthPage.jsx';
 import PagamentoPage from './pages/PagamentoPage.jsx';
 import ConvitePage from './pages/ConvitePage.jsx';
 import EmailVerificationRequiredPage from './pages/EmailVerificationRequiredPage.jsx';
@@ -49,12 +48,16 @@ const router = createBrowserRouter([
     ),
   },
   {
+    path: '/auth',
+    element: <AuthPage />,
+  },
+  {
     path: '/login',
-    element: <LoginPage />,
+    element: <Navigate to="/auth?mode=login" replace />,
   },
   {
     path: '/cadastro',
-    element: <CadastroPage />,
+    element: <Navigate to="/auth?mode=signup" replace />,
   },
   {
     path: '/pagamento',
