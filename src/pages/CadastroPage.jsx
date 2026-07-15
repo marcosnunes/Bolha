@@ -221,12 +221,12 @@ function CadastroPage({ tokenOverride = null, embedded = false }) {
             onClick={handleGoogleSignup}
             disabled={loading || googleLoading}
             startIcon={googleLoading ? <CircularProgress size={18} color="inherit" /> : <GoogleIcon />}
-            sx={{ mt: 1, mb: 2, bgcolor: '#DB4437', '&:hover': { bgcolor: '#C3362B' } }}
+            sx={{ mt: 1, mb: 2, bgcolor: '#DB4437', '&:hover': { bgcolor: '#C3362B' }, display: { xs: 'none', sm: 'inline-flex' } }}
           >
             {googleLoading ? 'Conectando...' : 'Cadastrar com Google'}
           </Button>
 
-          <Divider sx={{ my: 2 }}>ou</Divider>
+          <Divider sx={{ my: 2, display: { xs: 'none', sm: 'block' } }}>ou</Divider>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, my: 2 }}>
             <Avatar

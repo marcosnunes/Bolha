@@ -101,7 +101,7 @@ function LoginPage({ embedded = false }) {
             {googleLoading ? 'Conectando...' : 'Entrar com Google'}
           </Button>
 
-          <Divider sx={{ my: 2 }}>ou</Divider>
+          <Divider sx={{ my: 2, display: { xs: 'none', sm: 'block' } }}>ou</Divider>
 
           <TextField
             margin="normal"
