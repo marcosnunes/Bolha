@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase/config';
 import { ref, push, set, get, onChildAdded, onChildChanged, onChildRemoved, serverTimestamp, update } from 'firebase/database';
@@ -18,13 +18,12 @@ function CommentModal({ postId, open, onClose }) {
   const [loading, setLoading] = useState(false);
   const [loadingComments, setLoadingComments] = useState(true);
   const [error, setError] = useState('');
-  const mountTimeRef = useRef(Date.now());
 
   // Escutar comentários existentes (carregamento inicial)
   useEffect(() => {
     if (!open || !postId) return undefined;
 
-    setLoadingComments(true);
+    const openedAt = Date.now();
     const commentsRef = ref(rtdb, `posts/${postId}/comments`);
 
     // Carregamento inicial de todos os comentários
@@ -53,7 +52,7 @@ function CommentModal({ postId, open, onClose }) {
     const unsubAdded = onChildAdded(
       ref(rtdb, `posts/${postId}/comments`),
       (snapshot) => {
-        if (snapshot.exists() && snapshot.val().createdAt > mountTimeRef.current) {
+        if (snapshot.exists() && snapshot.val().createdAt > openedAt) {
           const newComment = { id: snapshot.key, ...snapshot.val() };
           setComments((prev) => [...prev, newComment]);
         }

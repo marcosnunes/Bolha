@@ -18,7 +18,7 @@ import {
 // Ícones do MUI
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import AddIcon from '@mui/icons-material/Add';
 import PolicyIcon from '@mui/icons-material/Policy';
@@ -51,7 +51,7 @@ function HomePage() {
     const [allUsers, setAllUsers] = useState([]);
     const [openUserListDialog, setOpenUserListDialog] = useState(false);
     const [userSearchFilter, setUserSearchFilter] = useState('');
-    const [presenceClock, setPresenceClock] = useState(Date.now());
+    const [presenceClock, setPresenceClock] = useState(0);
 
     const profilePicInputRef = useRef(null);
 
@@ -80,9 +80,8 @@ function HomePage() {
     useEffect(() => {
         if (!openUserListDialog) return;
 
-        setPresenceClock(Date.now());
         const interval = setInterval(() => {
-            setPresenceClock(Date.now());
+            setPresenceClock((prev) => prev + 60000);
         }, 60000);
 
         return () => clearInterval(interval);
@@ -304,7 +303,10 @@ function HomePage() {
                         icon={<PeopleIcon style={{ color: 'inherit' }} />} 
                         label={`${userCount} membros`}
                         variant="outlined"
-                        onClick={() => setOpenUserListDialog(true)}
+                        onClick={() => {
+                            setPresenceClock(Date.now());
+                            setOpenUserListDialog(true);
+                        }}
                         sx={{ 
                             mr: 2, 
                             color: 'white', 
@@ -321,7 +323,7 @@ function HomePage() {
             
             <Drawer variant="temporary" open={mobileOpen} onClose={handleDrawerToggle} anchor="right" ModalProps={{ keepMounted: true }} sx={{ '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 } }}>{drawer}</Drawer>
 
-            <Dialog open={openUserListDialog} onClose={() => { setOpenUserListDialog(false); setUserSearchFilter(''); }} fullWidth maxWidth="sm">
+            <Dialog open={openUserListDialog} onClose={() => { setPresenceClock(Date.now()); setOpenUserListDialog(false); setUserSearchFilter(''); }} fullWidth maxWidth="sm">
                 <DialogTitle>Membros da Bolha ({userCount})</DialogTitle>
                 <DialogContent dividers sx={{ maxHeight: '60vh', overflow: 'auto', p: 2 }}>
                     <TextField
@@ -345,7 +347,7 @@ function HomePage() {
                     </List>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => { setOpenUserListDialog(false); setUserSearchFilter(''); }}>Fechar</Button>
+                    <Button onClick={() => { setPresenceClock(Date.now()); setOpenUserListDialog(false); setUserSearchFilter(''); }}>Fechar</Button>
                 </DialogActions>
             </Dialog>
 
@@ -402,9 +404,10 @@ function HomePage() {
 }
 
 // Componente wrapper para item de usuário com status online
-function formatLastSeen(timestamp, now = Date.now()) {
+function formatLastSeen(timestamp, now) {
   if (!timestamp) return null;
-    const diff = now - timestamp;
+    const referenceNow = typeof now === 'number' ? now : Date.now();
+    const diff = referenceNow - timestamp;
   const minutes = Math.floor(diff / (60 * 1000));
   const hours = Math.floor(diff / (60 * 60 * 1000));
   const days = Math.floor(diff / (24 * 60 * 60 * 1000));

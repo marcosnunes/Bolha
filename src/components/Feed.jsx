@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { rtdb } from '../firebase/config';
 import { ref, query, orderByChild, get, startAt, onChildAdded, onValue } from 'firebase/database';
 import Post from './Post.jsx';
@@ -17,9 +17,6 @@ function Feed({ filterNSFW }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false); // Começa falso até verificar
 
-  // Marca o tempo de início para o Realtime só pegar posts futuros
-  const mountTimeRef = useRef(Date.now());
-
   const [selectedUser, setSelectedUser] = useState(null);
   const [editProfileData, setEditProfileData] = useState(null);
 
@@ -28,6 +25,7 @@ function Feed({ filterNSFW }) {
   // 1. LISTENER GLOBAL PARA REORDENAÇÃO POR TIMESTAMP
   // Detecta qualquer mudança em qualquer post (novo, comentário, like) e reordena tudo
   useEffect(() => {
+    const mountedAt = Date.now();
     const postsRef = ref(rtdb, 'posts');
     
     // Listener que dispara para QUALQUER mudança na raiz de posts
@@ -55,7 +53,7 @@ function Feed({ filterNSFW }) {
     });
 
     // Listener para novos posts criados após montar
-    const realtimeQuery = query(postsRef, orderByChild('createdAt'), startAt(mountTimeRef.current + 1));
+    const realtimeQuery = query(postsRef, orderByChild('createdAt'), startAt(mountedAt + 1));
     const unsubAdded = onChildAdded(realtimeQuery, (snapshot) => {
       const newPostData = snapshot.val();
       const newPostId = snapshot.key;
@@ -81,7 +79,6 @@ function Feed({ filterNSFW }) {
 
   // 2. Busca Inicial de IDs (Histórico) - Ordena por lastActivityAt para trazer posts com atividade recente ao topo
   const fetchAllPostMetas = useCallback(async () => {
-    setLoading(true);
     const postsRef = ref(rtdb, 'posts');
     const postsQuery = query(postsRef, orderByChild('lastActivityAt'));
 
@@ -103,22 +100,44 @@ function Feed({ filterNSFW }) {
         // Inverte para o mais recente (em atividade) ficar primeiro (Descrescente)
         metas.reverse();
 
-        setAllPostMetas(metas);
-        // Não setamos loading(false) aqui ainda, esperamos carregar o conteúdo abaixo
+        return metas;
       } else {
-        setAllPostMetas([]);
-        setPosts([]);
-        setLoading(false); // Se não tem nada, paramos aqui
+        return [];
       }
     } catch (error) {
       console.error("Erro ao buscar lista de posts:", error);
-      setLoading(false);
+      return null;
     }
   }, []);
 
   // Inicia a busca
   useEffect(() => {
-    fetchAllPostMetas();
+    let isActive = true;
+
+    const loadAllPostMetas = async () => {
+      const metas = await fetchAllPostMetas();
+      if (!isActive) return;
+
+      if (metas === null) {
+        setLoading(false);
+        return;
+      }
+
+      if (metas.length === 0) {
+        setAllPostMetas([]);
+        setPosts([]);
+        setLoading(false);
+        return;
+      }
+
+      setAllPostMetas(metas);
+    };
+
+    loadAllPostMetas();
+
+    return () => {
+      isActive = false;
+    };
   }, [fetchAllPostMetas]);
 
   // 3. Carrega o conteúdo dos posts (Paginação)

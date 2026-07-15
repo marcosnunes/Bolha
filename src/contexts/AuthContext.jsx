@@ -42,7 +42,18 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [hiddenUsers, setHiddenUsers] = useState([]);
   const [authFlowError, setAuthFlowError] = useState('');
-  const [pendingGoogleProfile, setPendingGoogleProfile] = useState(null);
+  const [pendingGoogleProfile, setPendingGoogleProfile] = useState(() => {
+    try {
+      const pendingRaw = sessionStorage.getItem(GOOGLE_PENDING_PROFILE_KEY);
+      if (!pendingRaw) return null;
+
+      const parsed = JSON.parse(pendingRaw);
+      return parsed && parsed.mode === 'signup' ? parsed : null;
+    } catch {
+      sessionStorage.removeItem(GOOGLE_PENDING_PROFILE_KEY);
+      return null;
+    }
+  });
 
   function signup(email, password) {
     return createUserWithEmailAndPassword(auth, email, password);
@@ -559,20 +570,6 @@ export function AuthProvider({ children }) {
       isCancelled = true;
     };
   }, [finalizeGoogleSignIn]);
-
-  useEffect(() => {
-    const pendingRaw = sessionStorage.getItem(GOOGLE_PENDING_PROFILE_KEY);
-    if (!pendingRaw) return;
-
-    try {
-      const parsed = JSON.parse(pendingRaw);
-      if (parsed && parsed.mode === 'signup') {
-        setPendingGoogleProfile(parsed);
-      }
-    } catch {
-      sessionStorage.removeItem(GOOGLE_PENDING_PROFILE_KEY);
-    }
-  }, []);
 
   useEffect(() => {
     if (currentUser) {

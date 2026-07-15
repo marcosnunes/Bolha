@@ -96,7 +96,7 @@ function LoginPage({ embedded = false }) {
             onClick={handleGoogleLogin}
             disabled={loading || googleLoading}
             startIcon={googleLoading ? <CircularProgress size={18} color="inherit" /> : <GoogleIcon />}
-            sx={{ mt: 1, mb: 2, bgcolor: '#DB4437', '&:hover': { bgcolor: '#C3362B' } }}
+            sx={{ mt: 1, mb: 2, bgcolor: '#DB4437', '&:hover': { bgcolor: '#C3362B' }, display: { xs: 'none', sm: 'inline-flex' } }}
           >
             {googleLoading ? 'Conectando...' : 'Entrar com Google'}
           </Button>

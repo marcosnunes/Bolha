@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useParams, Link as RouterLink } from 'react-router-dom';
 
@@ -170,14 +170,6 @@ function CadastroPage({ tokenOverride = null, embedded = false }) {
 
   const handleGoogleSignup = () => executeGoogleSignup(null);
 
-  useEffect(() => {
-    if (!pendingGoogleProfile) return;
-
-    const initialNickname = (pendingGoogleProfile.suggestedNickname || '').slice(0, 32);
-    setGoogleNickname(initialNickname);
-    setNicknameDialogOpen(true);
-  }, [pendingGoogleProfile]);
-
   const confirmGoogleNickname = async () => {
     const chosenNickname = googleNickname.trim();
     if (chosenNickname.length < 3) {
@@ -281,7 +273,7 @@ function CadastroPage({ tokenOverride = null, embedded = false }) {
       )}
 
       <Dialog
-        open={nicknameDialogOpen}
+        open={nicknameDialogOpen || !!pendingGoogleProfile}
         onClose={() => {
           setNicknameDialogOpen(false);
           if (pendingGoogleProfile) {
@@ -298,7 +290,7 @@ function CadastroPage({ tokenOverride = null, embedded = false }) {
             fullWidth
             autoFocus
             label="Apelido"
-            value={googleNickname}
+            value={googleNickname || (pendingGoogleProfile?.suggestedNickname || '').slice(0, 32)}
             onChange={(e) => setGoogleNickname(e.target.value)}
             inputProps={{ maxLength: 32 }}
           />

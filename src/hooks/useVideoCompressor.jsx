@@ -28,7 +28,7 @@ export default function useVideoCompressor() {
       setIsReady(true);
     } catch (error) {
       console.error('Erro ao carregar FFmpeg:', error);
-      throw new Error('Não foi possível inicializar o compressor de vídeo');
+      throw new Error('Não foi possível inicializar o compressor de vídeo', { cause: error });
     }
   }, []);
 
@@ -131,7 +131,7 @@ export default function useVideoCompressor() {
       setLoading(false);
       setProgress(0);
       console.error('Erro na compressão:', error);
-      throw new Error(`Falha ao comprimir vídeo: ${error.message}`);
+      throw new Error(`Falha ao comprimir vídeo: ${error.message}`, { cause: error });
     }
   }, [isReady, loadFFmpeg]);
 
